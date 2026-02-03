@@ -237,11 +237,12 @@ async function main() {
   ]
 
   for (const exercise of exercises) {
-    await prisma.exercise.upsert({
-      where: { name: exercise.name },
-      update: {},
-      create: exercise,
+    const existing = await prisma.exercise.findFirst({
+      where: { name: exercise.name, isPublic: true },
     })
+    if (!existing) {
+      await prisma.exercise.create({ data: exercise })
+    }
   }
 
   console.log(`Seeded ${exercises.length} exercises`)

@@ -37,8 +37,30 @@ export async function GET(
           },
           include: {
             microcycles: {
-              select: {
-                id: true,
+              orderBy: {
+                weekNumber: 'asc',
+              },
+              include: {
+                workouts: {
+                  orderBy: {
+                    dayOfWeek: 'asc',
+                  },
+                  include: {
+                    workoutExercises: {
+                      orderBy: {
+                        orderIndex: 'asc',
+                      },
+                      include: {
+                        exercise: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
