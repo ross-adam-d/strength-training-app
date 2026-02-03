@@ -1,0 +1,218 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User authentication and profile
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile       Profile?
+  macrocycles   Macrocycle[]
+  exercises     Exercise[]
+
+  @@map("users")
+}
+
+model Profile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dateOfBirth       DateTime?
+  height            Float?    // in cm
+  weight            Float?    // in kg
+  experienceLevel   String?   // beginner, intermediate, advanced
+  goals             String?   // text field for training goals
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+// Exercise library
+model Exercise {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  muscleGroups      String[] // array of muscle groups (chest, back, legs, etc.)
+  equipment         String[] // array of equipment (barbell, dumbbell, machine, etc.)
+  videoUrl          String?
+  imageUrl          String?
+  isPublic          Boolean  @default(true)
+
+  createdById       String?
+  createdBy         User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workoutExercises  WorkoutExercise[]
+  exerciseLogs      ExerciseLog[]
+
+  @@map("exercises")
+  @@index([createdById])
+}
+
+// Training cycles hierarchy
+model Macrocycle {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  startDate         DateTime
+  endDate           DateTime
+  goals             String?
+  status            String   @default("active") // active, completed, paused
+
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  mesocycles        Mesocycle[]
+
+  @@map("macrocycles")
+  @@index([userId])
+  @@index([status])
+}
+
+model Mesocycle {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  startDate         DateTime
+  endDate           DateTime
+  focus             String?  // hypertrophy, strength, power, deload, etc.
+
+  macrocycleId      String
+  macrocycle        Macrocycle @relation(fields: [macrocycleId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  microcycles       Microcycle[]
+
+  @@map("mesocycles")
+  @@index([macrocycleId])
+}
+
+model Microcycle {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  startDate         DateTime
+  endDate           DateTime
+  weekNumber        Int      // week number within mesocycle
+
+  mesocycleId       String
+  mesocycle         Mesocycle @relation(fields: [mesocycleId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workouts          Workout[]
+
+  @@map("microcycles")
+  @@index([mesocycleId])
+}
+
+model Workout {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  dayOfWeek         Int?     // 0-6, Sunday to Saturday
+  estimatedDuration Int?     // in minutes
+  notes             String?
+
+  microcycleId      String
+  microcycle        Microcycle @relation(fields: [microcycleId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workoutExercises  WorkoutExercise[]
+  workoutLogs       WorkoutLog[]
+
+  @@map("workouts")
+  @@index([microcycleId])
+}
+
+model WorkoutExercise {
+  id                String   @id @default(cuid())
+  orderIndex        Int      // order of exercise in workout
+  targetSets        Int
+  targetReps        String?  // can be range like "8-12" or single number
+  targetRpe         Float?   // Rate of Perceived Exertion (1-10)
+  notes             String?
+  restPeriod        Int?     // rest in seconds
+
+  workoutId         String
+  workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  exerciseId        String
+  exercise          Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("workout_exercises")
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+// Workout logging
+model WorkoutLog {
+  id                String   @id @default(cuid())
+  completedAt       DateTime @default(now())
+  duration          Int?     // actual duration in minutes
+  notes             String?
+  overallRating     Int?     // 1-5 rating
+
+  workoutId         String
+  workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  exerciseLogs      ExerciseLog[]
+
+  @@map("workout_logs")
+  @@index([workoutId])
+  @@index([completedAt])
+}
+
+model ExerciseLog {
+  id                String   @id @default(cuid())
+  setNumber         Int
+  reps              Int
+  weight            Float    // in kg or lbs
+  rpe               Float?   // Rate of Perceived Exertion (1-10)
+  notes             String?
+
+  workoutLogId      String
+  workoutLog        WorkoutLog @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+
+  exerciseId        String
+  exercise          Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("exercise_logs")
+  @@index([workoutLogId])
+  @@index([exerciseId])
+}
