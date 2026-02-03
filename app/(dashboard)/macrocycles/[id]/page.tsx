@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
@@ -29,8 +29,9 @@ interface Macrocycle {
   mesocycles: Mesocycle[]
 }
 
-export default function MacrocycleDetailPage({ params }: { params: { id: string } }) {
+export default function MacrocycleDetailPage() {
   const router = useRouter()
+  const params = useParams()
   const [macrocycle, setMacrocycle] = useState<Macrocycle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)

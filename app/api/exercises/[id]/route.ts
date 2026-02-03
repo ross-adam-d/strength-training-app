@@ -5,12 +5,13 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const exercise = await prisma.exercise.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         createdBy: {
@@ -41,9 +42,10 @@ export async function GET(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -53,7 +55,7 @@ export async function DELETE(
     // Only allow deleting user's own exercises
     const deleted = await prisma.exercise.deleteMany({
       where: {
-        id: params.id,
+        id,
         createdById: session.user.id,
       },
     })

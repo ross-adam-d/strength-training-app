@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -32,8 +32,9 @@ interface Mesocycle {
   microcycles: Microcycle[]
 }
 
-export default function MesocycleDetailPage({ params }: { params: { id: string } }) {
+export default function MesocycleDetailPage() {
   const router = useRouter()
+  const params = useParams()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)

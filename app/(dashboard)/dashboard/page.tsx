@@ -51,7 +51,7 @@ export default async function DashboardPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here's your training overview.</p>
+        <p className="text-gray-600 mt-2">Welcome back! Here&apos;s your training overview.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">

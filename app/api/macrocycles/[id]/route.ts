@@ -15,9 +15,10 @@ const macrocycleSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -26,7 +27,7 @@ export async function GET(
 
     const macrocycle = await prisma.macrocycle.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: session.user.id,
       },
       include: {
@@ -64,9 +65,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -82,7 +84,7 @@ export async function PATCH(
 
     const macrocycle = await prisma.macrocycle.updateMany({
       where: {
-        id: params.id,
+        id,
         userId: session.user.id,
       },
       data: updateData,
@@ -96,7 +98,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.macrocycle.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json(updated)
@@ -118,9 +120,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -129,7 +132,7 @@ export async function DELETE(
 
     const deleted = await prisma.macrocycle.deleteMany({
       where: {
-        id: params.id,
+        id,
         userId: session.user.id,
       },
     })

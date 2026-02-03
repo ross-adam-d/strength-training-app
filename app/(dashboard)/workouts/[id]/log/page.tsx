@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -52,8 +52,9 @@ interface ExerciseLog {
   notes?: string
 }
 
-export default function WorkoutLogPage({ params }: { params: { id: string } }) {
+export default function WorkoutLogPage() {
   const router = useRouter()
+  const params = useParams()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
   const [startTime] = useState(new Date())

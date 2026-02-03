@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -16,7 +17,7 @@ export async function GET(
 
     const logs = await prisma.exerciseLog.findMany({
       where: {
-        exerciseId: params.id,
+        exerciseId: id,
         workoutLog: {
           workout: {
             microcycle: {

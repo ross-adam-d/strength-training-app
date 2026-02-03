@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -16,7 +17,7 @@ export async function GET(
 
     const mesocycle = await prisma.mesocycle.findFirst({
       where: {
-        id: params.id,
+        id,
         macrocycle: {
           userId: session.user.id,
         },
@@ -62,9 +63,10 @@ export async function GET(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -73,7 +75,7 @@ export async function DELETE(
 
     const deleted = await prisma.mesocycle.deleteMany({
       where: {
-        id: params.id,
+        id,
         macrocycle: {
           userId: session.user.id,
         },

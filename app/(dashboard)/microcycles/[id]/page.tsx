@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -65,8 +65,9 @@ const DAYS_OF_WEEK = [
   { value: '6', label: 'Saturday' },
 ]
 
-export default function MicrocycleDetailPage({ params }: { params: { id: string } }) {
+export default function MicrocycleDetailPage() {
   const router = useRouter()
+  const params = useParams()
   const [microcycle, setMicrocycle] = useState<Microcycle | null>(null)
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -251,7 +252,7 @@ export default function MicrocycleDetailPage({ params }: { params: { id: string 
                     <h3 className="text-lg font-semibold">{workout.name}</h3>
                     {workout.dayOfWeek !== undefined && workout.dayOfWeek !== null && (
                       <p className="text-sm text-gray-600">
-                        {DAYS_OF_WEEK.find((d) => d.value === workout.dayOfWeek.toString())?.label}
+                        {DAYS_OF_WEEK.find((d) => d.value === workout.dayOfWeek?.toString())?.label}
                       </p>
                     )}
                   </div>
