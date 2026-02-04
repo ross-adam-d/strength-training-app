@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { EditableSlotRow, SlotData } from './EditableSlotRow'
 
 interface ExerciseSlot {
@@ -27,6 +28,8 @@ interface Microcycle {
   id: string
   name: string
   weekNumber: number
+  startDate: string
+  endDate: string
   workouts: Workout[]
 }
 
@@ -71,6 +74,21 @@ function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
 export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProps) {
   const templateWorkouts =
     mesocycle.microcycles.length > 0 ? mesocycle.microcycles[0].workouts : []
+
+  // Map workout name → ID from the current (or first) microcycle for "Start" links
+  const startWorkoutIds = useMemo(() => {
+    const now = new Date()
+    const active = mesocycle.microcycles.find(
+      (m) => now >= new Date(m.startDate) && now < new Date(m.endDate)
+    ) ?? mesocycle.microcycles[0]
+    const ids: Record<string, string> = {}
+    if (active) {
+      for (const w of active.workouts) {
+        if (!ids[w.name]) ids[w.name] = w.id
+      }
+    }
+    return ids
+  }, [mesocycle.microcycles])
 
   const [slotsByWorkout, setSlotsByWorkout] = useState<Record<string, SlotData[]>>(
     () => buildSlots(templateWorkouts)
@@ -218,7 +236,17 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
           {templateWorkouts.map((workout) => (
             <div key={workout.name} className="bg-white rounded-lg border p-3">
-              <p className="text-sm font-semibold text-gray-700 mb-2">{workout.name}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">{workout.name}</p>
+                {startWorkoutIds[workout.name] && (
+                  <Link
+                    href={`/workouts/${startWorkoutIds[workout.name]}/log`}
+                    className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700"
+                  >
+                    Start
+                  </Link>
+                )}
+              </div>
               <div className="space-y-2">
                 {(slotsByWorkout[workout.name] || []).map((slot, idx) => (
                   <EditableSlotRow

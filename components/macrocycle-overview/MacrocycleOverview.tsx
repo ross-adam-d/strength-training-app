@@ -28,6 +28,8 @@ interface Microcycle {
   id: string
   name: string
   weekNumber: number
+  startDate: string
+  endDate: string
   workouts: Workout[]
 }
 
