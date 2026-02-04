@@ -76,64 +76,60 @@ export async function POST(request: Request) {
       }
     }
 
-    // Single transaction: create the entire block
-    const macrocycle = await prisma.$transaction(async (tx) => {
-      const macro = await tx.macrocycle.create({
+    // Sequential creates — prisma.$transaction is incompatible with Supabase's PgBouncer pooler
+    const macrocycle = await prisma.macrocycle.create({
+      data: {
+        name: data.name,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        status: data.status,
+        userId: session.user.id,
+      },
+    })
+
+    for (const mesoData of data.mesocycles) {
+      const meso = await prisma.mesocycle.create({
         data: {
-          name: data.name,
-          startDate: new Date(data.startDate),
-          endDate: new Date(data.endDate),
-          status: data.status,
-          userId: session.user.id,
+          name: mesoData.name,
+          focus: mesoData.focus,
+          startDate: new Date(mesoData.startDate),
+          endDate: new Date(mesoData.endDate),
+          macrocycleId: macrocycle.id,
         },
       })
 
-      for (const mesoData of data.mesocycles) {
-        const meso = await tx.mesocycle.create({
+      for (const microData of mesoData.microcycles) {
+        const micro = await prisma.microcycle.create({
           data: {
-            name: mesoData.name,
-            focus: mesoData.focus,
-            startDate: new Date(mesoData.startDate),
-            endDate: new Date(mesoData.endDate),
-            macrocycleId: macro.id,
+            name: microData.name,
+            weekNumber: microData.weekNumber,
+            startDate: new Date(microData.startDate),
+            endDate: new Date(microData.endDate),
+            mesocycleId: meso.id,
           },
         })
 
-        for (const microData of mesoData.microcycles) {
-          const micro = await tx.microcycle.create({
+        for (const workoutData of microData.workouts) {
+          await prisma.workout.create({
             data: {
-              name: microData.name,
-              weekNumber: microData.weekNumber,
-              startDate: new Date(microData.startDate),
-              endDate: new Date(microData.endDate),
-              mesocycleId: meso.id,
+              name: workoutData.name,
+              dayOfWeek: workoutData.dayOfWeek,
+              microcycleId: micro.id,
+              workoutExercises: {
+                create: workoutData.exercises.map((slot) => ({
+                  exerciseId: exerciseMap.get(slot.exerciseName)!,
+                  orderIndex: slot.orderIndex,
+                  targetSets: slot.targetSets,
+                  targetReps: slot.targetReps,
+                  notes: slot.notes,
+                  restPeriod: slot.restPeriod,
+                })),
+              },
             },
           })
-
-          for (const workoutData of microData.workouts) {
-            await tx.workout.create({
-              data: {
-                name: workoutData.name,
-                dayOfWeek: workoutData.dayOfWeek,
-                microcycleId: micro.id,
-                workoutExercises: {
-                  create: workoutData.exercises.map((slot) => ({
-                    exerciseId: exerciseMap.get(slot.exerciseName)!,
-                    orderIndex: slot.orderIndex,
-                    targetSets: slot.targetSets,
-                    targetReps: slot.targetReps,
-                    notes: slot.notes,
-                    restPeriod: slot.restPeriod,
-                  })),
-                },
-              },
-            })
-          }
         }
       }
-
-      return macro
-    })
+    }
 
     return NextResponse.json({ id: macrocycle.id }, { status: 201 })
   } catch (error) {
