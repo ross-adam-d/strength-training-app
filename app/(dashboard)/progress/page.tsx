@@ -40,7 +40,7 @@ interface WorkoutLog {
   overallRating?: number
   workout: {
     name: string
-  }
+  } | null
   exerciseLogs: Array<{
     exercise: {
       name: string
@@ -303,7 +303,7 @@ export default function ProgressPage() {
                   className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50 transition"
                 >
                   <div>
-                    <h3 className="font-medium">{workout.workout.name}</h3>
+                    <h3 className="font-medium">{workout.workout?.name ?? 'Manual Workout'}</h3>
                     <p className="text-sm text-gray-600">
                       {new Date(workout.completedAt).toLocaleDateString()} •{' '}
                       {workout.exerciseLogs.length} exercises

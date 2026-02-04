@@ -19,15 +19,7 @@ export async function GET(
       where: {
         exerciseId: id,
         workoutLog: {
-          workout: {
-            microcycle: {
-              mesocycle: {
-                macrocycle: {
-                  userId: session.user.id,
-                },
-              },
-            },
-          },
+          userId: session.user.id,
         },
       },
       orderBy: {
