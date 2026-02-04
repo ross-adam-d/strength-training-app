@@ -22,6 +22,7 @@ model User {
   profile       Profile?
   macrocycles   Macrocycle[]
   exercises     Exercise[]
+  workoutLogs   WorkoutLog[]
 
   @@map("users")
 }
@@ -157,6 +158,8 @@ model WorkoutExercise {
   targetSets        Int
   targetReps        String?  // can be range like "8-12" or single number
   targetRpe         Float?   // Rate of Perceived Exertion (1-10)
+  tempo             String?  // 4-digit tempo notation e.g. "3010"
+  targetRir         Int?     // Reps in Reserve target
   notes             String?
   restPeriod        Int?     // rest in seconds
 
@@ -182,8 +185,11 @@ model WorkoutLog {
   notes             String?
   overallRating     Int?     // 1-5 rating
 
-  workoutId         String
-  workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  workoutId         String?
+  workout           Workout? @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  userId           String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -192,6 +198,7 @@ model WorkoutLog {
 
   @@map("workout_logs")
   @@index([workoutId])
+  @@index([userId])
   @@index([completedAt])
 }
 

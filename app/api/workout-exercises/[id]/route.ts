@@ -8,8 +8,11 @@ const updateSchema = z.object({
   exerciseId: z.string().optional(),
   targetSets: z.number().int().positive().optional(),
   targetReps: z.string().optional(),
+  tempo: z.string().optional(),
+  targetRir: z.number().int().optional(),
   notes: z.string().optional(),
   orderIndex: z.number().int().optional(),
+  restPeriod: z.number().int().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {

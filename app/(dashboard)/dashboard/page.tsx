@@ -23,15 +23,7 @@ export default async function DashboardPage() {
 
   const recentWorkoutLogs = await prisma.workoutLog.findMany({
     where: {
-      workout: {
-        microcycle: {
-          mesocycle: {
-            macrocycle: {
-              userId: session.user.id,
-            },
-          },
-        },
-      },
+      userId: session.user.id,
     },
     orderBy: {
       completedAt: 'desc',
@@ -49,9 +41,18 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600 mt-2">Welcome back! Here&apos;s your training overview.</p>
+      </div>
+
+      <div className="mb-6">
+        <Link
+          href="/workout/start"
+          className="inline-flex items-center gap-2 px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-medium"
+        >
+          Start a Workout
+        </Link>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -106,7 +107,7 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               {recentWorkoutLogs.map((log) => (
                 <div key={log.id} className="p-3 border rounded-md">
-                  <h3 className="font-medium">{log.workout.name}</h3>
+                  <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
                   <p className="text-sm text-gray-600">
                     {new Date(log.completedAt).toLocaleDateString()}
                   </p>

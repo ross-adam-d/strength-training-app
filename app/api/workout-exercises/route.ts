@@ -9,6 +9,8 @@ const createSchema = z.object({
   exerciseId: z.string(),
   targetSets: z.number().int().positive(),
   targetReps: z.string(),
+  tempo: z.string().optional(),
+  targetRir: z.number().int().optional(),
   notes: z.string().optional(),
   restPeriod: z.number().int().optional(),
 })
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
         orderIndex: (maxOrder._max.orderIndex ?? -1) + 1,
         targetSets: data.targetSets,
         targetReps: data.targetReps,
+        tempo: data.tempo,
+        targetRir: data.targetRir,
         notes: data.notes,
         restPeriod: data.restPeriod,
       },

@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { PhaseSummaryBar } from './PhaseSummaryBar'
-import { WeekRow } from './WeekRow'
+import { PhaseEditor } from './PhaseEditor'
 
 interface ExerciseSlot {
   id: string
   exerciseId: string
   orderIndex: number
   targetSets: number
-  targetReps: string
+  targetReps: string | null
+  tempo: string | null
+  targetRir: number | null
   notes: string | null
   restPeriod: number | null
   exercise: { id: string; name: string }
@@ -54,10 +56,16 @@ interface Exercise {
 
 export default function MacrocycleOverview({ data, onRefresh }: { data: MacrocycleData; onRefresh: () => void }) {
   const [exercises, setExercises] = useState<Exercise[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     fetch('/api/exercises').then((r) => r.json()).then(setExercises)
   }, [])
+
+  function handleRefresh() {
+    onRefresh()
+    setRefreshKey((k) => k + 1)
+  }
 
   if (!data.mesocycles.length) {
     return (
@@ -71,21 +79,14 @@ export default function MacrocycleOverview({ data, onRefresh }: { data: Macrocyc
     <div>
       <PhaseSummaryBar mesocycles={data.mesocycles} />
 
-      <div className="space-y-6 mt-6">
+      <div className="space-y-4 mt-6">
         {data.mesocycles.map((meso) => (
-          <div key={meso.id}>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              {meso.name}{meso.focus ? ` — ${meso.focus}` : ''}
-            </h3>
-            {meso.microcycles.map((micro) => (
-              <WeekRow
-                key={micro.id}
-                microcycle={micro}
-                exercises={exercises}
-                onSlotChange={onRefresh}
-              />
-            ))}
-          </div>
+          <PhaseEditor
+            key={`${meso.id}-${refreshKey}`}
+            mesocycle={meso}
+            exercises={exercises}
+            onRefresh={handleRefresh}
+          />
         ))}
       </div>
     </div>

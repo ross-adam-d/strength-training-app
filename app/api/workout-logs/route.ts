@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const workoutLogSchema = z.object({
-  workoutId: z.string(),
+  workoutId: z.string().optional(),
   duration: z.number().int().positive().optional(),
   notes: z.string().optional(),
   overallRating: z.number().int().min(1).max(5).optional(),
@@ -32,15 +32,7 @@ export async function GET(request: Request) {
 
     const workoutLogs = await prisma.workoutLog.findMany({
       where: {
-        workout: {
-          microcycle: {
-            mesocycle: {
-              macrocycle: {
-                userId: session.user.id,
-              },
-            },
-          },
-        },
+        userId: session.user.id,
       },
       orderBy: {
         completedAt: 'desc',
@@ -87,31 +79,34 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = workoutLogSchema.parse(body)
 
-    // Verify the workout belongs to the user
-    const workout = await prisma.workout.findFirst({
-      where: {
-        id: data.workoutId,
-        microcycle: {
-          mesocycle: {
-            macrocycle: {
-              userId: session.user.id,
+    // Verify the workout belongs to the user (if provided)
+    if (data.workoutId) {
+      const workout = await prisma.workout.findFirst({
+        where: {
+          id: data.workoutId,
+          microcycle: {
+            mesocycle: {
+              macrocycle: {
+                userId: session.user.id,
+              },
             },
           },
         },
-      },
-    })
+      })
 
-    if (!workout) {
-      return NextResponse.json(
-        { error: 'Workout not found' },
-        { status: 404 }
-      )
+      if (!workout) {
+        return NextResponse.json(
+          { error: 'Workout not found' },
+          { status: 404 }
+        )
+      }
     }
 
     // Create workout log with exercise logs
     const workoutLog = await prisma.workoutLog.create({
       data: {
-        workoutId: data.workoutId,
+        workoutId: data.workoutId || null,
+        userId: session.user.id,
         duration: data.duration,
         notes: data.notes,
         overallRating: data.overallRating,
