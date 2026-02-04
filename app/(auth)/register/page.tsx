@@ -71,8 +71,9 @@ export default function RegisterPage() {
                 id="name"
                 name="name"
                 type="text"
+                autoComplete="name"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="John Doe"
               />
             </div>
@@ -85,8 +86,9 @@ export default function RegisterPage() {
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="you@example.com"
               />
             </div>
@@ -99,9 +101,10 @@ export default function RegisterPage() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="••••••••"
               />
               <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
@@ -115,9 +118,10 @@ export default function RegisterPage() {
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="••••••••"
               />
             </div>

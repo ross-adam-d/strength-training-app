@@ -63,8 +63,9 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="you@example.com"
               />
             </div>
@@ -77,8 +78,9 @@ export default function LoginPage() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="current-password"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                 placeholder="••••••••"
               />
             </div>
