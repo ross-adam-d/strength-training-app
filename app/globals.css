@@ -26,19 +26,38 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* Samsung Chrome fix: Force color inheritance for all elements */
-* {
-  color: inherit;
-}
-
-/* Explicitly set body text color so all children inherit it */
-body {
-  color: #000000 !important;
+/* Samsung Chrome fix: Explicitly set color for form elements and text */
+input:not([class*="text-"]),
+textarea:not([class*="text-"]),
+select:not([class*="text-"]),
+p:not([class*="text-"]),
+span:not([class*="text-"]),
+div:not([class*="text-"]):not([class*="bg-"]),
+label:not([class*="text-"]),
+h1:not([class*="text-"]),
+h2:not([class*="text-"]),
+h3:not([class*="text-"]),
+h4:not([class*="text-"]),
+h5:not([class*="text-"]),
+h6:not([class*="text-"]) {
+  color: #1f2937;
 }
 
 @media (prefers-color-scheme: dark) {
-  body {
-    color: #ffffff !important;
+  input:not([class*="text-"]),
+  textarea:not([class*="text-"]),
+  select:not([class*="text-"]),
+  p:not([class*="text-"]),
+  span:not([class*="text-"]),
+  div:not([class*="text-"]):not([class*="bg-"]),
+  label:not([class*="text-"]),
+  h1:not([class*="text-"]),
+  h2:not([class*="text-"]),
+  h3:not([class*="text-"]),
+  h4:not([class*="text-"]),
+  h5:not([class*="text-"]),
+  h6:not([class*="text-"]) {
+    color: #f3f4f6;
   }
 }
 
