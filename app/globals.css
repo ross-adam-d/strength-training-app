@@ -17,7 +17,7 @@
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: #000000;
   background: linear-gradient(
       to bottom,
       transparent,
@@ -26,38 +26,22 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* Samsung Chrome fix: Explicitly set color for form elements and text */
-input:not([class*="text-"]),
-textarea:not([class*="text-"]),
-select:not([class*="text-"]),
-p:not([class*="text-"]),
-span:not([class*="text-"]),
-div:not([class*="text-"]):not([class*="bg-"]),
-label:not([class*="text-"]),
-h1:not([class*="text-"]),
-h2:not([class*="text-"]),
-h3:not([class*="text-"]),
-h4:not([class*="text-"]),
-h5:not([class*="text-"]),
-h6:not([class*="text-"]) {
-  color: #1f2937;
+/* Samsung Chrome fix: Force black text on inputs */
+input,
+textarea,
+select {
+  color: #000000 !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  input:not([class*="text-"]),
-  textarea:not([class*="text-"]),
-  select:not([class*="text-"]),
-  p:not([class*="text-"]),
-  span:not([class*="text-"]),
-  div:not([class*="text-"]):not([class*="bg-"]),
-  label:not([class*="text-"]),
-  h1:not([class*="text-"]),
-  h2:not([class*="text-"]),
-  h3:not([class*="text-"]),
-  h4:not([class*="text-"]),
-  h5:not([class*="text-"]),
-  h6:not([class*="text-"]) {
-    color: #f3f4f6;
+  body {
+    color: #ffffff;
+  }
+
+  input,
+  textarea,
+  select {
+    color: #ffffff !important;
   }
 }
 
