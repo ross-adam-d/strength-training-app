@@ -16,21 +16,6 @@
   }
 }
 
-input, textarea, select, label, button {
-  color: inherit;
-}
-
-/* Ensure specific text colors for disabled states */
-button:disabled {
-  color: inherit;
-  opacity: 0.5;
-}
-
-/* Ensure link colors are visible */
-a {
-  color: inherit;
-}
-
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -39,6 +24,22 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+/* Samsung Chrome fix: Force color inheritance for all elements */
+* {
+  color: inherit;
+}
+
+/* Explicitly set body text color so all children inherit it */
+body {
+  color: #000000 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #ffffff !important;
+  }
 }
 
 @layer utilities {
