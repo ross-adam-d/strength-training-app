@@ -16,35 +16,29 @@
   }
 }
 
+input, textarea, select, label, button {
+  color: inherit;
+}
+
+/* Ensure specific text colors for disabled states */
+button:disabled {
+  color: inherit;
+  opacity: 0.5;
+}
+
+/* Ensure link colors are visible */
+a {
+  color: inherit;
+}
+
 body {
-  color: #000000;
+  color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
       transparent,
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-}
-
-/* Samsung Chrome: explicit colors for all text elements */
-body, h1, h2, h3, h4, h5, h6, p, span, div, label, input, textarea, select, button, a {
-  color: #000000;
-}
-
-/* Allow Tailwind text-* classes to override */
-[class*="text-white"] { color: #ffffff !important; }
-[class*="text-gray"] { color: revert !important; }
-[class*="text-primary"] { color: revert !important; }
-[class*="text-red"] { color: revert !important; }
-[class*="text-green"] { color: revert !important; }
-[class*="text-blue"] { color: revert !important; }
-[class*="text-yellow"] { color: revert !important; }
-[class*="text-amber"] { color: revert !important; }
-
-@media (prefers-color-scheme: dark) {
-  body, h1, h2, h3, h4, h5, h6, p, span, div, label, input, textarea, select, button, a {
-    color: #ffffff;
-  }
 }
 
 @layer utilities {
