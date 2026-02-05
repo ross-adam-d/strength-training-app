@@ -16,33 +16,29 @@
   }
 }
 
+input, textarea, select, label, button {
+  color: inherit;
+}
+
+/* Ensure specific text colors for disabled states */
+button:disabled {
+  color: inherit;
+  opacity: 0.5;
+}
+
+/* Ensure link colors are visible */
+a {
+  color: inherit;
+}
+
 body {
-  color: #000000;
+  color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
       transparent,
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-}
-
-/* Samsung Chrome fix: Force black text on inputs */
-input,
-textarea,
-select {
-  color: #000000 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    color: #ffffff;
-  }
-
-  input,
-  textarea,
-  select {
-    color: #ffffff !important;
-  }
 }
 
 @layer utilities {
