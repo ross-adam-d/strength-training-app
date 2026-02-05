@@ -76,7 +76,7 @@ model Macrocycle {
   startDate         DateTime
   endDate           DateTime
   goals             String?
-  status            String   @default("active") // active, completed, paused
+  status            String   @default("planned") // planned, active, completed, paused
 
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -208,6 +208,8 @@ model ExerciseLog {
   reps              Int
   weight            Float    // in kg or lbs
   rpe               Float?   // Rate of Perceived Exertion (1-10)
+  rir               Int?     // Reps In Reserve (actual)
+  skipped           Boolean  @default(false)
   notes             String?
 
   workoutLogId      String

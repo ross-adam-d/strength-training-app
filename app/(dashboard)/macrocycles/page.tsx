@@ -59,7 +59,7 @@ export default function MacrocyclesPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {macrocycles.map((macro) => (
             <Link key={macro.id} href={`/macrocycles/${macro.id}`}>
-              <Card className="hover:shadow-lg transition cursor-pointer h-full">
+              <Card className={`hover:shadow-lg transition cursor-pointer h-full ${macro.status === 'active' ? 'border-2 border-primary-500' : ''}`}>
                 <CardBody>
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-xl font-semibold">{macro.name}</h3>

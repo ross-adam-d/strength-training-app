@@ -25,6 +25,7 @@ interface EditableSlotRowProps {
   onDelete: () => void
   onReorder: (direction: 'up' | 'down') => void
   onExerciseCreated: (exercise: Exercise) => void
+  readOnly?: boolean
 }
 
 export function EditableSlotRow({
@@ -34,6 +35,7 @@ export function EditableSlotRow({
   onDelete,
   onReorder,
   onExerciseCreated,
+  readOnly = false,
 }: EditableSlotRowProps) {
   const [tempoError, setTempoError] = useState(false)
 
@@ -50,16 +52,24 @@ export function EditableSlotRow({
     <div className="bg-gray-50 rounded p-2 space-y-1.5">
       <div className="flex items-center gap-1.5">
         <div className="flex-1 min-w-0">
-          <ExercisePickerDropdown
-            exercises={exercises}
-            value={slot.exerciseId}
-            onChange={handleExerciseChange}
-            onExerciseCreated={onExerciseCreated}
-          />
+          {readOnly ? (
+            <p className="text-xs font-medium text-gray-700">{slot.exerciseName}</p>
+          ) : (
+            <ExercisePickerDropdown
+              exercises={exercises}
+              value={slot.exerciseId}
+              onChange={handleExerciseChange}
+              onExerciseCreated={onExerciseCreated}
+            />
+          )}
         </div>
-        <button type="button" onClick={() => onReorder('up')} className="text-gray-400 hover:text-gray-600 text-xs px-1">↑</button>
-        <button type="button" onClick={() => onReorder('down')} className="text-gray-400 hover:text-gray-600 text-xs px-1">↓</button>
-        <button type="button" onClick={onDelete} className="text-gray-400 hover:text-red-600 text-xs px-1">✕</button>
+        {!readOnly && (
+          <>
+            <button type="button" onClick={() => onReorder('up')} className="text-gray-400 hover:text-gray-600 text-xs px-1">↑</button>
+            <button type="button" onClick={() => onReorder('down')} className="text-gray-400 hover:text-gray-600 text-xs px-1">↓</button>
+            <button type="button" onClick={onDelete} className="text-gray-400 hover:text-red-600 text-xs px-1">✕</button>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 items-end">
@@ -70,7 +80,8 @@ export function EditableSlotRow({
             min={1}
             value={slot.targetSets}
             onChange={(e) => update('targetSets', parseInt(e.target.value) || 1)}
-            className="w-12 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400"
+            disabled={readOnly}
+            className="w-12 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -81,7 +92,8 @@ export function EditableSlotRow({
             placeholder="8-10"
             value={slot.targetReps}
             onChange={(e) => update('targetReps', e.target.value)}
-            className="w-16 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400"
+            disabled={readOnly}
+            className="w-16 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -100,7 +112,8 @@ export function EditableSlotRow({
               if (e.target.value && !/^\d{4}$/.test(e.target.value)) setTempoError(true)
             }}
             onFocus={() => setTempoError(false)}
-            className={`w-16 text-xs border rounded px-1.5 py-0.5 focus:outline-none ${
+            disabled={readOnly}
+            className={`w-16 text-xs border rounded px-1.5 py-0.5 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed ${
               tempoError ? 'border-red-400' : 'border-gray-300 focus:border-primary-400'
             }`}
           />
@@ -116,7 +129,8 @@ export function EditableSlotRow({
             onChange={(e) =>
               update('restPeriod', e.target.value === '' ? null : parseInt(e.target.value))
             }
-            className="w-16 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400"
+            disabled={readOnly}
+            className="w-16 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -131,7 +145,8 @@ export function EditableSlotRow({
             onChange={(e) =>
               update('targetRir', e.target.value === '' ? null : parseInt(e.target.value))
             }
-            className="w-12 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400"
+            disabled={readOnly}
+            className="w-12 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
       </div>

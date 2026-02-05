@@ -57,7 +57,19 @@ export async function GET(
           orderBy: {
             completedAt: 'desc',
           },
-          take: 5,
+          take: 1,
+          include: {
+            exerciseLogs: {
+              where: { skipped: false },
+              orderBy: { setNumber: 'asc' },
+              select: {
+                exerciseId: true,
+                setNumber: true,
+                reps: true,
+                weight: true,
+              },
+            },
+          },
         },
       },
     })

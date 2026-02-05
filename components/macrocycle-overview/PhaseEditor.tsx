@@ -49,6 +49,7 @@ interface PhaseEditorProps {
   mesocycle: Mesocycle
   exercises: Exercise[]
   onRefresh: () => void
+  macrocycleStatus: string
 }
 
 function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
@@ -71,9 +72,12 @@ function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
   return map
 }
 
-export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProps) {
+export function PhaseEditor({ mesocycle, exercises, onRefresh, macrocycleStatus }: PhaseEditorProps) {
   const templateWorkouts =
     mesocycle.microcycles.length > 0 ? mesocycle.microcycles[0].workouts : []
+
+  // Phase is locked if macrocycle is active (has started workouts)
+  const isLocked = macrocycleStatus === 'active' || macrocycleStatus === 'completed'
 
   // Map workout name → ID from the current (or first) microcycle for "Start" links
   const startWorkoutIds = useMemo(() => {
@@ -98,6 +102,7 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localExercises, setLocalExercises] = useState<Exercise[]>(exercises)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   useEffect(() => {
     setLocalExercises(exercises)
@@ -214,25 +219,55 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
 
   return (
     <div className="border rounded-lg mb-4 overflow-hidden">
-      <div className="bg-white px-4 py-3 flex items-center justify-between border-b">
-        <div>
-          <span className="text-sm font-semibold text-gray-800">{mesocycle.name}</span>
-          {mesocycle.focus && (
-            <span className="text-sm text-gray-500 ml-2">— {mesocycle.focus}</span>
-          )}
-          {dirty && <span className="text-xs text-amber-600 ml-2">• Unsaved changes</span>}
+      <div
+        className="bg-white px-4 py-3 flex items-center justify-between border-b cursor-pointer hover:bg-gray-50 transition"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <svg
+            className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <div>
+            <span className="text-sm font-semibold text-gray-800">{mesocycle.name}</span>
+            {mesocycle.focus && (
+              <span className="text-sm text-gray-500 ml-2">— {mesocycle.focus}</span>
+            )}
+            {isLocked && (
+              <span className="text-xs text-gray-500 ml-2">🔒 Locked</span>
+            )}
+            {dirty && !isLocked && <span className="text-xs text-amber-600 ml-2">• Unsaved changes</span>}
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !dirty}
-          className="text-xs bg-primary-600 text-white px-3 py-1 rounded disabled:opacity-50 hover:bg-primary-700"
-        >
-          {saving ? 'Saving...' : 'Save Phase'}
-        </button>
+        {!isLocked && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleSave()
+            }}
+            disabled={saving || !dirty}
+            className="text-xs bg-primary-600 text-white px-3 py-1 rounded disabled:opacity-50 hover:bg-primary-700"
+          >
+            {saving ? 'Saving...' : 'Save Phase'}
+          </button>
+        )}
       </div>
 
-      <div className="bg-gray-50 p-3">
+      {isExpanded && (
+        <div className="bg-gray-50 p-3">
+        {isLocked && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+            <p className="text-sm text-yellow-800">
+              🔒 This phase is locked because workouts have been completed. You can view the structure but cannot make changes.
+              To edit individual workouts, click the &quot;Start&quot; button to go to the workout page.
+            </p>
+          </div>
+        )}
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
           {templateWorkouts.map((workout) => (
             <div key={workout.name} className="bg-white rounded-lg border p-3">
@@ -253,38 +288,44 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                     key={idx}
                     slot={slot}
                     exercises={localExercises}
-                    onChange={(updated) => updateSlot(workout.name, idx, updated)}
-                    onDelete={() => deleteSlot(workout.name, idx)}
-                    onReorder={(dir) => reorderSlot(workout.name, idx, dir)}
+                    onChange={(updated) => !isLocked && updateSlot(workout.name, idx, updated)}
+                    onDelete={() => !isLocked && deleteSlot(workout.name, idx)}
+                    onReorder={(dir) => !isLocked && reorderSlot(workout.name, idx, dir)}
                     onExerciseCreated={handleExerciseCreated}
+                    readOnly={isLocked}
                   />
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={() => addSlot(workout.name)}
-                className="mt-2 w-full text-xs text-primary-600 hover:text-primary-800 text-left px-1 py-0.5 hover:bg-primary-50 rounded"
-              >
-                + Add exercise
-              </button>
+              {!isLocked && (
+                <button
+                  type="button"
+                  onClick={() => addSlot(workout.name)}
+                  className="mt-2 w-full text-xs text-primary-600 hover:text-primary-800 text-left px-1 py-0.5 hover:bg-primary-50 rounded"
+                >
+                  + Add exercise
+                </button>
+              )}
             </div>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600">
-            <input
-              type="checkbox"
-              checked={applyToSubsequent}
-              onChange={(e) => setApplyToSubsequent(e.target.checked)}
-              className="rounded"
-            />
-            Apply changes to all subsequent phases
-          </label>
-        </div>
+        {!isLocked && (
+          <div className="mt-4 flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={applyToSubsequent}
+                onChange={(e) => setApplyToSubsequent(e.target.checked)}
+                className="rounded"
+              />
+              Apply changes to all subsequent phases
+            </label>
+          </div>
+        )}
 
         {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

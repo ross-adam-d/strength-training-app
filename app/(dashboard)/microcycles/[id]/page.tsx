@@ -28,7 +28,18 @@ interface Workout {
   dayOfWeek?: number
   estimatedDuration?: number
   workoutExercises: WorkoutExercise[]
-  workoutLogs: { id: string; completedAt: string }[]
+  workoutLogs: {
+    id: string
+    completedAt: string
+    exerciseLogs: {
+      exerciseId: string
+      exercise: { id: string; name: string }
+      setNumber: number
+      reps: number
+      weight: number
+      skipped: boolean
+    }[]
+  }[]
 }
 
 interface Microcycle {
@@ -275,12 +286,35 @@ export default function MicrocycleDetailPage() {
                   ))}
                 </div>
 
-                <div className="mt-3 text-xs text-gray-500">
-                  {workout.workoutLogs.length > 0 && (
-                    <p>Last completed: {new Date(workout.workoutLogs[0].completedAt).toLocaleDateString()}</p>
-                  )}
-                  {workout.estimatedDuration && <p>Duration: ~{workout.estimatedDuration} min</p>}
-                </div>
+                {workout.estimatedDuration && (
+                  <p className="text-xs text-gray-500 mt-2">Duration: ~{workout.estimatedDuration} min</p>
+                )}
+
+                {workout.workoutLogs.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-green-700">
+                        Completed {new Date(workout.workoutLogs[0].completedAt).toLocaleDateString()}
+                      </p>
+                      <Link href={`/workout-logs/${workout.workoutLogs[0].id}`} className="text-xs text-primary-600 hover:text-primary-700">
+                        View details
+                      </Link>
+                    </div>
+                    <div className="mt-1.5 space-y-0.5">
+                      {workout.workoutExercises.map((we) => {
+                        const sets = workout.workoutLogs[0].exerciseLogs.filter(
+                          (el) => el.exerciseId === we.exercise.id && !el.skipped
+                        )
+                        if (sets.length === 0) return null
+                        return (
+                          <p key={we.id} className="text-xs text-gray-600">
+                            {we.exercise.name}: {sets.map((s) => `${s.weight}kg × ${s.reps}`).join(', ')}
+                          </p>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </CardBody>
             </Card>
           ))}

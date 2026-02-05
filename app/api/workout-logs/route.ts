@@ -12,9 +12,11 @@ const workoutLogSchema = z.object({
   exerciseLogs: z.array(z.object({
     exerciseId: z.string(),
     setNumber: z.number().int().positive(),
-    reps: z.number().int().positive(),
-    weight: z.number(),
+    reps: z.number().int().min(0),
+    weight: z.number().min(0),
     rpe: z.number().optional(),
+    rir: z.number().int().min(0).optional(),
+    skipped: z.boolean().optional(),
     notes: z.string().optional(),
   })),
 })
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
     const data = workoutLogSchema.parse(body)
 
     // Verify the workout belongs to the user (if provided)
+    let macrocycleId: string | null = null
     if (data.workoutId) {
       const workout = await prisma.workout.findFirst({
         where: {
@@ -92,6 +95,22 @@ export async function POST(request: Request) {
             },
           },
         },
+        include: {
+          microcycle: {
+            include: {
+              mesocycle: {
+                include: {
+                  macrocycle: {
+                    select: {
+                      id: true,
+                      status: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       })
 
       if (!workout) {
@@ -100,6 +119,8 @@ export async function POST(request: Request) {
           { status: 404 }
         )
       }
+
+      macrocycleId = workout.microcycle.mesocycle.macrocycle.id
     }
 
     // Create workout log with exercise logs
@@ -117,6 +138,8 @@ export async function POST(request: Request) {
             reps: log.reps,
             weight: log.weight,
             rpe: log.rpe,
+            rir: log.rir,
+            skipped: log.skipped ?? false,
             notes: log.notes,
           })),
         },
@@ -129,6 +152,19 @@ export async function POST(request: Request) {
         },
       },
     })
+
+    // Automatically transition macrocycle from "planned" to "active" on first workout completion
+    if (macrocycleId) {
+      await prisma.macrocycle.updateMany({
+        where: {
+          id: macrocycleId,
+          status: 'planned',
+        },
+        data: {
+          status: 'active',
+        },
+      })
+    }
 
     return NextResponse.json(workoutLog, { status: 201 })
   } catch (error) {

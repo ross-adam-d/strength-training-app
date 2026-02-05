@@ -56,9 +56,17 @@ export async function GET(
               },
             },
             workoutLogs: {
-              select: {
-                id: true,
-                completedAt: true,
+              orderBy: { completedAt: 'desc' },
+              take: 1,
+              include: {
+                exerciseLogs: {
+                  orderBy: { setNumber: 'asc' },
+                  include: {
+                    exercise: {
+                      select: { id: true, name: true },
+                    },
+                  },
+                },
               },
             },
           },

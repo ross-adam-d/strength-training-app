@@ -170,15 +170,15 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recentWorkoutLogs.map((log) => (
-                <div key={log.id} className="p-3 border rounded-md">
+                <Link key={log.id} href={`/workout-logs/${log.id}`} className="block p-3 border rounded-md hover:bg-gray-50 transition">
                   <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
                   <p className="text-sm text-gray-600">
                     {new Date(log.completedAt).toLocaleDateString()}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {log.exerciseLogs.length} exercises • {log.duration || '—'} min
+                    {new Set(log.exerciseLogs.map((el) => el.exercise.id)).size} exercises • {log.duration || '—'} min
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

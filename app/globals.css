@@ -16,6 +16,21 @@
   }
 }
 
+input, textarea, select, label, button {
+  color: inherit;
+}
+
+/* Ensure specific text colors for disabled states */
+button:disabled {
+  color: inherit;
+  opacity: 0.5;
+}
+
+/* Ensure link colors are visible */
+a {
+  color: inherit;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(

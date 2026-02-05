@@ -88,6 +88,7 @@ export default function MacrocycleOverview({ data, onRefresh }: { data: Macrocyc
             mesocycle={meso}
             exercises={exercises}
             onRefresh={handleRefresh}
+            macrocycleStatus={data.status}
           />
         ))}
       </div>
