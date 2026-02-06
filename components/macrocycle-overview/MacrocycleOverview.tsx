@@ -22,6 +22,10 @@ interface Workout {
   name: string
   dayOfWeek: number | null
   workoutExercises: ExerciseSlot[]
+  workoutLogs: {
+    id: string
+    completedAt: string
+  }[]
 }
 
 interface Microcycle {

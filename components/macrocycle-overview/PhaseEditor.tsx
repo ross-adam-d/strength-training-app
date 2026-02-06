@@ -22,6 +22,10 @@ interface Workout {
   name: string
   dayOfWeek: number | null
   workoutExercises: ExerciseSlot[]
+  workoutLogs: {
+    id: string
+    completedAt: string
+  }[]
 }
 
 interface Microcycle {
@@ -92,6 +96,19 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
       }
     }
     return ids
+  }, [mesocycle.microcycles])
+
+  // Track which workout templates have been completed (check across all microcycles)
+  const completedWorkouts = useMemo(() => {
+    const completed = new Set<string>()
+    for (const micro of mesocycle.microcycles) {
+      for (const workout of micro.workouts) {
+        if (workout.workoutLogs && workout.workoutLogs.length > 0) {
+          completed.add(workout.name)
+        }
+      }
+    }
+    return completed
   }, [mesocycle.microcycles])
 
   const [slotsByWorkout, setSlotsByWorkout] = useState<Record<string, SlotData[]>>(
@@ -304,17 +321,25 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                 Week {selectedWeek.weekNumber} - {selectedWeek.name}
               </h4>
               <div className="grid md:grid-cols-2 gap-3">
-                {selectedWeek.workouts.map((workout) => (
-                  <div key={workout.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium text-gray-900">{workout.name}</h5>
-                      <Link
-                        href={`/workouts/${workout.id}/log`}
-                        className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700"
-                      >
-                        Start
-                      </Link>
-                    </div>
+                {selectedWeek.workouts.map((workout) => {
+                  const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0
+                  return (
+                    <div key={workout.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-gray-900">{workout.name}</h5>
+                        {isCompleted ? (
+                          <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+                            ✓ Completed
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/workouts/${workout.id}/log`}
+                            className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700"
+                          >
+                            Start
+                          </Link>
+                        )}
+                      </div>
                     <div className="text-xs text-gray-600 space-y-1">
                       {workout.workoutExercises.slice(0, 3).map((we) => (
                         <div key={we.id}>
@@ -328,7 +353,8 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                       )}
                     </div>
                   </div>
-                ))}
+                )
+                })}
               </div>
             </div>
           )
@@ -346,44 +372,53 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
           </div>
         )}
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {templateWorkouts.map((workout) => (
-            <div key={workout.name} className="bg-white rounded-lg border p-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-gray-700">{workout.name}</p>
-                {startWorkoutIds[workout.name] && (
-                  <Link
-                    href={`/workouts/${startWorkoutIds[workout.name]}/log`}
-                    className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700"
+          {templateWorkouts.map((workout) => {
+            const isWorkoutCompleted = completedWorkouts.has(workout.name)
+            const isWorkoutReadOnly = isLocked || isWorkoutCompleted
+
+            return (
+              <div key={workout.name} className="bg-white rounded-lg border p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-700">{workout.name}</p>
+                  {isWorkoutCompleted ? (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                      ✓ Completed
+                    </span>
+                  ) : startWorkoutIds[workout.name] ? (
+                    <Link
+                      href={`/workouts/${startWorkoutIds[workout.name]}/log`}
+                      className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700"
+                    >
+                      Start
+                    </Link>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  {(slotsByWorkout[workout.name] || []).map((slot, idx) => (
+                    <EditableSlotRow
+                      key={idx}
+                      slot={slot}
+                      exercises={localExercises}
+                      onChange={(updated) => !isWorkoutReadOnly && updateSlot(workout.name, idx, updated)}
+                      onDelete={() => !isWorkoutReadOnly && deleteSlot(workout.name, idx)}
+                      onReorder={(dir) => !isWorkoutReadOnly && reorderSlot(workout.name, idx, dir)}
+                      onExerciseCreated={handleExerciseCreated}
+                      readOnly={isWorkoutReadOnly}
+                    />
+                  ))}
+                </div>
+                {!isWorkoutReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => addSlot(workout.name)}
+                    className="mt-2 w-full text-xs text-primary-600 hover:text-primary-800 text-left px-1 py-0.5 hover:bg-primary-50 rounded"
                   >
-                    Start
-                  </Link>
+                    + Add exercise
+                  </button>
                 )}
               </div>
-              <div className="space-y-2">
-                {(slotsByWorkout[workout.name] || []).map((slot, idx) => (
-                  <EditableSlotRow
-                    key={idx}
-                    slot={slot}
-                    exercises={localExercises}
-                    onChange={(updated) => !isLocked && updateSlot(workout.name, idx, updated)}
-                    onDelete={() => !isLocked && deleteSlot(workout.name, idx)}
-                    onReorder={(dir) => !isLocked && reorderSlot(workout.name, idx, dir)}
-                    onExerciseCreated={handleExerciseCreated}
-                    readOnly={isLocked}
-                  />
-                ))}
-              </div>
-              {!isLocked && (
-                <button
-                  type="button"
-                  onClick={() => addSlot(workout.name)}
-                  className="mt-2 w-full text-xs text-primary-600 hover:text-primary-800 text-left px-1 py-0.5 hover:bg-primary-50 rounded"
-                >
-                  + Add exercise
-                </button>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {!isLocked && (
