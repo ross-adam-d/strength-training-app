@@ -369,21 +369,24 @@ export default function WorkoutLogPage() {
         </Link>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{workout.name}</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Started {startTime.toLocaleTimeString()}
-              </p>
+      {/* Sticky header on mobile */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-6 md:static md:border-0 md:mx-0 md:px-0 md:py-0 md:mb-6">
+        <Card className="md:mb-0">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{workout.name}</h1>
+                <p className="text-xs md:text-sm text-gray-600 mt-1">
+                  Started {startTime.toLocaleTimeString()}
+                </p>
+              </div>
+              <Button onClick={handleComplete} disabled={saving} className="shrink-0">
+                {saving ? 'Saving...' : 'Complete'}
+              </Button>
             </div>
-            <Button onClick={handleComplete} disabled={saving}>
-              {saving ? 'Saving...' : 'Complete Workout'}
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+        </Card>
+      </div>
 
       {/* Vertical exercise cards */}
       {workout.workoutExercises.map((we) => {
@@ -420,14 +423,14 @@ export default function WorkoutLogPage() {
               )}
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 pb-2 border-b mb-3">
+              <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 pb-2 border-b mb-3">
                 <div />
-                <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Weight (kg)</div>
-                <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
-                <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">RIR</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Weight (kg)</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">RIR</div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {setsForExercise.map((log) => {
                   const timerKey = `${log.exerciseId}-${log.setNumber}`
                   const isTimerActive = activeTimerKey === timerKey
@@ -437,14 +440,14 @@ export default function WorkoutLogPage() {
                     return (
                       <div
                         key={timerKey}
-                        className="flex items-center gap-2 bg-gray-100 opacity-60 rounded-md px-2 py-2"
+                        className="flex items-center gap-2 bg-gray-100 opacity-60 rounded-md px-3 py-3"
                       >
-                        <span className="text-sm font-semibold text-gray-600 w-[1.75rem]">{log.setNumber}</span>
-                        <span className="text-sm italic text-gray-500 flex-1">Skipped</span>
-                        <Button variant="ghost" size="sm" onClick={() => skipSet(log.exerciseId, log.setNumber)}>
+                        <span className="text-sm md:text-base font-semibold text-gray-600 w-[2rem]">{log.setNumber}</span>
+                        <span className="text-sm md:text-base italic text-gray-500 flex-1">Skipped</span>
+                        <Button variant="ghost" size="sm" className="min-h-[36px]" onClick={() => skipSet(log.exerciseId, log.setNumber)}>
                           Unskip
                         </Button>
-                        <Button variant="danger" size="sm" onClick={() => removeSet(log.exerciseId, log.setNumber)}>
+                        <Button variant="danger" size="sm" className="min-h-[36px] min-w-[36px]" onClick={() => removeSet(log.exerciseId, log.setNumber)}>
                           ×
                         </Button>
                       </div>
@@ -452,9 +455,10 @@ export default function WorkoutLogPage() {
                   }
 
                   return (
-                    <div key={timerKey} className="space-y-1.5">
-                      <div className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 items-center">
-                        <span className="text-sm font-semibold text-gray-600">{log.setNumber}</span>
+                    <div key={timerKey} className="space-y-2">
+                      {/* Larger touch targets for mobile - min 44px height */}
+                      <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
+                        <span className="text-sm md:text-base font-semibold text-gray-600">{log.setNumber}</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -463,7 +467,7 @@ export default function WorkoutLogPage() {
                           value={log.weight}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
                         <input
                           type="text"
@@ -473,7 +477,7 @@ export default function WorkoutLogPage() {
                           value={log.reps}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
                         <input
                           type="text"
@@ -483,16 +487,17 @@ export default function WorkoutLogPage() {
                           value={log.rir ?? ''}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'rir', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'rir', log.rir ?? '')}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
                       </div>
-                      <div className="ml-[2.25rem] space-y-1.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="ml-[2.5rem] space-y-2">
+                        {/* Better spacing and larger buttons for mobile */}
+                        <div className="flex items-center gap-2 flex-wrap">
                           {we.restPeriod != null && (
                             <Button
                               variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}
                               size="sm"
-                              className={isFlashing ? 'animate-pulse' : ''}
+                              className={`min-h-[36px] ${isFlashing ? 'animate-pulse' : ''}`}
                               onClick={() => startTimer(log.exerciseId, log.setNumber, we.restPeriod!)}
                             >
                               {isTimerActive ? formatTimer(timerSecondsLeft) : `Rest ${formatTimer(we.restPeriod)}`}
@@ -501,6 +506,7 @@ export default function WorkoutLogPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="min-h-[36px]"
                             onClick={() => {
                               if (window.confirm('Skip this set?')) {
                                 skipSet(log.exerciseId, log.setNumber)
@@ -509,7 +515,12 @@ export default function WorkoutLogPage() {
                           >
                             Skip
                           </Button>
-                          <Button variant="danger" size="sm" onClick={() => removeSet(log.exerciseId, log.setNumber)}>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            className="min-h-[36px] min-w-[36px]"
+                            onClick={() => removeSet(log.exerciseId, log.setNumber)}
+                          >
                             ×
                           </Button>
                         </div>
@@ -518,7 +529,7 @@ export default function WorkoutLogPage() {
                           placeholder="Notes for this set…"
                           value={log.notes || ''}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'notes', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder-gray-400"
+                          className="w-full px-3 py-2 text-sm md:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
                         />
                       </div>
                     </div>
@@ -526,11 +537,12 @@ export default function WorkoutLogPage() {
                 })}
               </div>
 
-              <div className="mt-3">
+              <div className="mt-4">
                 <Button
                   onClick={() => addSet(we.exercise.id)}
                   variant="secondary"
                   size="sm"
+                  className="min-h-[40px] w-full md:w-auto"
                 >
                   + Add Set
                 </Button>
