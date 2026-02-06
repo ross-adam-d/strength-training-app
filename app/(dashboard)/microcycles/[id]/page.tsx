@@ -110,6 +110,7 @@ export default function MicrocycleDetailPage() {
   const [expandedDays, setExpandedDays] = useState<Set<number | null>>(
     () => new Set([null, 0, 1, 2, 3, 4, 5, 6]) // All expanded by default
   )
+  const [editingDayForWorkout, setEditingDayForWorkout] = useState<string | null>(null)
 
   function toggleDay(day: number | null) {
     setExpandedDays(prev => {
@@ -121,6 +122,23 @@ export default function MicrocycleDetailPage() {
       }
       return next
     })
+  }
+
+  async function handleUpdateWorkoutDay(workoutId: string, newDayOfWeek: number | null) {
+    try {
+      const response = await fetch(`/api/workouts/${workoutId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayOfWeek: newDayOfWeek }),
+      })
+
+      if (response.ok) {
+        setEditingDayForWorkout(null)
+        fetchMicrocycle()
+      }
+    } catch (error) {
+      console.error('Error updating workout day:', error)
+    }
   }
 
   useEffect(() => {
@@ -238,10 +256,10 @@ export default function MicrocycleDetailPage() {
     <div>
       <div className="mb-6">
         <Link
-          href={`/mesocycles/${microcycle.mesocycle.id}`}
+          href={`/macrocycles/${microcycle.mesocycle.macrocycle.id}`}
           className="text-primary-600 hover:text-primary-700 text-sm"
         >
-          ← Back to {microcycle.mesocycle.name}
+          ← Back to {microcycle.mesocycle.macrocycle.name}
         </Link>
       </div>
 
@@ -330,12 +348,32 @@ export default function MicrocycleDetailPage() {
             <Card key={workout.id} className="hover:shadow-lg transition">
               <CardBody>
                 <div className="flex items-start justify-between mb-2">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold">{workout.name}</h3>
-                    {workout.dayOfWeek !== undefined && workout.dayOfWeek !== null && (
-                      <p className="text-sm text-gray-600">
-                        {DAYS_OF_WEEK.find((d) => d.value === workout.dayOfWeek?.toString())?.label}
-                      </p>
+                    {workout.workoutLogs.length === 0 ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <select
+                          value={workout.dayOfWeek?.toString() ?? ''}
+                          onChange={(e) => {
+                            const newDay = e.target.value === '' ? null : parseInt(e.target.value)
+                            handleUpdateWorkoutDay(workout.id, newDay)
+                          }}
+                          className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          {DAYS_OF_WEEK.map((day) => (
+                            <option key={day.value} value={day.value}>
+                              {day.label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-gray-500">Change day</span>
+                      </div>
+                    ) : (
+                      workout.dayOfWeek !== undefined && workout.dayOfWeek !== null && (
+                        <p className="text-sm text-gray-600">
+                          {DAYS_OF_WEEK.find((d) => d.value === workout.dayOfWeek?.toString())?.label}
+                        </p>
+                      )
                     )}
                   </div>
                   {workout.workoutLogs.length > 0 ? (

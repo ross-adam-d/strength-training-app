@@ -160,14 +160,8 @@ export default async function DashboardPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-xl font-semibold">Current Phase</h2>
-            <Link
-              href={currentPhase ? `/macrocycles/${currentPhase.macrocycleId}` : '/macrocycles'}
-              className="text-sm text-primary-600 hover:text-primary-700"
-            >
-              {currentPhase ? 'View Training Block' : 'View All Blocks'}
-            </Link>
           </div>
 
           {!currentPhase ? (
@@ -186,7 +180,12 @@ export default async function DashboardPage() {
               <div>
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{currentPhase.name}</h3>
+                    <Link
+                      href={`/macrocycles/${currentPhase.macrocycleId}`}
+                      className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition"
+                    >
+                      {currentPhase.name}
+                    </Link>
                     <p className="text-sm text-gray-600">{currentPhase.macrocycleName}</p>
                   </div>
                   <div className="flex gap-2">
