@@ -21,6 +21,17 @@ body {
   background: #1a1a1a;
 }
 
+/* Keep auth pages light themed */
+body:has([class*="from-blue-50"]) {
+  background: #ffffff;
+}
+
+body:has([class*="from-blue-50"]) h1,
+body:has([class*="from-blue-50"]) p,
+body:has([class*="from-blue-50"]) label {
+  color: #111827 !important;
+}
+
 /* Force all containers and cards to dark theme */
 div, section, article, main, header, footer, nav {
   background-color: transparent;
@@ -79,6 +90,21 @@ input::placeholder, textarea::placeholder {
 /* Ensure buttons keep their colors */
 button {
   color: inherit;
+}
+
+/* Fix timer buttons to be visible */
+button[class*="bg-primary"],
+button[class*="bg-green"],
+button[class*="bg-blue"],
+button[class*="bg-red"],
+button[class*="bg-amber"] {
+  color: #ffffff !important;
+}
+
+button[class*="bg-gray-200"],
+button[class*="bg-gray-100"] {
+  background-color: #404040 !important;
+  color: #ffffff !important;
 }
 
 @layer utilities {
