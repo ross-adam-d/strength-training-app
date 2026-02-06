@@ -104,6 +104,28 @@ export default function ManualWorkoutPage() {
     const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000 / 60)
 
     try {
+      const exerciseLogs = logs.map((l) => {
+        // Clean and validate numeric values
+        const repsValue = parseInt(l.reps, 10)
+        const weightValue = parseFloat(l.weight)
+        const rpeValue = l.rpe ? parseFloat(l.rpe) : undefined
+
+        // Validate cleaned values
+        if (isNaN(repsValue) || isNaN(weightValue) || (rpeValue !== undefined && isNaN(rpeValue))) {
+          throw new Error('Invalid numeric value in exercise log')
+        }
+
+        return {
+          exerciseId: l.exerciseId,
+          setNumber: l.setNumber,
+          reps: repsValue,
+          weight: weightValue,
+          rpe: rpeValue,
+          skipped: false,
+          notes: l.notes || undefined,
+        }
+      })
+
       const res = await fetch('/api/workout-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,21 +133,20 @@ export default function ManualWorkoutPage() {
           duration,
           notes: overallNotes,
           overallRating,
-          exerciseLogs: logs.map((l) => ({
-            exerciseId: l.exerciseId,
-            setNumber: l.setNumber,
-            reps: parseInt(l.reps),
-            weight: parseFloat(l.weight),
-            rpe: l.rpe ? parseFloat(l.rpe) : undefined,
-            notes: l.notes || undefined,
-          })),
+          exerciseLogs,
         }),
       })
+
       if (res.ok) {
         router.push('/dashboard')
       } else {
-        alert('Failed to save workout')
+        const errorData = await res.json().catch(() => ({}))
+        console.error('Server error:', errorData)
+        alert(`Failed to save workout: ${errorData.error || 'Unknown error'}`)
       }
+    } catch (error) {
+      console.error('Error saving workout:', error)
+      alert(`Failed to save workout: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
