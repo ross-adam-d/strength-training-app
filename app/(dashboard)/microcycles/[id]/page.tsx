@@ -25,7 +25,7 @@ interface Workout {
   id: string
   name: string
   description?: string
-  dayOfWeek?: number
+  dayOfWeek: number | null
   estimatedDuration?: number
   workoutExercises: WorkoutExercise[]
   workoutLogs: {
@@ -76,6 +76,27 @@ const DAYS_OF_WEEK = [
   { value: '6', label: 'Saturday' },
 ]
 
+function groupWorkoutsByDay(workouts: Workout[]): Map<number | null, Workout[]> {
+  const grouped = new Map<number | null, Workout[]>()
+
+  for (const workout of workouts) {
+    const day = workout.dayOfWeek
+    if (!grouped.has(day)) {
+      grouped.set(day, [])
+    }
+    grouped.get(day)!.push(workout)
+  }
+
+  // Sort: null (no specific day) last, then by day number
+  return new Map(
+    Array.from(grouped.entries()).sort((a, b) => {
+      if (a[0] === null) return 1
+      if (b[0] === null) return -1
+      return a[0] - b[0]
+    })
+  )
+}
+
 export default function MicrocycleDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -86,6 +107,21 @@ export default function MicrocycleDetailPage() {
   const [selectedExercises, setSelectedExercises] = useState<
     Array<{ exerciseId: string; targetSets: number; targetReps: string; targetRpe?: number }>
   >([])
+  const [expandedDays, setExpandedDays] = useState<Set<number | null>>(
+    () => new Set([null, 0, 1, 2, 3, 4, 5, 6]) // All expanded by default
+  )
+
+  function toggleDay(day: number | null) {
+    setExpandedDays(prev => {
+      const next = new Set(prev)
+      if (next.has(day)) {
+        next.delete(day)
+      } else {
+        next.add(day)
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     fetchMicrocycle()
@@ -254,8 +290,43 @@ export default function MicrocycleDetailPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {microcycle.workouts.map((workout) => (
+        <div className="space-y-4">
+          {(() => {
+            const grouped = groupWorkoutsByDay(microcycle.workouts)
+            return Array.from(grouped.entries()).map(([dayValue, dayWorkouts]) => {
+              const isExpanded = expandedDays.has(dayValue)
+              const dayLabel = dayValue === null
+                ? 'No specific day'
+                : DAYS_OF_WEEK.find(d => d.value === dayValue.toString())?.label || 'Unknown'
+
+              return (
+                <div key={dayValue?.toString() || 'null'} className="border rounded-lg overflow-hidden">
+                  {/* Collapsible Header */}
+                  <button
+                    onClick={() => toggleDay(dayValue)}
+                    className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 transition flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-semibold text-gray-900">{dayLabel}</span>
+                      <span className="text-sm text-gray-600">
+                        {dayWorkouts.length} {dayWorkouts.length === 1 ? 'workout' : 'workouts'}
+                      </span>
+                    </div>
+                    <svg
+                      className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Collapsible Content */}
+                  {isExpanded && (
+                    <div className="p-4 bg-white">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {dayWorkouts.map((workout) => (
             <Card key={workout.id} className="hover:shadow-lg transition">
               <CardBody>
                 <div className="flex items-start justify-between mb-2">
@@ -323,7 +394,14 @@ export default function MicrocycleDetailPage() {
                 )}
               </CardBody>
             </Card>
-          ))}
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          })()}
         </div>
       )}
 
