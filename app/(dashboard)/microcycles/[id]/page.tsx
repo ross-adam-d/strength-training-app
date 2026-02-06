@@ -119,7 +119,7 @@ export default function MicrocycleDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this microcycle?')) {
+    if (!confirm('Are you sure you want to delete this week?')) {
       return
     }
 
@@ -195,7 +195,7 @@ export default function MicrocycleDetailPage() {
   }
 
   if (!microcycle) {
-    return <div className="text-center py-8">Microcycle not found</div>
+    return <div className="text-center py-8">Week not found</div>
   }
 
   return (

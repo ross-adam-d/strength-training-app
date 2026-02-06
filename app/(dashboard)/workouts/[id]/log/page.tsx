@@ -304,12 +304,24 @@ export default function WorkoutLogPage() {
             notes: log.notes,
           }
         }
+
+        // Clean and validate numeric values before submission
+        const repsValue = parseInt(log.reps.toString(), 10)
+        const weightValue = parseFloat(log.weight.toString())
+        const rirStr = String(log.rir ?? '').trim()
+        const rirValue = rirStr === '' ? undefined : parseInt(rirStr, 10)
+
+        // Validate cleaned values
+        if (isNaN(repsValue) || isNaN(weightValue) || (rirValue !== undefined && isNaN(rirValue))) {
+          throw new Error('Invalid numeric value in exercise log')
+        }
+
         return {
           exerciseId: log.exerciseId,
           setNumber: log.setNumber,
-          reps: parseInt(log.reps.toString()),
-          weight: parseFloat(log.weight.toString()),
-          rir: log.rir !== undefined && log.rir !== '' ? parseInt(log.rir.toString()) : undefined,
+          reps: repsValue,
+          weight: weightValue,
+          rir: rirValue,
           skipped: false,
           notes: log.notes,
         }
@@ -326,11 +338,13 @@ export default function WorkoutLogPage() {
       if (response.ok && workout) {
         router.push(`/microcycles/${workout.microcycle.id}`)
       } else {
-        alert('Failed to save workout log')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Server error:', errorData)
+        alert(`Failed to save workout log: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error saving workout log:', error)
-      alert('Failed to save workout log')
+      alert(`Failed to save workout log: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
     }

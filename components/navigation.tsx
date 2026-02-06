@@ -22,7 +22,7 @@ export function Navigation() {
 
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/macrocycles', label: 'Macrocycles' },
+    { href: '/macrocycles', label: 'Training Blocks' },
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
   ]

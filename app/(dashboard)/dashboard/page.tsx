@@ -122,7 +122,7 @@ export default async function DashboardPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Active Macrocycles</h2>
+            <h2 className="text-xl font-semibold">Active Training Blocks</h2>
             <Link
               href="/macrocycles"
               className="text-sm text-primary-600 hover:text-primary-700"
@@ -133,12 +133,12 @@ export default async function DashboardPage() {
 
           {macrocycles.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No active training cycles</p>
+              <p className="text-gray-500 mb-4">No active training blocks</p>
               <Link
                 href="/macrocycles"
                 className="inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition"
               >
-                Create Your First Macrocycle
+                Create Your First Training Block
               </Link>
             </div>
           ) : (
