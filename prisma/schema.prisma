@@ -98,6 +98,7 @@ model Mesocycle {
   startDate         DateTime
   endDate           DateTime
   focus             String?  // hypertrophy, strength, power, deload, etc.
+  status            String   @default("planned") // planned, active, completed
 
   macrocycleId      String
   macrocycle        Macrocycle @relation(fields: [macrocycleId], references: [id], onDelete: Cascade)
@@ -109,6 +110,7 @@ model Mesocycle {
 
   @@map("mesocycles")
   @@index([macrocycleId])
+  @@index([status])
 }
 
 model Microcycle {

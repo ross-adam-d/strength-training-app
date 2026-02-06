@@ -37,6 +37,7 @@ interface Mesocycle {
   id: string
   name: string
   focus: string | null
+  status?: string
   microcycles: Microcycle[]
 }
 
@@ -49,7 +50,6 @@ interface PhaseEditorProps {
   mesocycle: Mesocycle
   exercises: Exercise[]
   onRefresh: () => void
-  macrocycleStatus: string
 }
 
 function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
@@ -72,12 +72,12 @@ function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
   return map
 }
 
-export function PhaseEditor({ mesocycle, exercises, onRefresh, macrocycleStatus }: PhaseEditorProps) {
+export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProps) {
   const templateWorkouts =
     mesocycle.microcycles.length > 0 ? mesocycle.microcycles[0].workouts : []
 
-  // Phase is locked if macrocycle is active (has started workouts)
-  const isLocked = macrocycleStatus === 'active' || macrocycleStatus === 'completed'
+  // Phase is locked if this specific mesocycle is active (has completed workouts)
+  const isLocked = mesocycle.status === 'active' || mesocycle.status === 'completed'
 
   // Map workout name → ID from the current (or first) microcycle for "Start" links
   const startWorkoutIds = useMemo(() => {
@@ -219,19 +219,8 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh, macrocycleStatus 
 
   return (
     <div className="border rounded-lg mb-4 overflow-hidden">
-      <div
-        className="bg-white px-4 py-3 flex items-center justify-between border-b cursor-pointer hover:bg-gray-50 transition"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-2">
-          <svg
-            className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+      <div className="bg-white px-4 py-3 border-b">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <span className="text-sm font-semibold text-gray-800">{mesocycle.name}</span>
             {mesocycle.focus && (
@@ -242,23 +231,64 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh, macrocycleStatus 
             )}
             {dirty && !isLocked && <span className="text-xs text-amber-600 ml-2">• Unsaved changes</span>}
           </div>
+          <div className="flex gap-2">
+            {!isLocked && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300"
+                >
+                  {isExpanded ? 'Hide' : 'Edit'} Workouts
+                </button>
+                {dirty && (
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="text-xs bg-primary-600 text-white px-3 py-1 rounded disabled:opacity-50 hover:bg-primary-700"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-        {!isLocked && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleSave()
-            }}
-            disabled={saving || !dirty}
-            className="text-xs bg-primary-600 text-white px-3 py-1 rounded disabled:opacity-50 hover:bg-primary-700"
-          >
-            {saving ? 'Saving...' : 'Save Phase'}
-          </button>
-        )}
+
+        {/* Horizontal week cards */}
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {mesocycle.microcycles.map((microcycle) => {
+            const now = new Date()
+            const isActive = now >= new Date(microcycle.startDate) && now < new Date(microcycle.endDate)
+
+            return (
+              <Link
+                key={microcycle.id}
+                href={`/microcycles/${microcycle.id}`}
+                className={`flex-shrink-0 w-32 p-3 rounded-lg border-2 transition cursor-pointer hover:shadow-md ${
+                  isActive ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-primary-300'
+                }`}
+              >
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Week {microcycle.weekNumber}</p>
+                  <p className="text-sm font-medium text-gray-900">{microcycle.name}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {new Date(microcycle.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                  {isActive && (
+                    <span className="inline-block mt-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                </div>
+              </Link>
+            )
+          })}
+        </div>
       </div>
 
-      {isExpanded && (
+      {!isLocked && isExpanded && (
         <div className="bg-gray-50 p-3">
         {isLocked && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">

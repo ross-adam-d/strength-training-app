@@ -82,6 +82,7 @@ export async function POST(request: Request) {
     const data = workoutLogSchema.parse(body)
 
     // Verify the workout belongs to the user (if provided)
+    let mesocycleId: string | null = null
     let macrocycleId: string | null = null
     if (data.workoutId) {
       const workout = await prisma.workout.findFirst({
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
           microcycle: {
             include: {
               mesocycle: {
+                select: {
+                  id: true,
+                  status: true,
+                },
                 include: {
                   macrocycle: {
                     select: {
@@ -120,6 +125,7 @@ export async function POST(request: Request) {
         )
       }
 
+      mesocycleId = workout.microcycle.mesocycle.id
       macrocycleId = workout.microcycle.mesocycle.macrocycle.id
     }
 
@@ -153,7 +159,19 @@ export async function POST(request: Request) {
       },
     })
 
-    // Automatically transition macrocycle from "planned" to "active" on first workout completion
+    // Automatically transition mesocycle and macrocycle from "planned" to "active" on first workout completion
+    if (mesocycleId) {
+      await prisma.mesocycle.updateMany({
+        where: {
+          id: mesocycleId,
+          status: 'planned',
+        },
+        data: {
+          status: 'active',
+        },
+      })
+    }
+
     if (macrocycleId) {
       await prisma.macrocycle.updateMany({
         where: {

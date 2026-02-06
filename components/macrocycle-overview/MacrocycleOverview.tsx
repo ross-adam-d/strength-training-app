@@ -37,6 +37,7 @@ interface Mesocycle {
   id: string
   name: string
   focus: string | null
+  status?: string
   microcycles: Microcycle[]
 }
 
@@ -88,7 +89,6 @@ export default function MacrocycleOverview({ data, onRefresh }: { data: Macrocyc
             mesocycle={meso}
             exercises={exercises}
             onRefresh={handleRefresh}
-            macrocycleStatus={data.status}
           />
         ))}
       </div>

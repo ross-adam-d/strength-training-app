@@ -267,9 +267,15 @@ export default function MicrocycleDetailPage() {
                       </p>
                     )}
                   </div>
-                  <Link href={`/workouts/${workout.id}/log`}>
-                    <Button size="sm">Start Workout</Button>
-                  </Link>
+                  {workout.workoutLogs.length > 0 ? (
+                    <span className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-full">
+                      ✓ Completed
+                    </span>
+                  ) : (
+                    <Link href={`/workouts/${workout.id}/log`}>
+                      <Button size="sm">Start Workout</Button>
+                    </Link>
+                  )}
                 </div>
 
                 {workout.description && (
