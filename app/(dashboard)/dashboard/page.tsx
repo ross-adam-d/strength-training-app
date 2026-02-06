@@ -231,6 +231,16 @@ export default async function DashboardPage() {
                   {Math.round((currentPhase.weekNumber / currentPhase.totalWeeks) * 100)}% complete
                 </p>
               </div>
+
+              {/* View current week link */}
+              <div className="pt-3 border-t">
+                <Link
+                  href={`/microcycles/${currentPhase.id}`}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  View Week Details →
+                </Link>
+              </div>
             </div>
           )}
         </div>

@@ -317,9 +317,17 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
 
           return (
             <div className="mt-4 p-4 bg-white rounded-lg border">
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Week {selectedWeek.weekNumber} - {selectedWeek.name}
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">
+                  Week {selectedWeek.weekNumber} - {selectedWeek.name}
+                </h4>
+                <Link
+                  href={`/microcycles/${selectedWeek.id}`}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  View Full Week →
+                </Link>
+              </div>
               <div className="grid md:grid-cols-2 gap-3">
                 {selectedWeek.workouts.map((workout) => {
                   const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0

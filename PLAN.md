@@ -104,324 +104,153 @@ Next.js web application for tracking strength training using hierarchical period
 - [x] Add troubleshooting section
 - [x] Create deployment checklist
 
-### 📋 Phase 11: Final Steps (TODO - Ready to Execute)
-- [ ] Initialize local PostgreSQL database
-- [ ] Generate Prisma client locally
-- [ ] Run database migrations locally
-- [ ] Seed exercise library
-- [ ] Test complete user flow locally
-- [ ] Set up GitHub repository
-- [ ] Deploy to Vercel
-- [ ] Configure Vercel Postgres
-- [ ] Run production migrations
-- [ ] Seed production database
-- [ ] Final production testing
+### ✅ Phase 11: Deployment (COMPLETED)
+- [x] Initialize local PostgreSQL database (Supabase)
+- [x] Generate Prisma client locally
+- [x] Push schema to database
+- [x] Seed exercise library
+- [x] Test complete user flow locally
+- [x] Set up GitHub repository
+- [x] Deploy to Vercel
+- [x] Configure production database (Supabase)
+- [x] Seed production database
+- [x] Production testing and validation
 
 ---
 
-## Current Working Directory
-```
-C:\Users\Ross Family\.local\bin\strength-training-app
-```
+## Current Development Phase
 
-## Next Steps (Immediate)
+### 🎯 Phase 12: Navigation & UX Refinements (IN PROGRESS)
 
-### 1. Set Up Local Development Environment ✅ READY
+**Completed in Session 6 (Feb 2026):**
+- ✅ Collapsible workout day headers in microcycle view
+- ✅ Dashboard shows current phase with progress bar
+- ✅ Removed redundant mesocycle detail page
+- ✅ Mark completed workouts as non-editable
+- ✅ Fixed ad-hoc workout save validation
 
-**Prerequisites:**
-- Install PostgreSQL locally OR use Docker
-- Configure `.env.local` with database connection
+**Next Up:**
+- [ ] Task #22: Add microcycle navigation links from macrocycle and dashboard
+- [ ] Task #23: Clean up project documentation
+- [ ] Improve mobile UX for workout logging
+- [ ] Add loading states and error boundaries
 
-**Commands to run:**
-```bash
-cd strength-training-app
+### 🚀 Phase 13: Intelligent Training Features (PLANNED)
 
-# Install dependencies (already done)
-npm install
+**Smart Suggestions:**
+- [ ] Program templates (Push/Pull/Legs, Upper/Lower, Full Body)
+- [ ] Progressive overload guidance (analyzing history to suggest weight/rep increases)
+- [ ] Exercise recommendations (based on training focus, equipment, current program)
+- [ ] Volume management (warning when sets per muscle group are too high/low)
+- [ ] Deload timing (detecting fatigue from RIR/RPE data)
+- [ ] Exercise substitutions (suggesting alternatives for skipped exercises)
 
-# Generate Prisma Client
-npm run db:generate
-
-# Push schema to database
-npm run db:push
-
-# Seed exercise library
-npm run db:seed
-
-# Start development server
-npm run dev
-```
-
-### 2. Test Complete User Flow Locally
-
-**Test checklist:**
-- [ ] Register new user
-- [ ] Login
-- [ ] Create macrocycle
-- [ ] Create mesocycle within macrocycle
-- [ ] Create microcycle within mesocycle
-- [ ] Browse exercise library
-- [ ] Create a workout with multiple exercises
-- [ ] Start workout logging session
-- [ ] Log multiple sets for each exercise
-- [ ] Complete workout
-- [ ] View progress dashboard
-- [ ] Check charts display correctly
-- [ ] Test logout
-
-### 3. Deploy to Production
-
-**Follow DEPLOYMENT.md:**
-1. Create GitHub repository
-2. Import to Vercel
-3. Set up Vercel Postgres
-4. Configure environment variables
-5. Run production migrations
-6. Seed production database
-7. Test production deployment
+**Data-Driven Features:**
+- [ ] Progress analysis over time (strength gains, volume trends)
+- [ ] Weak point identification
+- [ ] 1RM predictions from submaximal work
+- [ ] Optimal rest period recommendations
+- [ ] Training readiness score (based on RIR/RPE trends)
+- [ ] Volume landmarks (tracking and comparing against research-based recommendations)
 
 ---
 
-## Database Setup Instructions
+## Production Environment
 
-### To initialize the database locally:
+**Location:** `C:\Users\Ross Family\.local\bin\strength-training-app`
+**Repository:** `https://github.com/ross-adam-d/strength-training-app.git`
+**Live App:** `https://strength-training-app.vercel.app`
+
+**Tech Stack:**
+- Next.js 15.5 (App Router)
+- Prisma 6.19 + PostgreSQL (Supabase)
+- NextAuth.js v4
+- Tailwind CSS
+- Recharts for data visualization
+
+**Deployment:**
 ```bash
-cd strength-training-app
+# Build and test locally
+npm run build
 
-# Generate Prisma Client
-npm run db:generate
+# Deploy to production
+npx vercel --prod
+```
 
-# Push schema to database (creates tables)
+---
+
+## Database Commands
+
+```bash
+# Push schema changes to database (no migrations)
 npm run db:push
 
-# Seed the exercise library
-npm run db:seed
-
-# Optional: Open Prisma Studio to view data
+# Open Prisma Studio to view/edit data
 npm run db:studio
-```
 
-### To run migrations (production):
-```bash
-npm run db:migrate
-```
-
----
-
-## Testing Checklist (Before Deployment)
-
-### Authentication
-- [ ] User can register new account
-- [ ] User can log in
-- [ ] User can log out
-- [ ] Protected routes redirect to login
-- [ ] Session persists across page refreshes
-
-### Cycle Management
-- [ ] Create macrocycle
-- [ ] View macrocycle list
-- [ ] View macrocycle detail
-- [ ] Delete macrocycle
-- [ ] Create mesocycle within macrocycle
-- [ ] View mesocycle detail
-- [ ] Delete mesocycle
-- [ ] Create microcycle within mesocycle
-- [ ] View microcycle detail
-- [ ] Delete microcycle
-
-### Exercise Library
-- [ ] Browse exercise library
-- [ ] Filter by muscle group
-- [ ] Filter by equipment
-- [ ] Search exercises
-- [ ] View exercise details
-- [ ] Create custom exercise
-
-### Workout Management
-- [ ] Create workout in microcycle
-- [ ] Add exercises to workout
-- [ ] View workout detail
-- [ ] Delete workout
-
-### Workout Logging
-- [ ] Start workout logging session
-- [ ] Log exercise sets (weight, reps, RPE)
-- [ ] Add notes
-- [ ] Complete workout
-- [ ] View workout history
-
-### Progress Tracking
-- [ ] View progress dashboard
-- [ ] See exercise progression charts
-- [ ] View volume over time
-- [ ] Compare across cycles
-
----
-
-## Known Issues / Decisions Needed
-
-### 1. Database Configuration
-**Issue**: Need to set up actual PostgreSQL database connection
-**Current**: Using placeholder DATABASE_URL in .env.local
-**Action Required**:
-- Install PostgreSQL locally OR
-- Use Docker for local PostgreSQL OR
-- Use Vercel Postgres for development
-
-### 2. NextAuth Secret
-**Issue**: Using placeholder NEXTAUTH_SECRET
-**Action Required**: Generate secure secret for production
-```bash
-openssl rand -base64 32
-```
-
-### 3. Week Number Calculation
-**Decision**: Should week numbers auto-calculate based on dates or be manually set?
-**Current Implementation**: Manually set by user
-**Alternative**: Auto-calculate from mesocycle start date
-
-### 4. Exercise Library Permissions
-**Decision**: Should users be able to create custom exercises?
-**Current Implementation**: Yes, users can create private exercises
-**Alternative**: Admin-only exercise creation
-
-### 5. Workout Templates
-**Decision**: Should workouts be reusable templates across microcycles?
-**Current Implementation**: Each workout is unique to a microcycle
-**Alternative**: Template system for repeated workouts
-
-### 6. Unit System
-**Decision**: Metric (kg/cm) vs Imperial (lbs/inches) or both?
-**Current Implementation**: Database uses metric (kg/cm as Float)
-**Action Required**: Add user preference for display units
-
----
-
-## File Structure Overview
-
-```
-strength-training-app/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/page.tsx ✅
-│   │   └── register/page.tsx ✅
-│   ├── (dashboard)/
-│   │   ├── layout.tsx ✅
-│   │   ├── dashboard/page.tsx ✅
-│   │   ├── macrocycles/
-│   │   │   ├── page.tsx ✅
-│   │   │   └── [id]/page.tsx ✅
-│   │   ├── mesocycles/
-│   │   │   └── [id]/page.tsx ✅
-│   │   ├── microcycles/
-│   │   │   └── [id]/page.tsx ⏳ (needs creation)
-│   │   ├── exercises/
-│   │   │   └── page.tsx ⏳ (needs creation)
-│   │   ├── workouts/
-│   │   │   └── [id]/log/page.tsx ⏳ (needs creation)
-│   │   └── progress/page.tsx ⏳ (needs creation)
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── [...nextauth]/route.ts ✅
-│   │   │   └── register/route.ts ✅
-│   │   ├── macrocycles/
-│   │   │   ├── route.ts ✅
-│   │   │   └── [id]/route.ts ✅
-│   │   ├── mesocycles/
-│   │   │   ├── route.ts ✅
-│   │   │   └── [id]/route.ts ✅
-│   │   ├── microcycles/
-│   │   │   ├── route.ts ✅
-│   │   │   └── [id]/route.ts ✅
-│   │   ├── exercises/route.ts ⏳
-│   │   ├── workouts/route.ts ⏳
-│   │   ├── workout-logs/route.ts ⏳
-│   │   └── exercise-logs/route.ts ⏳
-│   ├── globals.css ✅
-│   ├── layout.tsx ✅
-│   ├── page.tsx ✅
-│   └── providers.tsx ✅
-├── components/
-│   ├── ui/
-│   │   ├── button.tsx ✅
-│   │   ├── card.tsx ✅
-│   │   ├── input.tsx ✅
-│   │   ├── modal.tsx ✅
-│   │   └── select.tsx ✅
-│   └── navigation.tsx ✅
-├── lib/
-│   ├── auth.ts ✅
-│   └── prisma.ts ✅
-├── prisma/
-│   ├── schema.prisma ✅
-│   └── seed.ts ✅
-├── types/
-│   └── next-auth.d.ts ✅
-├── .env.local ✅
-├── .gitignore ✅
-├── next.config.js ✅
-├── package.json ✅
-├── postcss.config.js ✅
-├── tailwind.config.ts ✅
-└── tsconfig.json ✅
-```
-
----
-
-## Deployment Steps (When Ready)
-
-### 1. Prepare Repository
-```bash
-git init
-git add .
-git commit -m "Initial commit: Strength training app"
-gh repo create strength-training-app --public --source=. --remote=origin
-git push -u origin main
-```
-
-### 2. Vercel Setup
-1. Import project from GitHub
-2. Configure environment variables:
-   - `DATABASE_URL` (Vercel Postgres connection string)
-   - `NEXTAUTH_URL` (production URL)
-   - `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
-3. Deploy
-
-### 3. Database Setup on Vercel
-```bash
-# After Vercel Postgres is provisioned
-npx prisma migrate deploy
+# Seed exercise library (if needed)
 npm run db:seed
 ```
 
 ---
 
-## Progress Summary
+## Architecture Decisions
 
-**Completed**: 13 / 13 tasks (100%) ✅
+### Database Strategy
+- **Provider**: Supabase PostgreSQL
+- **Schema Management**: Prisma with `db:push` (no migrations)
+- **Rationale**: Rapid iteration during active development
 
-### All Core Features Implemented:
-- ✅ Project initialization & configuration
-- ✅ Database schema with full relationships
-- ✅ Authentication system (NextAuth)
-- ✅ Project structure & layouts
-- ✅ Authentication pages (login/register)
-- ✅ Reusable UI components
-- ✅ Macrocycle management (CRUD)
-- ✅ Mesocycle management (CRUD)
-- ✅ Microcycle management (CRUD)
-- ✅ Exercise library with filters
-- ✅ Workout creation system
-- ✅ Active workout logging
-- ✅ Progress tracking with charts
-- ✅ Complete documentation (README, DEPLOYMENT)
+### Training Cycle Hierarchy
+- **Macrocycle** (Training Block): 4-16 weeks, contains mesocycles
+- **Mesocycle** (Phase): Specific training focus (hypertrophy, strength, etc.)
+- **Microcycle** (Week): Individual weeks with scheduled workouts
+- **Workout**: Specific training sessions with exercises
 
-### Application Status: **READY FOR DEPLOYMENT** 🚀
+### Key Design Patterns
+- **Status-based locking**: Macrocycles transition from "planned" → "active" → "completed"
+- **Phase locking**: Active/completed phases are read-only to prevent template corruption
+- **Local interfaces**: Each page defines its own TypeScript interfaces (no shared types)
+- **Pre-population**: Workout logging pre-fills from last completed session
 
-**Total Files Created**: 60+
-**Total Lines of Code**: ~6,000+
-**API Endpoints**: 20+
-**Pages**: 15+
-**Components**: 10+
+### Mobile-First Considerations
+- Use `100dvh` instead of `100vh` for form pages (handles keyboard)
+- Use `type="text"` + `inputMode="numeric"` instead of `type="number"` for better UX
+- Always set `color: inherit` on form elements (Samsung Chrome fix)
+- Grid layouts use `1fr` columns for responsive input widths
 
-**Next Action**: Set up local database and test, then deploy to Vercel
+---
+
+## Application Status
+
+### 🎉 Production Application - Actively Used
+
+**Deployment**: Live on Vercel since Feb 2026
+**Status**: Core features complete, iterating on UX improvements
+**Repository**: `https://github.com/ross-adam-d/strength-training-app.git`
+**Live URL**: `https://strength-training-app.vercel.app`
+
+### Core Features (All Implemented):
+- ✅ User authentication & session management
+- ✅ Hierarchical training cycle management (Macrocycle → Mesocycle → Microcycle → Workout)
+- ✅ Exercise library with filters and custom exercises
+- ✅ Workout logging with RIR/RPE tracking, rest timers, skip/unskip sets
+- ✅ Pre-population from previous workouts
+- ✅ Progress tracking with charts (volume, 1RM estimates, trends)
+- ✅ Mobile-responsive design with Samsung Chrome optimizations
+- ✅ Status-based phase locking (prevent template changes mid-training)
+- ✅ Collapsible day headers in microcycle view
+- ✅ Current phase dashboard with progress visualization
+- ✅ Completed workout tracking and history
+
+### Recent Improvements (Session 6 - Feb 2026):
+- Fixed critical workout save bugs (Prisma query errors, ad-hoc validation)
+- Implemented completed workout badges and read-only state
+- Added collapsible workout day headers
+- Enhanced dashboard with current phase progress bar
+- Removed redundant navigation pages
+
+### Next Development Phase:
+- Navigation improvements (Task #22)
+- Intelligent training features (progressive overload suggestions, volume management)
+- Advanced analytics and weak point identification
