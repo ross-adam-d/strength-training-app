@@ -100,10 +100,6 @@ export async function POST(request: Request) {
           microcycle: {
             include: {
               mesocycle: {
-                select: {
-                  id: true,
-                  status: true,
-                },
                 include: {
                   macrocycle: {
                     select: {
