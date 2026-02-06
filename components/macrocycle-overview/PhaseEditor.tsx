@@ -102,7 +102,8 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localExercises, setLocalExercises] = useState<Exercise[]>(exercises)
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalExercises(exercises)
@@ -261,13 +262,18 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
           {mesocycle.microcycles.map((microcycle) => {
             const now = new Date()
             const isActive = now >= new Date(microcycle.startDate) && now < new Date(microcycle.endDate)
+            const isSelected = selectedWeekId === microcycle.id
 
             return (
-              <Link
+              <button
                 key={microcycle.id}
-                href={`/microcycles/${microcycle.id}`}
+                onClick={() => setSelectedWeekId(isSelected ? null : microcycle.id)}
                 className={`flex-shrink-0 w-32 p-3 rounded-lg border-2 transition cursor-pointer hover:shadow-md ${
-                  isActive ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-primary-300'
+                  isSelected
+                    ? 'border-primary-600 bg-primary-50'
+                    : isActive
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 bg-white hover:border-primary-300'
                 }`}
               >
                 <div className="text-center">
@@ -282,10 +288,51 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                     </span>
                   )}
                 </div>
-              </Link>
+              </button>
             )
           })}
         </div>
+
+        {/* Selected week workouts */}
+        {selectedWeekId && (() => {
+          const selectedWeek = mesocycle.microcycles.find(m => m.id === selectedWeekId)
+          if (!selectedWeek) return null
+
+          return (
+            <div className="mt-4 p-4 bg-white rounded-lg border">
+              <h4 className="font-semibold text-gray-900 mb-3">
+                Week {selectedWeek.weekNumber} - {selectedWeek.name}
+              </h4>
+              <div className="grid md:grid-cols-2 gap-3">
+                {selectedWeek.workouts.map((workout) => (
+                  <div key={workout.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-gray-900">{workout.name}</h5>
+                      <Link
+                        href={`/workouts/${workout.id}/log`}
+                        className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700"
+                      >
+                        Start
+                      </Link>
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      {workout.workoutExercises.slice(0, 3).map((we) => (
+                        <div key={we.id}>
+                          {we.exercise.name} - {we.targetSets} × {we.targetReps}
+                        </div>
+                      ))}
+                      {workout.workoutExercises.length > 3 && (
+                        <div className="text-gray-500">
+                          +{workout.workoutExercises.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {!isLocked && isExpanded && (
