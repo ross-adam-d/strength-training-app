@@ -59,6 +59,23 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = macrocycleSchema.parse(body)
 
+    // Validate: Only one active training block allowed
+    if (data.status === 'active') {
+      const existingActive = await prisma.macrocycle.findFirst({
+        where: {
+          userId: session.user.id,
+          status: 'active',
+        },
+      })
+
+      if (existingActive) {
+        return NextResponse.json(
+          { error: 'You already have an active training block. Please set it to completed or paused before activating another.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const macrocycle = await prisma.macrocycle.create({
       data: {
         ...data,

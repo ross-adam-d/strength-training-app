@@ -6,9 +6,22 @@ import { prisma } from './prisma'
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: '/login',
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
   },
   providers: [
     CredentialsProvider({
@@ -18,25 +31,34 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        const startTime = Date.now()
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Invalid credentials')
         }
 
+        const dbStart = Date.now()
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
           },
         })
+        const dbTime = Date.now() - dbStart
 
         if (!user || !user.password) {
           throw new Error('Invalid credentials')
         }
 
+        const bcryptStart = Date.now()
         const isPasswordValid = await compare(credentials.password, user.password)
+        const bcryptTime = Date.now() - bcryptStart
 
         if (!isPasswordValid) {
           throw new Error('Invalid credentials')
         }
+
+        const totalTime = Date.now() - startTime
+        console.log(`[Auth Performance] Total: ${totalTime}ms | DB: ${dbTime}ms | bcrypt: ${bcryptTime}ms`)
 
         return {
           id: user.id,

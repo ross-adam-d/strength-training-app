@@ -69,6 +69,9 @@ model Exercise {
 }
 
 // Training cycles hierarchy
+// NOTE: Database has a partial unique index to ensure only one active macrocycle per user:
+//       CREATE UNIQUE INDEX unique_active_macrocycle_per_user ON macrocycles (user_id) WHERE status = 'active'
+//       See prisma/migrations/add_unique_active_macrocycle.sql
 model Macrocycle {
   id                String   @id @default(cuid())
   name              String

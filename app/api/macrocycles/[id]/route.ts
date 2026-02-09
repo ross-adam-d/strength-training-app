@@ -110,6 +110,26 @@ export async function PATCH(
     const body = await request.json()
     const data = macrocycleSchema.parse(body)
 
+    // Validate: Only one active training block allowed
+    if (data.status === 'active') {
+      const existingActive = await prisma.macrocycle.findFirst({
+        where: {
+          userId: session.user.id,
+          status: 'active',
+          NOT: {
+            id, // Exclude the current macrocycle being updated
+          },
+        },
+      })
+
+      if (existingActive) {
+        return NextResponse.json(
+          { error: 'You already have an active training block. Please set it to completed or paused before activating another.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const updateData: any = { ...data }
     if (data.startDate) updateData.startDate = new Date(data.startDate)
     if (data.endDate) updateData.endDate = new Date(data.endDate)
