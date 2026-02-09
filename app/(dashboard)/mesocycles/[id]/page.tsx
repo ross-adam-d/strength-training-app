@@ -265,6 +265,38 @@ export default function MesocycleDetailPage() {
     }
   }
 
+  async function handleMoveExercise(exerciseId: string, direction: 'up' | 'down', exercises: WorkoutExercise[]) {
+    const currentIndex = exercises.findIndex(e => e.id === exerciseId)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= exercises.length) return
+
+    const currentExercise = exercises[currentIndex]
+    const targetExercise = exercises[targetIndex]
+
+    try {
+      // Swap orderIndex values
+      await Promise.all([
+        fetch(`/api/workout-exercises/${currentExercise.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderIndex: targetExercise.orderIndex }),
+        }),
+        fetch(`/api/workout-exercises/${targetExercise.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderIndex: currentExercise.orderIndex }),
+        }),
+      ])
+
+      await fetchMesocycle()
+    } catch (error) {
+      console.error('Error reordering exercises:', error)
+      alert('Failed to reorder exercises')
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>
   }
@@ -592,6 +624,24 @@ export default function MesocycleDetailPage() {
                                       </div>
                                       {!isCompleted && (
                                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                          <div className="flex flex-col gap-0.5">
+                                            <button
+                                              className="p-1 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                              onClick={() => handleMoveExercise(we.id, 'up', workout.workoutExercises)}
+                                              disabled={index === 0}
+                                              title="Move up"
+                                            >
+                                              ⬆️
+                                            </button>
+                                            <button
+                                              className="p-1 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                              onClick={() => handleMoveExercise(we.id, 'down', workout.workoutExercises)}
+                                              disabled={index === workout.workoutExercises.length - 1}
+                                              title="Move down"
+                                            >
+                                              ⬇️
+                                            </button>
+                                          </div>
                                           <button
                                             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                                             onClick={() => startEditExercise(we)}
