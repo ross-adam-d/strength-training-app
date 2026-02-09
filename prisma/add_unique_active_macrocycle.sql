@@ -9,5 +9,5 @@
 --   Run this in the Supabase SQL editor
 
 CREATE UNIQUE INDEX IF NOT EXISTS unique_active_macrocycle_per_user
-ON macrocycles (user_id)
+ON macrocycles ("userId")
 WHERE status = 'active';
