@@ -132,18 +132,11 @@ export async function PATCH(
       )
     }
 
-    // Only allow updating day if workout hasn't been completed
-    if (workout.workoutLogs.length > 0) {
-      return NextResponse.json(
-        { error: 'Cannot update completed workout' },
-        { status: 400 }
-      )
-    }
-
+    // Allow updating day/date for any workout (even completed ones, per scope requirements)
     const updated = await prisma.workout.update({
       where: { id },
       data: {
-        dayOfWeek: dayOfWeek === null ? null : parseInt(dayOfWeek),
+        dayOfWeek: dayOfWeek === -1 || dayOfWeek === null ? null : parseInt(dayOfWeek),
       },
     })
 
