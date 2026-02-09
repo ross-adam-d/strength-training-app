@@ -35,7 +35,9 @@ export default function SetupPage() {
     setSubmitting(true)
     setError('')
     try {
-      const planData = forceStatus ? { ...plan, status: forceStatus } : plan
+      // Only use forceStatus if it's actually a string (not an event object from WizardLayout)
+      const shouldForceStatus = typeof forceStatus === 'string' ? forceStatus : undefined
+      const planData = shouldForceStatus ? { ...plan, status: shouldForceStatus } : plan
 
       const res = await fetch('/api/macrocycles/setup', {
         method: 'POST',
