@@ -43,7 +43,7 @@ export default function SetupPage() {
         body: JSON.stringify(planData),
       })
       if (!res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({ error: 'Unknown error' }))
         // Check if error is about existing active block
         if (data.error?.includes('already have an active training block')) {
           // Find the existing active block
@@ -60,13 +60,14 @@ export default function SetupPage() {
           }
         }
         setError(data.error || 'Failed to create training block')
+        setSubmitting(false)
         return
       }
       const { id } = await res.json()
       router.push(`/macrocycles/${id}`)
-    } catch {
+    } catch (error) {
+      console.error('Setup error:', error)
       setError('Network error. Please try again.')
-    } finally {
       setSubmitting(false)
     }
   }
@@ -74,18 +75,22 @@ export default function SetupPage() {
   async function handleMakeNewActive() {
     if (!existingActiveBlockId) return
     setSubmitting(true)
+    setShowActiveBlockWarning(false)
     try {
       // Pause the existing active block
-      await fetch(`/api/macrocycles/${existingActiveBlockId}`, {
+      const pauseRes = await fetch(`/api/macrocycles/${existingActiveBlockId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'paused' }),
       })
+      if (!pauseRes.ok) {
+        throw new Error('Failed to pause existing block')
+      }
       // Create new block as active
-      setShowActiveBlockWarning(false)
       await handleSubmit('active')
-    } catch {
-      setError('Failed to pause existing block')
+    } catch (error) {
+      console.error('Error making new block active:', error)
+      setError('Failed to pause existing block and create new one')
       setSubmitting(false)
     }
   }
@@ -96,38 +101,40 @@ export default function SetupPage() {
   }
 
   return (
-    <WizardLayout
-      step={step}
-      totalSteps={4}
-      onBack={() => setStep((s) => Math.max(1, s - 1))}
-      onNext={() => setStep((s) => Math.min(4, s + 1))}
-      onSubmit={handleSubmit}
-      canNext={step < 3 ? true : !!splitKey}
-      submitting={submitting}
-      error={error}
-    >
-      {step === 1 && <StepDuration totalWeeks={totalWeeks} onChange={setTotalWeeks} />}
-      {step === 2 && (
-        <StepRecovery
-          totalWeeks={totalWeeks}
-          buildWeeks={buildWeeks}
-          recoveryWeeks={recoveryWeeks}
-          onBuildChange={setBuildWeeks}
-          onRecoveryChange={setRecoveryWeeks}
-        />
-      )}
-      {step === 3 && (
-        <StepDaysAndSplit
-          trainingDays={trainingDays}
-          splitKey={splitKey}
-          onDaysChange={(d) => {
-            setTrainingDays(d)
-            setSplitKey('')
-          }}
-          onSplitChange={setSplitKey}
-        />
-      )}
-      {step === 4 && plan && <StepReview plan={plan} />}
+    <>
+      <WizardLayout
+        step={step}
+        totalSteps={4}
+        onBack={() => setStep((s) => Math.max(1, s - 1))}
+        onNext={() => setStep((s) => Math.min(4, s + 1))}
+        onSubmit={handleSubmit}
+        canNext={step < 3 ? true : !!splitKey}
+        submitting={submitting}
+        error={error}
+      >
+        {step === 1 && <StepDuration totalWeeks={totalWeeks} onChange={setTotalWeeks} />}
+        {step === 2 && (
+          <StepRecovery
+            totalWeeks={totalWeeks}
+            buildWeeks={buildWeeks}
+            recoveryWeeks={recoveryWeeks}
+            onBuildChange={setBuildWeeks}
+            onRecoveryChange={setRecoveryWeeks}
+          />
+        )}
+        {step === 3 && (
+          <StepDaysAndSplit
+            trainingDays={trainingDays}
+            splitKey={splitKey}
+            onDaysChange={(d) => {
+              setTrainingDays(d)
+              setSplitKey('')
+            }}
+            onSplitChange={setSplitKey}
+          />
+        )}
+        {step === 4 && plan && <StepReview plan={plan} />}
+      </WizardLayout>
 
       <Modal
         isOpen={showActiveBlockWarning}
@@ -159,6 +166,6 @@ export default function SetupPage() {
           </div>
         </div>
       </Modal>
-    </WizardLayout>
+    </>
   )
 }
