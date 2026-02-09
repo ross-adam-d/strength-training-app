@@ -10,6 +10,8 @@ const mesocycleSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   focus: z.string().optional(),
+  goal: z.string().optional(),
+  trainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
   macrocycleId: z.string(),
 })
 
@@ -46,6 +48,8 @@ export async function POST(request: Request) {
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         focus: data.focus,
+        goal: data.goal,
+        trainingDaysPerWeek: data.trainingDaysPerWeek,
         macrocycleId: data.macrocycleId,
       },
     })

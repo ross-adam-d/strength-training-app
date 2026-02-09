@@ -101,6 +101,8 @@ model Mesocycle {
   startDate         DateTime
   endDate           DateTime
   focus             String?  // hypertrophy, strength, power, deload, etc.
+  goal              String?  // Training goal: Hypertrophy, Strength, Power, Maintenance, or custom
+  trainingDaysPerWeek Int?   // Number of training days per week (e.g., 3, 4, 5, 6)
   status            String   @default("planned") // planned, active, completed
 
   macrocycleId      String
