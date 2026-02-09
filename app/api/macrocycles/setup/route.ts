@@ -39,7 +39,7 @@ const setupSchema = z.object({
   name: z.string().min(1),
   startDate: z.string(),
   endDate: z.string(),
-  status: z.enum(['active', 'completed', 'paused']).default('active'),
+  status: z.enum(['planned', 'active', 'completed', 'paused']).default('active'),
   mesocycles: z.array(mesocycleSchema),
 })
 
