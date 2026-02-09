@@ -135,6 +135,29 @@ export default function MacrocycleDetailPage() {
     }
   }
 
+  async function handleStatusChange(newStatus: 'planned' | 'active' | 'paused' | 'completed') {
+    try {
+      const response = await fetch(`/api/macrocycles/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (response.ok) {
+        await fetchMacrocycle()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to update status')
+        // Revert the dropdown on error
+        await fetchMacrocycle()
+      }
+    } catch (error) {
+      console.error('Error updating status:', error)
+      alert('Failed to update status')
+      await fetchMacrocycle()
+    }
+  }
+
   async function handleUpdatePhaseGoal(mesocycleId: string, goal: string) {
     try {
       const response = await fetch(`/api/mesocycles/${mesocycleId}`, {
@@ -270,18 +293,17 @@ export default function MacrocycleDetailPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
-              <span
-                className={`px-3 py-1 text-sm rounded-full ${
-                  macrocycle.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : macrocycle.status === 'completed'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {macrocycle.status}
-              </span>
+            <div className="flex gap-2 items-center">
+              <Select
+                options={[
+                  { value: 'planned', label: 'Planned' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'paused', label: 'Paused' },
+                  { value: 'completed', label: 'Completed' },
+                ]}
+                value={macrocycle.status}
+                onChange={(e) => handleStatusChange(e.target.value as 'planned' | 'active' | 'paused' | 'completed')}
+              />
               <Button variant="danger" size="sm" onClick={handleDelete}>
                 Delete
               </Button>
