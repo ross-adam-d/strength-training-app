@@ -142,13 +142,6 @@ export default function MesocycleDetailPage() {
   const [pinCount, setPinCount] = useState(0)
   const [pinDayName, setPinDayName] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [creatingNewExercise, setCreatingNewExercise] = useState(false)
-  const [newExerciseForm, setNewExerciseForm] = useState({
-    name: '',
-    description: '',
-    muscleGroups: '',
-    equipment: '',
-  })
   const [exerciseForm, setExerciseForm] = useState<{
     exerciseId: string
     targetSets: number
@@ -376,100 +369,9 @@ export default function MesocycleDetailPage() {
     })
   }
 
-  async function handleCreateCustomExercise(workoutId: string) {
-    // Validate new exercise form
-    if (!newExerciseForm.name.trim()) {
-      setSaveError('Exercise name is required')
-      return
-    }
-
-    const muscleGroupsArray = newExerciseForm.muscleGroups
-      .split(',')
-      .map((mg) => mg.trim())
-      .filter((mg) => mg.length > 0)
-
-    const equipmentArray = newExerciseForm.equipment
-      .split(',')
-      .map((eq) => eq.trim())
-      .filter((eq) => eq.length > 0)
-
-    if (muscleGroupsArray.length === 0) {
-      setSaveError('At least one muscle group is required')
-      return
-    }
-
-    if (equipmentArray.length === 0) {
-      setSaveError('At least one equipment type is required')
-      return
-    }
-
-    try {
-      // Create the custom exercise
-      const exerciseResponse = await fetch('/api/exercises', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newExerciseForm.name.trim(),
-          description: newExerciseForm.description.trim() || undefined,
-          muscleGroups: muscleGroupsArray,
-          equipment: equipmentArray,
-          isPublic: false,
-        }),
-      })
-
-      if (!exerciseResponse.ok) {
-        const data = await exerciseResponse.json()
-        setSaveError(data.error || 'Failed to create exercise')
-        return
-      }
-
-      const newExercise = await exerciseResponse.json()
-
-      // Refresh exercises list
-      await fetchExercises()
-
-      // Now add the exercise to the workout
-      const workoutExerciseResponse = await fetch('/api/workout-exercises', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workoutId,
-          exerciseId: newExercise.id,
-          targetSets: exerciseForm.targetSets,
-          targetReps: exerciseForm.targetReps || null,
-          targetRir: exerciseForm.targetRir ?? null,
-          tempo: exerciseForm.tempo || null,
-          restPeriod: exerciseForm.restPeriod ?? null,
-          notes: exerciseForm.notes || null,
-        }),
-      })
-
-      if (!workoutExerciseResponse.ok) {
-        const data = await workoutExerciseResponse.json()
-        setSaveError(data.error || 'Failed to add exercise to workout')
-        return
-      }
-
-      // Reset forms and states
-      setAddingToWorkout(null)
-      setCreatingNewExercise(false)
-      setNewExerciseForm({ name: '', description: '', muscleGroups: '', equipment: '' })
-      setSaveError(null)
-      await fetchMesocycle()
-    } catch (error) {
-      console.error('Error creating custom exercise:', error)
-      setSaveError('Failed to create custom exercise')
-    }
-  }
-
   async function handleAddExercise(workoutId: string) {
-    if (creatingNewExercise) {
-      await handleCreateCustomExercise(workoutId)
-      return
-    }
-
     if (!exerciseForm.exerciseId) {
-      setSaveError('Please select an exercise')
+      alert('Please select an exercise')
       return
     }
 
@@ -485,15 +387,14 @@ export default function MesocycleDetailPage() {
 
       if (response.ok) {
         setAddingToWorkout(null)
-        setSaveError(null)
         await fetchMesocycle()
       } else {
         const data = await response.json()
-        setSaveError(data.error || 'Failed to add exercise')
+        alert(data.error || 'Failed to add exercise')
       }
     } catch (error) {
       console.error('Error adding exercise:', error)
-      setSaveError('Failed to add exercise')
+      alert('Failed to add exercise')
     }
   }
 
@@ -1155,100 +1056,22 @@ export default function MesocycleDetailPage() {
                               ))}
                             {addingToWorkout === workout.id && (
                               <div className="p-3 bg-green-50 rounded-lg space-y-3" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-between">
-                                  <h5 className="font-medium text-gray-900">Add Exercise</h5>
-                                  <button
-                                    type="button"
-                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                    onClick={() => {
-                                      setCreatingNewExercise(!creatingNewExercise)
-                                      setSaveError(null)
-                                    }}
-                                  >
-                                    {creatingNewExercise ? 'Select from Library' : '+ Create Custom Exercise'}
-                                  </button>
+                                <h5 className="font-medium text-gray-900">Add Exercise</h5>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Exercise
+                                  </label>
+                                  <Select
+                                    options={allExercises.map((ex) => ({
+                                      value: ex.id,
+                                      label: ex.name,
+                                    }))}
+                                    value={exerciseForm.exerciseId}
+                                    onChange={(e) =>
+                                      setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })
+                                    }
+                                  />
                                 </div>
-                                {saveError && (
-                                  <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                                    {saveError}
-                                  </div>
-                                )}
-                                {creatingNewExercise ? (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Exercise Name *
-                                      </label>
-                                      <input
-                                        type="text"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        placeholder="e.g. Dumbbell Press"
-                                        value={newExerciseForm.name}
-                                        onChange={(e) =>
-                                          setNewExerciseForm({ ...newExerciseForm, name: e.target.value })
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description (optional)
-                                      </label>
-                                      <textarea
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        rows={2}
-                                        placeholder="Brief description of the exercise"
-                                        value={newExerciseForm.description}
-                                        onChange={(e) =>
-                                          setNewExerciseForm({ ...newExerciseForm, description: e.target.value })
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Muscle Groups * (comma-separated)
-                                      </label>
-                                      <input
-                                        type="text"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        placeholder="e.g. chest, shoulders, triceps"
-                                        value={newExerciseForm.muscleGroups}
-                                        onChange={(e) =>
-                                          setNewExerciseForm({ ...newExerciseForm, muscleGroups: e.target.value })
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Equipment * (comma-separated)
-                                      </label>
-                                      <input
-                                        type="text"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        placeholder="e.g. dumbbells, bench"
-                                        value={newExerciseForm.equipment}
-                                        onChange={(e) =>
-                                          setNewExerciseForm({ ...newExerciseForm, equipment: e.target.value })
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                      Exercise
-                                    </label>
-                                    <Select
-                                      options={allExercises.map((ex) => ({
-                                        value: ex.id,
-                                        label: ex.name,
-                                      }))}
-                                      value={exerciseForm.exerciseId}
-                                      onChange={(e) =>
-                                        setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })
-                                      }
-                                    />
-                                  </div>
-                                )}
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1352,12 +1175,7 @@ export default function MesocycleDetailPage() {
                                   <Button
                                     size="sm"
                                     variant="secondary"
-                                    onClick={() => {
-                                      setAddingToWorkout(null)
-                                      setCreatingNewExercise(false)
-                                      setNewExerciseForm({ name: '', description: '', muscleGroups: '', equipment: '' })
-                                      setSaveError(null)
-                                    }}
+                                    onClick={() => setAddingToWorkout(null)}
                                   >
                                     Cancel
                                   </Button>
