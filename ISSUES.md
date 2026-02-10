@@ -2,22 +2,24 @@
 
 ## 🐛 Critical Issues
 
-### Custom Exercise Creation - Mobile Broken (Feb 11, 2026)
+### Custom Exercise Creation - UI Issues (Feb 11, 2026)
 
-**Status:** 🔴 BLOCKING mobile users from creating custom exercises
+**Status:** 🟡 UI improvement needed
 
 **Affected Pages:**
 - Phase Overview (`/mesocycles/[id]`) → Add Exercise → Create Custom Exercise
 
 **Issues:**
-1. **Input fields not editable on mobile**
-   - Form displays but cannot type in text inputs or interact with checkboxes
-   - Works perfectly on desktop/laptop
-   - Likely Samsung Chrome input visibility issue
+1. **Poor discoverability**
+   - Form is expandable but requires clicking small arrow to the right
+   - Arrow is not obvious/easy to miss on mobile
+   - Users may not realize the form is there
 
-2. **Wrong form preference**
-   - Current: Compact inline form (blue background, small text, nested in workout card)
-   - Preferred: Exercise Library modal form (proven mobile compatibility, better UX)
+2. **Poor visibility - White background**
+   - Form uses white/light background making text fields hard to see
+   - Input fields blend into background
+   - Difficult to read and interact with on mobile
+   - Needs better contrast and visual distinction
 
 3. **Missing in exercise edit workflow**
    - "Create Custom Exercise" only appears when adding new exercise
@@ -25,47 +27,66 @@
    - Use case: Replace an existing exercise with a new custom one
 
 **Impact:**
-- Mobile users cannot create custom exercises from Phase Overview
-- Desktop users can, but UX is cramped
-- Workaround: Navigate to Exercise Library page to create (works on mobile)
+- Form is functional but hard to discover (small arrow)
+- Poor visibility makes it difficult to use (white background)
+- Missing from exercise edit workflow
 
 **Proposed Solution:**
 
-1. **Extract Exercise Library form to reusable component**
+1. **Improve inline form UI visibility**
    ```
-   components/CustomExerciseModal.tsx
-   - Props: isOpen, onClose, onExerciseCreated(exerciseId)
-   - Reuse Exercise Library validation logic
-   - Mobile-tested and proven to work
+   Phase Overview (mesocycles/[id]/page.tsx, lines ~1089-1200):
+
+   Current issues:
+   - White background (bg-white) makes fields hard to see
+   - Small checkboxes with light styling
+   - May need larger arrow or auto-expand behavior
+
+   Improvements needed:
+   - Change background to darker color (bg-gray-100 or bg-blue-50)
+   - Increase input field contrast (darker borders, bg-white for inputs)
+   - Larger, more visible expand/collapse indicator
+   - Consider auto-expanding when "Create Custom Exercise" selected
+   - Better label contrast and sizing for mobile
    ```
 
-2. **Replace inline form with modal approach**
+2. **Add to exercise edit dropdown**
    ```
-   Phase Overview (mesocycles/[id]/page.tsx):
-   - Remove inline custom exercise form
-   - Import <CustomExerciseModal>
-   - Open modal when "Create Custom Exercise" selected
-   - Auto-select returned exercise ID in dropdown
+   When editing existing exercise (Phase Overview):
+   - Find exercise select dropdown in edit mode
+   - Add "➕ Create Custom Exercise..." option
+   - Show same inline form when selected
+   - Auto-select newly created exercise in dropdown
    ```
 
-3. **Add to exercise edit dropdown**
-   ```
-   When editing existing exercise:
-   - Add "Create Custom Exercise" to exercise selection dropdown
-   - Same modal-based workflow
-   ```
+**Specific UI Changes:**
+
+```tsx
+// Current inline form (lines ~1089-1200):
+<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+  // Nested white background checkboxes:
+  <div className="... bg-white"> // ← PROBLEM: Hard to see
+
+// Proposed changes:
+<div className="p-3 bg-gray-50 border border-gray-300 rounded-lg space-y-3">
+  // Make input fields stand out:
+  <input className="... bg-white border-2 border-gray-400 ...">
+
+  // Checkbox containers with better contrast:
+  <div className="... bg-gray-100 border-2 border-gray-300">
+    <label className="... text-gray-900 font-medium">
+```
 
 **Benefits:**
-- ✅ Proven mobile compatibility
-- ✅ Consistent UX across Exercise Library and Phase Overview
-- ✅ Larger touch targets and better accessibility
-- ✅ Full validation from Exercise Library form
+- ✅ Simpler implementation (no component extraction needed)
+- ✅ Improved visibility on mobile and desktop
+- ✅ Better discoverability with darker backgrounds
 - ✅ Works in both add and edit workflows
+- ✅ Maintains existing validation logic
 
-**Estimated Effort:** 3-4 hours
-- Extract modal component: 1-2h
-- Replace inline form: 1h
-- Add to edit workflow: 1h
+**Estimated Effort:** 1-2 hours
+- Improve inline form styling: 45min
+- Add to edit workflow: 45min
 - Testing: 30min
 
 ---
