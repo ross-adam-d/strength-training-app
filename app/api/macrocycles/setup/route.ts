@@ -39,7 +39,7 @@ const setupSchema = z.object({
   name: z.string().min(1),
   startDate: z.string(),
   endDate: z.string(),
-  status: z.enum(['active', 'completed', 'paused']).default('active'),
+  status: z.enum(['planned', 'active', 'completed', 'paused']).default('active'),
   mesocycles: z.array(mesocycleSchema),
 })
 
@@ -52,6 +52,23 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const data = setupSchema.parse(body)
+
+    // Validate: Only one active training block allowed
+    if (data.status === 'active') {
+      const existingActive = await prisma.macrocycle.findFirst({
+        where: {
+          userId: session.user.id,
+          status: 'active',
+        },
+      })
+
+      if (existingActive) {
+        return NextResponse.json(
+          { error: 'You already have an active training block. Please set it to completed or paused before creating a new active block.' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Build exercise name → id map
     const exercises = await prisma.exercise.findMany({

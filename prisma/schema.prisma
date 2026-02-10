@@ -69,6 +69,9 @@ model Exercise {
 }
 
 // Training cycles hierarchy
+// NOTE: Database has a partial unique index to ensure only one active macrocycle per user:
+//       CREATE UNIQUE INDEX unique_active_macrocycle_per_user ON macrocycles (user_id) WHERE status = 'active'
+//       See prisma/migrations/add_unique_active_macrocycle.sql
 model Macrocycle {
   id                String   @id @default(cuid())
   name              String
@@ -98,6 +101,9 @@ model Mesocycle {
   startDate         DateTime
   endDate           DateTime
   focus             String?  // hypertrophy, strength, power, deload, etc.
+  goal              String?  // Training goal: Hypertrophy, Strength, Power, Maintenance, or custom
+  trainingDaysPerWeek Int?   // Number of training days per week (e.g., 3, 4, 5, 6)
+  warmupNotes       String?  // Warm-up routine/notes for the entire phase
   status            String   @default("planned") // planned, active, completed
 
   macrocycleId      String
@@ -139,6 +145,7 @@ model Workout {
   description       String?
   dayOfWeek         Int?     // 0-6, Sunday to Saturday
   estimatedDuration Int?     // in minutes
+  warmupNotes       String?  // Warm-up routine/notes for this specific workout
   notes             String?
 
   microcycleId      String
