@@ -11,6 +11,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -418,10 +419,10 @@ export default function MesocycleDetailPage() {
         body: JSON.stringify({
           exerciseId: exerciseForm.exerciseId,
           targetSets: exerciseForm.targetSets,
-          targetReps: exerciseForm.targetReps,
-          targetRir: exerciseForm.targetRir,
+          targetReps: exerciseForm.targetReps || null,
+          targetRir: exerciseForm.targetRir ?? null,
           tempo: exerciseForm.tempo || null,
-          restPeriod: exerciseForm.restPeriod,
+          restPeriod: exerciseForm.restPeriod ?? null,
           notes: exerciseForm.notes || null,
         }),
       })
@@ -463,6 +464,13 @@ export default function MesocycleDetailPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms for better touch scrolling
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
