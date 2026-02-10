@@ -32,6 +32,7 @@ interface Workout {
   name: string
   dayOfWeek: number | null
   estimatedDuration: number | null
+  warmupNotes: string | null
   workoutExercises: WorkoutExercise[]
   workoutLogs: {
     id: string
@@ -54,6 +55,7 @@ interface Mesocycle {
   focus: string | null
   goal: string | null
   trainingDaysPerWeek: number | null
+  warmupNotes: string | null
   startDate: string
   endDate: string
   status: string
@@ -75,6 +77,10 @@ export default function MesocycleDetailPage() {
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [editingExercise, setEditingExercise] = useState<string | null>(null)
   const [addingToWorkout, setAddingToWorkout] = useState<string | null>(null)
+  const [editingMesocycleWarmup, setEditingMesocycleWarmup] = useState(false)
+  const [mesocycleWarmupText, setMesocycleWarmupText] = useState('')
+  const [editingWorkoutWarmup, setEditingWorkoutWarmup] = useState<string | null>(null)
+  const [workoutWarmupText, setWorkoutWarmupText] = useState('')
   const [exerciseForm, setExerciseForm] = useState<{
     exerciseId: string
     targetSets: number
@@ -156,6 +162,48 @@ export default function MesocycleDetailPage() {
     } catch (error) {
       console.error('Error updating workout day:', error)
       alert('Failed to update workout day')
+    }
+  }
+
+  async function handleSaveMesocycleWarmup() {
+    try {
+      const response = await fetch(`/api/mesocycles/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ warmupNotes: mesocycleWarmupText }),
+      })
+
+      if (response.ok) {
+        setEditingMesocycleWarmup(false)
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to update warmup notes')
+      }
+    } catch (error) {
+      console.error('Error updating warmup notes:', error)
+      alert('Failed to update warmup notes')
+    }
+  }
+
+  async function handleSaveWorkoutWarmup(workoutId: string) {
+    try {
+      const response = await fetch(`/api/workouts/${workoutId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ warmupNotes: workoutWarmupText }),
+      })
+
+      if (response.ok) {
+        setEditingWorkoutWarmup(null)
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to update workout warmup notes')
+      }
+    } catch (error) {
+      console.error('Error updating workout warmup notes:', error)
+      alert('Failed to update workout warmup notes')
     }
   }
 
@@ -335,6 +383,52 @@ export default function MesocycleDetailPage() {
             )}
           </p>
         )}
+
+        {/* Phase-wide Warmup Section */}
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-900">Phase Warmup Routine</h3>
+            {mesocycle.status === 'planned' && !editingMesocycleWarmup && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingMesocycleWarmup(true)
+                  setMesocycleWarmupText(mesocycle.warmupNotes || '')
+                }}
+              >
+                {mesocycle.warmupNotes ? 'Edit' : 'Add'}
+              </Button>
+            )}
+          </div>
+          {editingMesocycleWarmup ? (
+            <div className="space-y-2">
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                rows={3}
+                placeholder="Describe the warmup routine for this phase..."
+                value={mesocycleWarmupText}
+                onChange={(e) => setMesocycleWarmupText(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveMesocycleWarmup}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setEditingMesocycleWarmup(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-700">
+              {mesocycle.warmupNotes || 'No warmup routine specified for this phase.'}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Horizontal Week Navigation */}
@@ -458,6 +552,53 @@ export default function MesocycleDetailPage() {
 
                       {isExpanded && (
                         <div className="mt-4 pt-4 border-t">
+                          {/* Workout-specific Warmup */}
+                          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium text-gray-900">Workout Warmup</h4>
+                              {!isCompleted && editingWorkoutWarmup !== workout.id && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingWorkoutWarmup(workout.id)
+                                    setWorkoutWarmupText(workout.warmupNotes || '')
+                                  }}
+                                >
+                                  {workout.warmupNotes ? 'Edit' : 'Add'}
+                                </Button>
+                              )}
+                            </div>
+                            {editingWorkoutWarmup === workout.id ? (
+                              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                                <textarea
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  rows={2}
+                                  placeholder="Specific warmup for this workout..."
+                                  value={workoutWarmupText}
+                                  onChange={(e) => setWorkoutWarmupText(e.target.value)}
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => handleSaveWorkoutWarmup(workout.id)}>
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setEditingWorkoutWarmup(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-700">
+                                {workout.warmupNotes || 'Use phase warmup routine or add workout-specific warmup.'}
+                              </p>
+                            )}
+                          </div>
+
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-medium text-gray-900">Exercises</h4>
                             {!isCompleted && (
