@@ -30,8 +30,30 @@ const MUSCLE_GROUPS = [
   { value: 'forearms', label: 'Forearms' },
 ]
 
+const MUSCLE_GROUP_OPTIONS = [
+  { value: 'chest', label: 'Chest' },
+  { value: 'back', label: 'Back' },
+  { value: 'legs', label: 'Legs' },
+  { value: 'shoulders', label: 'Shoulders' },
+  { value: 'biceps', label: 'Biceps' },
+  { value: 'triceps', label: 'Triceps' },
+  { value: 'core', label: 'Core' },
+  { value: 'glutes', label: 'Glutes' },
+  { value: 'forearms', label: 'Forearms' },
+]
+
 const EQUIPMENT_OPTIONS = [
   { value: '', label: 'All Equipment' },
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'machine', label: 'Machine' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'bodyweight', label: 'Bodyweight' },
+  { value: 'kettlebell', label: 'Kettlebell' },
+  { value: 'resistance-band', label: 'Resistance Band' },
+]
+
+const EQUIPMENT_CREATE_OPTIONS = [
   { value: 'barbell', label: 'Barbell' },
   { value: 'dumbbell', label: 'Dumbbell' },
   { value: 'machine', label: 'Machine' },
@@ -49,6 +71,12 @@ export default function ExercisesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [muscleFilter, setMuscleFilter] = useState('')
   const [equipmentFilter, setEquipmentFilter] = useState('')
+
+  // Form state for creating exercises
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([])
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
+  const [formError, setFormError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     fetchExercises()
@@ -93,22 +121,59 @@ export default function ExercisesPage() {
     setFilteredExercises(filtered)
   }
 
+  function toggleMuscleGroup(value: string) {
+    setSelectedMuscleGroups((prev) =>
+      prev.includes(value)
+        ? prev.filter((m) => m !== value)
+        : [...prev, value]
+    )
+    setFormError('') // Clear error when user makes changes
+  }
+
+  function toggleEquipment(value: string) {
+    setSelectedEquipment((prev) =>
+      prev.includes(value)
+        ? prev.filter((e) => e !== value)
+        : [...prev, value]
+    )
+    setFormError('') // Clear error when user makes changes
+  }
+
+  function resetForm() {
+    setSelectedMuscleGroups([])
+    setSelectedEquipment([])
+    setFormError('')
+    setIsSubmitting(false)
+  }
+
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
+    setFormError('')
 
-    const muscleGroups = formData.get('muscleGroups') as string
-    const equipment = formData.get('equipment') as string
+    // Frontend validation
+    if (selectedMuscleGroups.length === 0) {
+      setFormError('Please select at least one muscle group')
+      return
+    }
+
+    if (selectedEquipment.length === 0) {
+      setFormError('Please select at least one equipment type')
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
 
     const data = {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
-      muscleGroups: muscleGroups.split(',').map((m) => m.trim()).filter(Boolean),
-      equipment: equipment.split(',').map((e) => e.trim()).filter(Boolean),
+      muscleGroups: selectedMuscleGroups,
+      equipment: selectedEquipment,
       videoUrl: formData.get('videoUrl') as string,
       imageUrl: formData.get('imageUrl') as string,
       isPublic: formData.get('isPublic') === 'on',
     }
+
+    setIsSubmitting(true)
 
     try {
       const response = await fetch('/api/exercises', {
@@ -119,10 +184,17 @@ export default function ExercisesPage() {
 
       if (response.ok) {
         setIsModalOpen(false)
+        resetForm()
         fetchExercises()
+      } else {
+        const errorData = await response.json()
+        setFormError(errorData.error || 'Failed to create exercise')
       }
     } catch (error) {
       console.error('Error creating exercise:', error)
+      setFormError('An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -137,7 +209,10 @@ export default function ExercisesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Exercise Library</h1>
           <p className="text-gray-600 mt-2">Browse and manage your exercises</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>Create Exercise</Button>
+        <Button onClick={() => {
+          setIsModalOpen(true)
+          resetForm()
+        }}>Create Exercise</Button>
       </div>
 
       <Card className="mb-6">
@@ -231,11 +306,20 @@ export default function ExercisesPage() {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          resetForm()
+        }}
         title="Create New Exercise"
         size="lg"
       >
         <form onSubmit={handleCreate} className="space-y-4">
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{formError}</p>
+            </div>
+          )}
+
           <Input
             label="Exercise Name"
             name="name"
@@ -255,19 +339,59 @@ export default function ExercisesPage() {
             />
           </div>
 
-          <Input
-            label="Muscle Groups (comma-separated)"
-            name="muscleGroups"
-            required
-            placeholder="e.g., chest, triceps, shoulders"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Muscle Groups <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+              {MUSCLE_GROUP_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedMuscleGroups.includes(option.value)}
+                    onChange={() => toggleMuscleGroup(option.value)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedMuscleGroups.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Selected: {selectedMuscleGroups.join(', ')}
+              </p>
+            )}
+          </div>
 
-          <Input
-            label="Equipment (comma-separated)"
-            name="equipment"
-            required
-            placeholder="e.g., barbell, bench"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Equipment <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+              {EQUIPMENT_CREATE_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedEquipment.includes(option.value)}
+                    onChange={() => toggleEquipment(option.value)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedEquipment.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Selected: {selectedEquipment.join(', ')}
+              </p>
+            )}
+          </div>
 
           <Input
             label="Video URL (optional)"
@@ -294,11 +418,17 @@ export default function ExercisesPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false)
+                resetForm()
+              }}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create'}
+            </Button>
           </div>
         </form>
       </Modal>

@@ -87,6 +87,28 @@ interface Mesocycle {
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const MUSCLE_GROUP_OPTIONS = [
+  { value: 'chest', label: 'Chest' },
+  { value: 'back', label: 'Back' },
+  { value: 'legs', label: 'Legs' },
+  { value: 'shoulders', label: 'Shoulders' },
+  { value: 'biceps', label: 'Biceps' },
+  { value: 'triceps', label: 'Triceps' },
+  { value: 'core', label: 'Core' },
+  { value: 'glutes', label: 'Glutes' },
+  { value: 'forearms', label: 'Forearms' },
+]
+
+const EQUIPMENT_OPTIONS = [
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'machine', label: 'Machine' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'bodyweight', label: 'Bodyweight' },
+  { value: 'kettlebell', label: 'Kettlebell' },
+  { value: 'resistance-band', label: 'Resistance Band' },
+]
+
 interface SortableWorkoutCardProps {
   id: string
   children: React.ReactNode
@@ -159,6 +181,15 @@ export default function MesocycleDetailPage() {
     restPeriod: 90,
     notes: '',
   })
+
+  // Custom exercise creation state
+  const [creatingCustomExercise, setCreatingCustomExercise] = useState(false)
+  const [customExerciseName, setCustomExerciseName] = useState('')
+  const [customExerciseDescription, setCustomExerciseDescription] = useState('')
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([])
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
+  const [customExerciseError, setCustomExerciseError] = useState('')
+  const [isCreatingExercise, setIsCreatingExercise] = useState(false)
 
   async function fetchMesocycle() {
     try {
@@ -367,6 +398,104 @@ export default function MesocycleDetailPage() {
       restPeriod: 90,
       notes: '',
     })
+    resetCustomExerciseForm()
+  }
+
+  function resetCustomExerciseForm() {
+    setCreatingCustomExercise(false)
+    setCustomExerciseName('')
+    setCustomExerciseDescription('')
+    setSelectedMuscleGroups([])
+    setSelectedEquipment([])
+    setCustomExerciseError('')
+    setIsCreatingExercise(false)
+  }
+
+  function toggleMuscleGroup(value: string) {
+    setSelectedMuscleGroups((prev) =>
+      prev.includes(value)
+        ? prev.filter((m) => m !== value)
+        : [...prev, value]
+    )
+    setCustomExerciseError('')
+  }
+
+  function toggleEquipment(value: string) {
+    setSelectedEquipment((prev) =>
+      prev.includes(value)
+        ? prev.filter((e) => e !== value)
+        : [...prev, value]
+    )
+    setCustomExerciseError('')
+  }
+
+  function handleExerciseSelectChange(value: string) {
+    if (value === '__CREATE_CUSTOM__') {
+      setCreatingCustomExercise(true)
+      setExerciseForm({ ...exerciseForm, exerciseId: '' })
+    } else {
+      setCreatingCustomExercise(false)
+      setExerciseForm({ ...exerciseForm, exerciseId: value })
+    }
+  }
+
+  async function handleCreateCustomExercise() {
+    setCustomExerciseError('')
+
+    // Validation
+    if (!customExerciseName.trim()) {
+      setCustomExerciseError('Exercise name is required')
+      return
+    }
+
+    if (selectedMuscleGroups.length === 0) {
+      setCustomExerciseError('Please select at least one muscle group')
+      return
+    }
+
+    if (selectedEquipment.length === 0) {
+      setCustomExerciseError('Please select at least one equipment type')
+      return
+    }
+
+    setIsCreatingExercise(true)
+
+    try {
+      const response = await fetch('/api/exercises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: customExerciseName.trim(),
+          description: customExerciseDescription.trim() || undefined,
+          muscleGroups: selectedMuscleGroups,
+          equipment: selectedEquipment,
+          videoUrl: '',
+          imageUrl: '',
+          isPublic: false,
+        }),
+      })
+
+      if (response.ok) {
+        const newExercise = await response.json()
+
+        // Refresh exercises list
+        await fetchExercises()
+
+        // Auto-select the newly created exercise
+        setExerciseForm({ ...exerciseForm, exerciseId: newExercise.id })
+
+        // Reset custom exercise form
+        resetCustomExerciseForm()
+      } else {
+        const errorData = await response.json()
+        setCustomExerciseError(errorData.error || 'Failed to create exercise')
+      }
+    } catch (error) {
+      console.error('Error creating custom exercise:', error)
+      setCustomExerciseError('An unexpected error occurred')
+    } finally {
+      setIsCreatingExercise(false)
+    }
   }
 
   async function handleAddExercise(workoutId: string) {
@@ -1062,16 +1191,133 @@ export default function MesocycleDetailPage() {
                                     Exercise
                                   </label>
                                   <Select
-                                    options={allExercises.map((ex) => ({
-                                      value: ex.id,
-                                      label: ex.name,
-                                    }))}
-                                    value={exerciseForm.exerciseId}
-                                    onChange={(e) =>
-                                      setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })
-                                    }
+                                    options={[
+                                      { value: '__CREATE_CUSTOM__', label: '➕ Create Custom Exercise...' },
+                                      ...allExercises.map((ex) => ({
+                                        value: ex.id,
+                                        label: ex.name,
+                                      }))
+                                    ]}
+                                    value={creatingCustomExercise ? '__CREATE_CUSTOM__' : exerciseForm.exerciseId}
+                                    onChange={(e) => handleExerciseSelectChange(e.target.value)}
                                   />
                                 </div>
+
+                                {creatingCustomExercise && (
+                                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                                    <h6 className="text-sm font-semibold text-gray-900">Create Custom Exercise</h6>
+
+                                    {customExerciseError && (
+                                      <div className="p-2 bg-red-50 border border-red-200 rounded">
+                                        <p className="text-xs text-red-600">{customExerciseError}</p>
+                                      </div>
+                                    )}
+
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        Exercise Name <span className="text-red-500">*</span>
+                                      </label>
+                                      <input
+                                        type="text"
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                                        placeholder="e.g., Barbell Bench Press"
+                                        value={customExerciseName}
+                                        onChange={(e) => {
+                                          setCustomExerciseName(e.target.value)
+                                          setCustomExerciseError('')
+                                        }}
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        Description (optional)
+                                      </label>
+                                      <textarea
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                                        rows={2}
+                                        placeholder="Describe the exercise..."
+                                        value={customExerciseDescription}
+                                        onChange={(e) => setCustomExerciseDescription(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        Muscle Groups <span className="text-red-500">*</span>
+                                      </label>
+                                      <div className="grid grid-cols-2 gap-1 p-2 border border-gray-300 rounded max-h-32 overflow-y-auto bg-white">
+                                        {MUSCLE_GROUP_OPTIONS.map((option) => (
+                                          <label
+                                            key={option.value}
+                                            className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={selectedMuscleGroups.includes(option.value)}
+                                              onChange={() => toggleMuscleGroup(option.value)}
+                                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <span className="text-gray-700">{option.label}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                      {selectedMuscleGroups.length > 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Selected: {selectedMuscleGroups.join(', ')}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        Equipment <span className="text-red-500">*</span>
+                                      </label>
+                                      <div className="grid grid-cols-2 gap-1 p-2 border border-gray-300 rounded max-h-32 overflow-y-auto bg-white">
+                                        {EQUIPMENT_OPTIONS.map((option) => (
+                                          <label
+                                            key={option.value}
+                                            className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={selectedEquipment.includes(option.value)}
+                                              onChange={() => toggleEquipment(option.value)}
+                                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <span className="text-gray-700">{option.label}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                      {selectedEquipment.length > 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Selected: {selectedEquipment.join(', ')}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={handleCreateCustomExercise}
+                                        disabled={isCreatingExercise}
+                                      >
+                                        {isCreatingExercise ? 'Creating...' : 'Create & Use Exercise'}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={resetCustomExerciseForm}
+                                        disabled={isCreatingExercise}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {!creatingCustomExercise && exerciseForm.exerciseId && (
+                                  <>
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1175,11 +1421,16 @@ export default function MesocycleDetailPage() {
                                   <Button
                                     size="sm"
                                     variant="secondary"
-                                    onClick={() => setAddingToWorkout(null)}
+                                    onClick={() => {
+                                      setAddingToWorkout(null)
+                                      resetCustomExerciseForm()
+                                    }}
                                   >
                                     Cancel
                                   </Button>
                                 </div>
+                                </>
+                                )}
                               </div>
                             )}
                           </div>
