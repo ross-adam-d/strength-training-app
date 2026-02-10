@@ -120,7 +120,7 @@ Next.js web application for tracking strength training using hierarchical period
 
 ## Current Development Phase
 
-### 🎯 Phase 12: Navigation & UX Refinements (IN PROGRESS - 75% Complete)
+### ✅ Phase 12: Navigation & UX Refinements (COMPLETED)
 
 **Completed in Session 6 (Feb 6, 2026):**
 - ✅ Collapsible workout day headers in microcycle view
@@ -136,10 +136,26 @@ Next.js web application for tracking strength training using hierarchical period
 - ✅ Add workout day editing for uncompleted workouts
 - ✅ Improve mobile UX for workout logging
 
-**Remaining:**
-- [ ] Add loading states and error boundaries
+**Deferred:**
+- Loading states and error boundaries (moved to Phase 13)
 
-### 🚀 Phase 13: Intelligent Training Features (PLANNED)
+### 🎯 Phase 13: Warmup & Workout Reordering (IN PROGRESS - 67% Complete)
+
+**Completed in Session 9 (Feb 10, 2026):**
+- ✅ Warmup section UI with dark theme
+- ✅ Phase-wide warmup notes (mesocycle level)
+- ✅ Workout-specific warmup notes
+- ✅ Pin warmup to same-day workouts functionality
+- ✅ Warmup display on workout logging page
+- ✅ Drag & drop workout reordering (desktop)
+- ✅ Added orderIndex to Workout schema
+- ✅ Exercise edit validation fixes
+
+**Remaining:**
+- [ ] Mobile drag & drop support (deferred)
+- [ ] "Apply to Rest of Phase" functionality (8-10h)
+
+### 🚀 Phase 14: Intelligent Training Features (PLANNED)
 
 **Smart Suggestions:**
 - [ ] Program templates (Push/Pull/Legs, Upper/Lower, Full Body)
@@ -247,14 +263,14 @@ npm run db:seed
 - ✅ Current phase dashboard with progress visualization
 - ✅ Completed workout tracking and history
 
-### Recent Improvements (Session 6 - Feb 2026):
-- Fixed critical workout save bugs (Prisma query errors, ad-hoc validation)
-- Implemented completed workout badges and read-only state
-- Added collapsible workout day headers
-- Enhanced dashboard with current phase progress bar
-- Removed redundant navigation pages
+### Recent Improvements (Sessions 6-9 - Feb 2026):
+- **Session 6:** Fixed critical workout save bugs, completed workout badges, collapsible headers
+- **Session 7:** Navigation improvements, workout day editing, mobile UX enhancements
+- **Session 8:** Phase Overview page, exercise management (add/edit/delete/reorder)
+- **Session 9:** Warmup section UI, drag & drop workout reordering (desktop)
 
 ### Next Development Phase:
-- Navigation improvements (Task #22)
-- Intelligent training features (progressive overload suggestions, volume management)
+- Complete Phase 13: "Apply to Rest of Phase" functionality
+- Phase 14: Intelligent training features (progressive overload suggestions, volume management)
+- Loading states and error boundaries
 - Advanced analytics and weak point identification
