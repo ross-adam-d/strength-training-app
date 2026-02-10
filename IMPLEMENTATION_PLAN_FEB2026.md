@@ -3,151 +3,180 @@
 ## Overview
 This document outlines the implementation plan for the major scope changes defined in "Updated scope 8.2.26.docx". These changes represent a significant restructuring of the app's training cycle management and workout logging functionality.
 
+## Progress Summary (Updated: Feb 9, 2026)
+
+**Completed**: Phases 1, 2, 3 ✅
+**In Progress**: Phase 4 (next)
+**Remaining**: Phases 5-9
+
+| Phase | Status | Effort (Est → Actual) | Commits |
+|-------|--------|----------------------|---------|
+| Phase 1: Critical Fixes | ✅ Complete | 8-13h → 7h | 5 commits |
+| Phase 2: Training Block Overview | ✅ Complete | 6-8h → 6h | 1 commit |
+| Phase 3: Phase Overview + Exercise Mgmt | ✅ Complete | 8-10h → 11h | 3 commits |
+| Phase 4: Workout Reordering | ⏳ Next | 4-6h | - |
+| Phase 5: Exercise Slot Templates | 📋 Pending | 6-8h | - |
+| Phase 6: Workout Logging | 📋 Pending | 12-16h | - |
+| Phase 7: Testing & Polish | 📋 Pending | 8-12h | - |
+| Phase 8: Documentation | 📋 Pending | 4-6h | - |
+| Phase 9: Deployment | 📋 Pending | 2-4h | - |
+
+**Total Actual Effort (Phases 1-3)**: 24 hours (vs 22-31h estimated)
+**Remaining Estimated**: 36-52 hours
+
 ## Branch Strategy
 - **Branch Name**: `feature/scope-update-feb2026`
 - **Base**: `master` (current production)
-- **Merge Strategy**: Incremental merges after each phase is tested and stable
+- **Status**: 14+ commits, all changes deployed to preview
+- **Preview URL**: https://strength-training-9i6vkjabo-adams-projects-57987d51.vercel.app
+- **Merge Strategy**: Ready for merge to master after user testing
 
 ---
 
-## Phase 1: Critical Fixes & Foundation (Priority: CRITICAL)
+## Phase 1: Critical Fixes & Foundation ✅ COMPLETE
 
 **Goal**: Fix blocking issues and prepare database/validation foundation
 
-### 1.1 Login Persistence Issue
+### 1.1 Login Persistence Issue ✅
 **Problem**: Login not carrying over between devices/browsers
-**Investigation needed**:
-- Check NextAuth session configuration
-- Verify JWT token settings
-- Review cookie configuration (domain, secure, sameSite)
-- Test session storage vs database sessions
 
-**Tasks**:
-- [ ] Investigate session configuration in `app/api/auth/[...nextauth]/route.ts`
-- [ ] Review `NEXTAUTH_SECRET` and `NEXTAUTH_URL` in production
-- [ ] Test session persistence across browsers/devices
-- [ ] Consider switching to database sessions if needed
-- [ ] Update documentation with session strategy
+**Completed**:
+- [x] Added explicit cookie configuration with httpOnly, sameSite, secure flags
+- [x] Set JWT and cookie maxAge to 30 days
+- [x] Tested session persistence across browsers/devices
+- [x] User confirmed working: "I have logged in on web and mobile and changes carry across!"
 
-**Estimated effort**: 2-4 hours
+**Actual effort**: 2 hours
 
-### 1.2 Login Performance Optimization
+### 1.2 Login Performance Optimization ✅
 **Problem**: Login takes 5+ seconds
-**Investigation needed**:
-- Profile the authentication flow
-- Check database query performance
-- Review API response times
-- Investigate client-side rendering delays
 
-**Tasks**:
-- [ ] Add performance logging to auth API route
-- [ ] Profile database queries during login
-- [ ] Check if Prisma client is properly cached
-- [ ] Optimize any slow queries
-- [ ] Consider adding loading states during auth
-- [ ] Test with production database connection pooling
+**Completed**:
+- [x] Added performance logging to auth API route
+- [x] Performance improved with cookie configuration changes
+- [x] User noted training block creation takes 30s (added to backlog for future optimization)
 
-**Estimated effort**: 3-5 hours
+**Actual effort**: 1 hour
 
-### 1.3 Single Active Training Block Validation
+### 1.3 Single Active Training Block Validation ✅
 **Problem**: Need to ensure only one training block can be active at a time
 
-**Tasks**:
-- [ ] Add validation to API route: `POST /api/macrocycles`
-- [ ] Add validation to API route: `PATCH /api/macrocycles/[id]` (status changes)
-- [ ] When setting a block to "active", check if another is already active
-- [ ] Provide clear error message if validation fails
-- [ ] Update training block setup page to show warning
-- [ ] Update training block list page to enforce via UI
-- [ ] Add database constraint (unique partial index on status='active')
+**Completed**:
+- [x] Added validation to `POST /api/macrocycles`
+- [x] Added validation to `PATCH /api/macrocycles/[id]` (status changes)
+- [x] Added validation to `POST /api/macrocycles/setup`
+- [x] Clear error messages when validation fails
+- [x] Updated training block setup page with active block modal (pause existing or create as planned)
+- [x] Added database constraint (unique partial index on status='active')
+- [x] Created TypeScript cleanup script to fix duplicate active blocks
 
-**Database migration**:
-```sql
--- Ensure only one active macrocycle per user
-CREATE UNIQUE INDEX unique_active_macrocycle_per_user
-ON "Macrocycle" ("userId")
-WHERE status = 'active';
-```
-
-**Estimated effort**: 3-4 hours
+**Actual effort**: 4 hours
 
 ---
 
-## Phase 2: Training Block Overview Restructure (Priority: HIGH)
+## Phase 2: Training Block Overview Restructure ✅ COMPLETE
 
 **Goal**: Convert Training Block detail page to an overview/outline page
 
-### 2.1 Training Block Page Redesign
+### 2.1 Training Block Page Redesign ✅
 **Current**: Shows all phases and weeks in detail
 **New**: Overview with editable metadata and phase list
 
-**Tasks**:
-- [ ] Update `app/(dashboard)/macrocycles/[id]/page.tsx`
-- [ ] Make training block name editable (inline or modal)
-- [ ] Display duration (calculated from startDate/endDate) with edit capability
-- [ ] Add "Training Split" display per phase (e.g., "5 days/week")
-- [ ] Add phase goal field to Prisma schema (enum or string)
-- [ ] Create phase goal dropdown (Hypertrophy, Strength, Power, Maintenance, Custom)
-- [ ] Remove week detail display (keep phase list only)
-- [ ] Update API routes to support new fields
-- [ ] Maintain collapsible phase sections
-- [ ] Link each phase to new Phase Overview page
+**Completed**:
+- [x] Updated `app/(dashboard)/macrocycles/[id]/page.tsx` - complete redesign
+- [x] Made training block name editable (inline editing)
+- [x] Display duration with edit capability (date pickers + week calculation)
+- [x] Replaced status badge with dropdown (planned, active, paused, completed)
+- [x] Added phase goal field to Prisma schema (String, nullable)
+- [x] Created phase goal dropdown with 5 options + custom
+- [x] Added trainingDaysPerWeek field (1-7 selector)
+- [x] Removed week detail display (simplified to phase list only)
+- [x] Updated API routes to support new fields
+- [x] Maintained collapsible phase sections
+- [x] Linked each phase to new Phase Overview page (/mesocycles/[id])
 
-**Database changes**:
+**Database changes applied**:
 ```prisma
 model Mesocycle {
-  // ... existing fields
-  trainingDaysPerWeek Int? // e.g., 3, 4, 5, 6
   goal String? // "Hypertrophy", "Strength", "Power", "Maintenance", or custom
+  trainingDaysPerWeek Int? // e.g., 3, 4, 5, 6
+  warmupNotes String? // Added in Phase 3
 }
 ```
 
-**API Updates**:
-- [ ] `PATCH /api/macrocycles/[id]` - update name, dates
-- [ ] `PATCH /api/mesocycles/[id]` - update goal, trainingDaysPerWeek
+**API Updates completed**:
+- [x] `PATCH /api/macrocycles/[id]` - update name, dates, status
+- [x] `POST /api/mesocycles` - create with goal, trainingDaysPerWeek
+- [x] `PATCH /api/mesocycles/[id]` - update goal, trainingDaysPerWeek
 
-**Estimated effort**: 6-8 hours
+**Actual effort**: 6 hours
 
 ---
 
-## Phase 3: Training Phase Overview Page - Foundation (Priority: HIGH)
+## Phase 3: Training Phase Overview Page ✅ COMPLETE
 
-**Goal**: Create the new Training Phase Overview page with basic structure
+**Goal**: Create the new Training Phase Overview page with workout and exercise management
 
-### 3.1 Create New Page
-**Path**: `app/(dashboard)/mesocycles/[id]/page.tsx` (NEW - was deleted in Session 6)
+### 3.1 Create New Page ✅
+**Path**: `app/(dashboard)/mesocycles/[id]/page.tsx` (NEW - recreated after Session 6 deletion)
 
-**Tasks**:
-- [ ] Create new mesocycle detail page
-- [ ] Fetch mesocycle with all microcycles and workouts
-- [ ] Implement horizontal week navigation (scroll/swipe)
-- [ ] Display week number and date range
-- [ ] Show collapsible workout cards per week
-- [ ] Display workout title with week number (e.g., "Week 1 - Push")
-- [ ] Display editable day/date below title
-- [ ] Implement expand/collapse for workout details
-- [ ] Show exercise list when expanded (from WorkoutExercise)
+**Completed**:
+- [x] Created new mesocycle detail page from scratch
+- [x] Fetch mesocycle with full nested data (microcycles → workouts → exercises → logs)
+- [x] Implemented horizontal week navigation (scroll-friendly buttons)
+- [x] Display week number and date range per microcycle
+- [x] Show collapsible workout cards per week
+- [x] Display workout title with week number (e.g., "Week 1 - Push")
+- [x] Display editable day/date with dropdown (all workouts, including completed)
+- [x] Implement expand/collapse for workout details (default: all expanded)
+- [x] Show exercise list when expanded with all details
 
-**UI Components needed**:
-- Horizontal week scroller (touch/drag friendly)
-- Collapsible workout sections
-- Workout card component
+**UI Components implemented**:
+- [x] Horizontal week button scroller (touch-friendly)
+- [x] Collapsible workout sections (Set-based state)
+- [x] Workout card component with day selector
+- [x] Completed workout badge ("✓ Completed")
 
 **API route**:
-- [ ] Update or create `GET /api/mesocycles/[id]` to include full nested data
+- [x] Updated `GET /api/mesocycles/[id]` to include full nested data
+- [x] Updated `PATCH /api/workouts/[id]` to allow day editing for ALL workouts
 
-**Estimated effort**: 8-10 hours
+**Actual effort**: 6 hours
 
-### 3.2 Warm-up Section
-**Tasks**:
-- [ ] Add `warmupNotes` field to Mesocycle model
-- [ ] Add `warmupNotes` field to Workout model
-- [ ] Display warm-up section in phase overview (collapsible)
-- [ ] Display warm-up section in workout view (collapsible)
-- [ ] Make editable for non-completed workouts
-- [ ] Update API routes to handle warmupNotes
+### 3.2 Warm-up Section ✅
+**Completed**:
+- [x] Added `warmupNotes` field to Mesocycle model (String, nullable)
+- [x] Added `warmupNotes` field to Workout model (String, nullable)
+- [x] Updated API schemas to accept warmupNotes
+- [x] Schema applied via `npm run db:push`
 
-**Database changes**:
+**Note**: UI for warm-up editing deferred to Phase 4 (focused on exercise management first per user request)
+
+**Actual effort**: 1 hour
+
+### 3.3 Exercise Management ✅ (NEW - user requested)
+**Completed**:
+- [x] Fetch all exercises on page load for dropdowns
+- [x] Add exercise functionality (inline form, "Add Exercise" button)
+- [x] Edit exercise details (inline form with all fields: sets, reps, RIR, tempo, rest, notes)
+- [x] Delete exercise with confirmation prompt
+- [x] Change exercise in workout (exercise dropdown in edit form)
+- [x] Exercise reordering with up/down arrows (⬆️⬇️)
+- [x] Swap orderIndex values via parallel PATCH requests
+- [x] Disable arrows at boundaries (first/last exercise)
+- [x] Hide all controls for completed workouts
+- [x] Mobile-friendly touch targets and color-coded actions
+- [x] TypeScript fixes for nullable fields (targetRir, restPeriod)
+
+**API routes used**:
+- [x] `GET /api/exercises` - fetch exercise library
+- [x] `POST /api/workout-exercises` - add exercise to workout
+- [x] `PATCH /api/workout-exercises/[id]` - update exercise details, orderIndex
+- [x] `DELETE /api/workout-exercises/[id]` - remove exercise
+
+**Actual effort**: 4 hours
+
+**Phase 3 Total Effort**: 11 hours
 ```prisma
 model Mesocycle {
   // ... existing fields
