@@ -83,6 +83,7 @@ export default function MesocycleDetailPage() {
   const [workoutWarmupText, setWorkoutWarmupText] = useState('')
   const [confirmPinWorkout, setConfirmPinWorkout] = useState<string | null>(null)
   const [pinCount, setPinCount] = useState(0)
+  const [pinDayName, setPinDayName] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [exerciseForm, setExerciseForm] = useState<{
     exerciseId: string
@@ -214,17 +215,36 @@ export default function MesocycleDetailPage() {
   function startPinWorkoutWarmup(workoutId: string) {
     if (!mesocycle) return
 
-    // Get all uncompleted workouts in the phase (excluding the current one)
-    const uncompletedWorkouts = mesocycle.microcycles
+    // Find the current workout to get its day of week
+    const currentWorkout = mesocycle.microcycles
       .flatMap(mc => mc.workouts)
-      .filter(w => w.id !== workoutId && w.workoutLogs.length === 0)
+      .find(w => w.id === workoutId)
 
-    if (uncompletedWorkouts.length === 0) {
-      setSaveError('No remaining uncompleted workouts to pin to.')
+    if (!currentWorkout) {
+      setSaveError('Workout not found.')
       return
     }
 
-    setPinCount(uncompletedWorkouts.length)
+    // Get all uncompleted workouts on the same day (excluding the current one)
+    const sameDayWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w =>
+        w.id !== workoutId &&
+        w.workoutLogs.length === 0 &&
+        w.dayOfWeek === currentWorkout.dayOfWeek
+      )
+
+    const dayName = currentWorkout.dayOfWeek !== null
+      ? DAYS_OF_WEEK[currentWorkout.dayOfWeek]
+      : 'unscheduled'
+
+    if (sameDayWorkouts.length === 0) {
+      setSaveError(`No remaining uncompleted ${dayName} workouts to pin to.`)
+      return
+    }
+
+    setPinCount(sameDayWorkouts.length)
+    setPinDayName(dayName)
     setConfirmPinWorkout(workoutId)
   }
 
@@ -234,14 +254,28 @@ export default function MesocycleDetailPage() {
     setSaveError(null)
     const workoutId = confirmPinWorkout
 
-    // Get all uncompleted workouts in the phase (excluding the current one)
-    const uncompletedWorkouts = mesocycle.microcycles
+    // Find the current workout to get its day of week
+    const currentWorkout = mesocycle.microcycles
       .flatMap(mc => mc.workouts)
-      .filter(w => w.id !== workoutId && w.workoutLogs.length === 0)
+      .find(w => w.id === workoutId)
+
+    if (!currentWorkout) {
+      setSaveError('Workout not found.')
+      return
+    }
+
+    // Get all uncompleted workouts on the same day (excluding the current one)
+    const sameDayWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w =>
+        w.id !== workoutId &&
+        w.workoutLogs.length === 0 &&
+        w.dayOfWeek === currentWorkout.dayOfWeek
+      )
 
     try {
-      // Update all uncompleted workouts with this warmup
-      const updates = uncompletedWorkouts.map(w =>
+      // Update all same-day workouts with this warmup
+      const updates = sameDayWorkouts.map(w =>
         fetch(`/api/workouts/${w.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -645,7 +679,7 @@ export default function MesocycleDetailPage() {
                                 {confirmPinWorkout === workout.id ? (
                                   <div className="p-3 bg-blue-900 border border-blue-700 rounded">
                                     <p className="text-sm text-white mb-2">
-                                      Pin this warmup to {pinCount} remaining uncompleted workout(s)?
+                                      Pin this warmup to {pinCount} remaining {pinDayName} workout(s)?
                                     </p>
                                     <div className="flex gap-2">
                                       <Button size="sm" onClick={confirmPinWorkoutWarmup}>
