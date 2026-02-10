@@ -147,6 +147,7 @@ model Workout {
   estimatedDuration Int?     // in minutes
   warmupNotes       String?  // Warm-up routine/notes for this specific workout
   notes             String?
+  orderIndex        Int      @default(0) // order of workout within microcycle
 
   microcycleId      String
   microcycle        Microcycle @relation(fields: [microcycleId], references: [id], onDelete: Cascade)

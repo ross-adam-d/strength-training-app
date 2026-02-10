@@ -6,6 +6,23 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Exercise {
   id: string
@@ -33,6 +50,7 @@ interface Workout {
   dayOfWeek: number | null
   estimatedDuration: number | null
   warmupNotes: string | null
+  orderIndex: number
   workoutExercises: WorkoutExercise[]
   workoutLogs: {
     id: string
@@ -67,6 +85,44 @@ interface Mesocycle {
 }
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+interface SortableWorkoutCardProps {
+  id: string
+  children: React.ReactNode
+}
+
+function SortableWorkoutCard({ id, children }: SortableWorkoutCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex items-start gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-4 cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded text-gray-500"
+          onClick={(e) => e.stopPropagation()}
+        >
+          ⋮⋮
+        </button>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
+  )
+}
 
 export default function MesocycleDetailPage() {
   const params = useParams()
@@ -405,6 +461,56 @@ export default function MesocycleDetailPage() {
     }
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  async function handleWorkoutDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id || !mesocycle) return
+
+    const activeWorkout = currentMicrocycle?.workouts.find(w => w.id === active.id)
+    const overWorkout = currentMicrocycle?.workouts.find(w => w.id === over.id)
+
+    if (!activeWorkout || !overWorkout) return
+
+    const oldIndex = currentMicrocycle.workouts.findIndex(w => w.id === active.id)
+    const newIndex = currentMicrocycle.workouts.findIndex(w => w.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Optimistically update UI
+    const reorderedWorkouts = arrayMove(currentMicrocycle.workouts, oldIndex, newIndex)
+
+    // Update orderIndex for all affected workouts
+    const updates = reorderedWorkouts.map((workout, index) => ({
+      id: workout.id,
+      orderIndex: index,
+    }))
+
+    try {
+      const response = await fetch(`/api/microcycles/${currentMicrocycle.id}/reorder-workouts`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workouts: updates }),
+      })
+
+      if (response.ok) {
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        setSaveError(data.error || 'Failed to reorder workouts')
+      }
+    } catch (error) {
+      console.error('Error reordering workouts:', error)
+      setSaveError('Failed to reorder workouts. Please try again.')
+    }
+  }
+
   async function handleMoveExercise(exerciseId: string, direction: 'up' | 'down', exercises: WorkoutExercise[]) {
     const currentIndex = exercises.findIndex(e => e.id === exerciseId)
     if (currentIndex === -1) return
@@ -579,15 +685,25 @@ export default function MesocycleDetailPage() {
               </CardBody>
             </Card>
           ) : (
-            currentMicrocycle.workouts
-              .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0))
-              .map((workout) => {
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleWorkoutDragEnd}
+            >
+              <SortableContext
+                items={currentMicrocycle.workouts.map(w => w.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {currentMicrocycle.workouts
+                  .sort((a, b) => a.orderIndex - b.orderIndex)
+                  .map((workout) => {
                 const isExpanded = expandedWorkouts.has(workout.id)
                 const isCompleted = workout.workoutLogs.length > 0
                 const lastLog = isCompleted ? workout.workoutLogs[0] : null
 
                 return (
-                  <Card key={workout.id}>
+                  <SortableWorkoutCard key={workout.id} id={workout.id}>
+                    <Card>
                     <CardBody>
                       <div
                         className="flex items-center justify-between cursor-pointer"
@@ -1072,8 +1188,11 @@ export default function MesocycleDetailPage() {
                       )}
                     </CardBody>
                   </Card>
+                  </SortableWorkoutCard>
                 )
-              })
+              })}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       )}
