@@ -35,6 +35,7 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
+                warmupNotes: true,
                 macrocycle: {
                   select: {
                     id: true,
@@ -104,7 +105,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { dayOfWeek } = body
+    const { dayOfWeek, warmupNotes } = body
 
     // Verify ownership before updating
     const workout = await prisma.workout.findFirst({
@@ -132,12 +133,19 @@ export async function PATCH(
       )
     }
 
-    // Allow updating day/date for any workout (even completed ones, per scope requirements)
+    // Build update data object
+    const updateData: any = {}
+    if (dayOfWeek !== undefined) {
+      updateData.dayOfWeek = dayOfWeek === -1 || dayOfWeek === null ? null : parseInt(dayOfWeek)
+    }
+    if (warmupNotes !== undefined) {
+      updateData.warmupNotes = warmupNotes
+    }
+
+    // Allow updating day/date and warmup notes for any workout (even completed ones, per scope requirements)
     const updated = await prisma.workout.update({
       where: { id },
-      data: {
-        dayOfWeek: dayOfWeek === -1 || dayOfWeek === null ? null : parseInt(dayOfWeek),
-      },
+      data: updateData,
     })
 
     return NextResponse.json(updated)

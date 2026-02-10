@@ -6,6 +6,24 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Exercise {
   id: string
@@ -32,6 +50,8 @@ interface Workout {
   name: string
   dayOfWeek: number | null
   estimatedDuration: number | null
+  warmupNotes: string | null
+  orderIndex: number
   workoutExercises: WorkoutExercise[]
   workoutLogs: {
     id: string
@@ -54,6 +74,7 @@ interface Mesocycle {
   focus: string | null
   goal: string | null
   trainingDaysPerWeek: number | null
+  warmupNotes: string | null
   startDate: string
   endDate: string
   status: string
@@ -66,6 +87,44 @@ interface Mesocycle {
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+interface SortableWorkoutCardProps {
+  id: string
+  children: React.ReactNode
+}
+
+function SortableWorkoutCard({ id, children }: SortableWorkoutCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex items-start gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-4 cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded text-gray-500"
+          onClick={(e) => e.stopPropagation()}
+        >
+          ⋮⋮
+        </button>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 export default function MesocycleDetailPage() {
   const params = useParams()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
@@ -75,6 +134,14 @@ export default function MesocycleDetailPage() {
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [editingExercise, setEditingExercise] = useState<string | null>(null)
   const [addingToWorkout, setAddingToWorkout] = useState<string | null>(null)
+  const [editingMesocycleWarmup, setEditingMesocycleWarmup] = useState(false)
+  const [mesocycleWarmupText, setMesocycleWarmupText] = useState('')
+  const [editingWorkoutWarmup, setEditingWorkoutWarmup] = useState<string | null>(null)
+  const [workoutWarmupText, setWorkoutWarmupText] = useState('')
+  const [confirmPinWorkout, setConfirmPinWorkout] = useState<string | null>(null)
+  const [pinCount, setPinCount] = useState(0)
+  const [pinDayName, setPinDayName] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [exerciseForm, setExerciseForm] = useState<{
     exerciseId: string
     targetSets: number
@@ -159,6 +226,136 @@ export default function MesocycleDetailPage() {
     }
   }
 
+  async function handleSaveMesocycleWarmup() {
+    try {
+      const response = await fetch(`/api/mesocycles/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ warmupNotes: mesocycleWarmupText }),
+      })
+
+      if (response.ok) {
+        setEditingMesocycleWarmup(false)
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to update warmup notes')
+      }
+    } catch (error) {
+      console.error('Error updating warmup notes:', error)
+      alert('Failed to update warmup notes')
+    }
+  }
+
+  async function handleSaveWorkoutWarmup(workoutId: string) {
+    setSaveError(null)
+    try {
+      const response = await fetch(`/api/workouts/${workoutId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ warmupNotes: workoutWarmupText }),
+      })
+
+      if (response.ok) {
+        setEditingWorkoutWarmup(null)
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        setSaveError(data.error || 'Failed to update workout warmup notes')
+      }
+    } catch (error) {
+      console.error('Error updating workout warmup notes:', error)
+      setSaveError('Failed to update workout warmup notes. Please try again.')
+    }
+  }
+
+  function startPinWorkoutWarmup(workoutId: string) {
+    if (!mesocycle) return
+
+    // Find the current workout to get its day of week
+    const currentWorkout = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .find(w => w.id === workoutId)
+
+    if (!currentWorkout) {
+      setSaveError('Workout not found.')
+      return
+    }
+
+    // Get all uncompleted workouts on the same day (excluding the current one)
+    const sameDayWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w =>
+        w.id !== workoutId &&
+        w.workoutLogs.length === 0 &&
+        w.dayOfWeek === currentWorkout.dayOfWeek
+      )
+
+    const dayName = currentWorkout.dayOfWeek !== null
+      ? DAYS_OF_WEEK[currentWorkout.dayOfWeek]
+      : 'unscheduled'
+
+    if (sameDayWorkouts.length === 0) {
+      setSaveError(`No remaining uncompleted ${dayName} workouts to pin to.`)
+      return
+    }
+
+    setPinCount(sameDayWorkouts.length)
+    setPinDayName(dayName)
+    setConfirmPinWorkout(workoutId)
+  }
+
+  async function confirmPinWorkoutWarmup() {
+    if (!mesocycle || !confirmPinWorkout) return
+
+    setSaveError(null)
+    const workoutId = confirmPinWorkout
+
+    // Find the current workout to get its day of week
+    const currentWorkout = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .find(w => w.id === workoutId)
+
+    if (!currentWorkout) {
+      setSaveError('Workout not found.')
+      return
+    }
+
+    // Get all uncompleted workouts on the same day (excluding the current one)
+    const sameDayWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w =>
+        w.id !== workoutId &&
+        w.workoutLogs.length === 0 &&
+        w.dayOfWeek === currentWorkout.dayOfWeek
+      )
+
+    try {
+      // Update all same-day workouts with this warmup
+      const updates = sameDayWorkouts.map(w =>
+        fetch(`/api/workouts/${w.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ warmupNotes: workoutWarmupText }),
+        })
+      )
+
+      const results = await Promise.all(updates)
+      const failedResults = results.filter(r => !r.ok)
+
+      if (failedResults.length === 0) {
+        setEditingWorkoutWarmup(null)
+        setConfirmPinWorkout(null)
+        await fetchMesocycle()
+      } else {
+        setSaveError(`${failedResults.length} of ${results.length} workouts failed to update. Please try again.`)
+      }
+    } catch (error) {
+      console.error('Error pinning workout warmup:', error)
+      setSaveError('Failed to pin warmup notes. Please try again.')
+    }
+  }
+
   function startAddExercise(workoutId: string) {
     setAddingToWorkout(workoutId)
     setExerciseForm({
@@ -222,10 +419,10 @@ export default function MesocycleDetailPage() {
         body: JSON.stringify({
           exerciseId: exerciseForm.exerciseId,
           targetSets: exerciseForm.targetSets,
-          targetReps: exerciseForm.targetReps,
-          targetRir: exerciseForm.targetRir,
+          targetReps: exerciseForm.targetReps || null,
+          targetRir: exerciseForm.targetRir ?? null,
           tempo: exerciseForm.tempo || null,
-          restPeriod: exerciseForm.restPeriod,
+          restPeriod: exerciseForm.restPeriod ?? null,
           notes: exerciseForm.notes || null,
         }),
       })
@@ -262,6 +459,63 @@ export default function MesocycleDetailPage() {
     } catch (error) {
       console.error('Error deleting exercise:', error)
       alert('Failed to delete exercise')
+    }
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms for better touch scrolling
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  async function handleWorkoutDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id || !mesocycle) return
+
+    const activeWorkout = currentMicrocycle?.workouts.find(w => w.id === active.id)
+    const overWorkout = currentMicrocycle?.workouts.find(w => w.id === over.id)
+
+    if (!activeWorkout || !overWorkout) return
+
+    const oldIndex = currentMicrocycle.workouts.findIndex(w => w.id === active.id)
+    const newIndex = currentMicrocycle.workouts.findIndex(w => w.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Optimistically update UI
+    const reorderedWorkouts = arrayMove(currentMicrocycle.workouts, oldIndex, newIndex)
+
+    // Update orderIndex for all affected workouts
+    const updates = reorderedWorkouts.map((workout, index) => ({
+      id: workout.id,
+      orderIndex: index,
+    }))
+
+    try {
+      const response = await fetch(`/api/microcycles/${currentMicrocycle.id}/reorder-workouts`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workouts: updates }),
+      })
+
+      if (response.ok) {
+        await fetchMesocycle()
+      } else {
+        const data = await response.json()
+        setSaveError(data.error || 'Failed to reorder workouts')
+      }
+    } catch (error) {
+      console.error('Error reordering workouts:', error)
+      setSaveError('Failed to reorder workouts. Please try again.')
     }
   }
 
@@ -335,6 +589,52 @@ export default function MesocycleDetailPage() {
             )}
           </p>
         )}
+
+        {/* Phase-wide Warmup Section */}
+        <div className="mt-4 p-4 bg-gray-900 border border-gray-700 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-white">Phase Warmup Routine</h3>
+            {mesocycle.status === 'planned' && !editingMesocycleWarmup && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingMesocycleWarmup(true)
+                  setMesocycleWarmupText(mesocycle.warmupNotes || '')
+                }}
+              >
+                {mesocycle.warmupNotes ? 'Edit' : 'Add'}
+              </Button>
+            )}
+          </div>
+          {editingMesocycleWarmup ? (
+            <div className="space-y-2">
+              <textarea
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg text-sm placeholder-gray-400"
+                rows={3}
+                placeholder="Describe the warmup routine for this phase..."
+                value={mesocycleWarmupText}
+                onChange={(e) => setMesocycleWarmupText(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveMesocycleWarmup}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setEditingMesocycleWarmup(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-300">
+              {mesocycle.warmupNotes || 'No warmup routine specified for this phase.'}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Horizontal Week Navigation */}
@@ -393,15 +693,25 @@ export default function MesocycleDetailPage() {
               </CardBody>
             </Card>
           ) : (
-            currentMicrocycle.workouts
-              .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0))
-              .map((workout) => {
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleWorkoutDragEnd}
+            >
+              <SortableContext
+                items={currentMicrocycle.workouts.map(w => w.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {currentMicrocycle.workouts
+                  .sort((a, b) => a.orderIndex - b.orderIndex)
+                  .map((workout) => {
                 const isExpanded = expandedWorkouts.has(workout.id)
                 const isCompleted = workout.workoutLogs.length > 0
                 const lastLog = isCompleted ? workout.workoutLogs[0] : null
 
                 return (
-                  <Card key={workout.id}>
+                  <SortableWorkoutCard key={workout.id} id={workout.id}>
+                    <Card>
                     <CardBody>
                       <div
                         className="flex items-center justify-between cursor-pointer"
@@ -458,6 +768,88 @@ export default function MesocycleDetailPage() {
 
                       {isExpanded && (
                         <div className="mt-4 pt-4 border-t">
+                          {/* Workout-specific Warmup */}
+                          <div className="mb-4 p-3 bg-gray-900 border border-gray-700 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium text-white">Workout Warmup</h4>
+                              {!isCompleted && editingWorkoutWarmup !== workout.id && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingWorkoutWarmup(workout.id)
+                                    setWorkoutWarmupText(workout.warmupNotes || '')
+                                  }}
+                                >
+                                  {workout.warmupNotes ? 'Edit' : 'Add'}
+                                </Button>
+                              )}
+                            </div>
+                            {editingWorkoutWarmup === workout.id ? (
+                              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                                <textarea
+                                  className="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg text-sm placeholder-gray-400"
+                                  rows={2}
+                                  placeholder="Specific warmup for this workout..."
+                                  value={workoutWarmupText}
+                                  onChange={(e) => setWorkoutWarmupText(e.target.value)}
+                                />
+                                {saveError && (
+                                  <div className="p-2 bg-red-100 border border-red-300 rounded text-sm text-red-800">
+                                    {saveError}
+                                  </div>
+                                )}
+                                {confirmPinWorkout === workout.id ? (
+                                  <div className="p-3 bg-blue-900 border border-blue-700 rounded">
+                                    <p className="text-sm text-white mb-2">
+                                      Pin this warmup to {pinCount} remaining {pinDayName} workout(s)?
+                                    </p>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={confirmPinWorkoutWarmup}>
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => setConfirmPinWorkout(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <Button size="sm" onClick={() => handleSaveWorkoutWarmup(workout.id)}>
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => startPinWorkoutWarmup(workout.id)}
+                                    >
+                                      📌 Pin to Remaining Workouts
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => {
+                                        setEditingWorkoutWarmup(null)
+                                        setSaveError(null)
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-300">
+                                {workout.warmupNotes || 'Use phase warmup routine or add workout-specific warmup.'}
+                              </p>
+                            )}
+                          </div>
+
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-medium text-gray-900">Exercises</h4>
                             {!isCompleted && (
@@ -804,8 +1196,11 @@ export default function MesocycleDetailPage() {
                       )}
                     </CardBody>
                   </Card>
+                  </SortableWorkoutCard>
                 )
-              })
+              })}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       )}

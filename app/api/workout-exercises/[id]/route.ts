@@ -7,12 +7,12 @@ import { z } from 'zod'
 const updateSchema = z.object({
   exerciseId: z.string().optional(),
   targetSets: z.number().int().positive().optional(),
-  targetReps: z.string().optional(),
-  tempo: z.string().optional(),
-  targetRir: z.number().int().optional(),
-  notes: z.string().optional(),
+  targetReps: z.string().nullable().optional(),
+  tempo: z.string().nullable().optional(),
+  targetRir: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
   orderIndex: z.number().int().optional(),
-  restPeriod: z.number().int().optional(),
+  restPeriod: z.number().int().nullable().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {

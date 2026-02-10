@@ -28,6 +28,7 @@ interface Workout {
   name: string
   description?: string
   estimatedDuration?: number
+  warmupNotes?: string
   notes?: string
   microcycle: {
     id: string
@@ -35,6 +36,7 @@ interface Workout {
     mesocycle: {
       id: string
       name: string
+      warmupNotes?: string
       macrocycle: {
         id: string
         name: string
@@ -387,6 +389,29 @@ export default function WorkoutLogPage() {
           </CardHeader>
         </Card>
       </div>
+
+      {/* Warmup Section */}
+      {(workout.warmupNotes || workout.microcycle.mesocycle.warmupNotes) && (
+        <Card className="mb-6 bg-gray-900 border-gray-700">
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-white">🔥 Warmup</h2>
+          </CardHeader>
+          <CardBody>
+            {workout.warmupNotes && (
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-300 mb-1">Workout Warmup:</p>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{workout.warmupNotes}</p>
+              </div>
+            )}
+            {!workout.warmupNotes && workout.microcycle.mesocycle.warmupNotes && (
+              <div>
+                <p className="text-sm font-medium text-gray-300 mb-1">Phase Warmup:</p>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{workout.microcycle.mesocycle.warmupNotes}</p>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       {/* Vertical exercise cards */}
       {workout.workoutExercises.map((we) => {
