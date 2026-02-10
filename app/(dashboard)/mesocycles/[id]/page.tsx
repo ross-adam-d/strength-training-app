@@ -207,6 +207,51 @@ export default function MesocycleDetailPage() {
     }
   }
 
+  async function handlePinWorkoutWarmup(workoutId: string) {
+    if (!mesocycle) return
+
+    // Get all uncompleted workouts in the phase (excluding the current one)
+    const uncompletedWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w => w.id !== workoutId && w.workoutLogs.length === 0)
+
+    if (uncompletedWorkouts.length === 0) {
+      alert('No remaining uncompleted workouts to pin to.')
+      return
+    }
+
+    const confirmed = confirm(
+      `Pin this warmup to ${uncompletedWorkouts.length} remaining uncompleted workout(s)?`
+    )
+
+    if (!confirmed) return
+
+    try {
+      // Update all uncompleted workouts with this warmup
+      const updates = uncompletedWorkouts.map(w =>
+        fetch(`/api/workouts/${w.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ warmupNotes: workoutWarmupText }),
+        })
+      )
+
+      const results = await Promise.all(updates)
+      const allSuccessful = results.every(r => r.ok)
+
+      if (allSuccessful) {
+        setEditingWorkoutWarmup(null)
+        await fetchMesocycle()
+        alert(`Warmup pinned to ${uncompletedWorkouts.length} workout(s)!`)
+      } else {
+        alert('Some workouts failed to update. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error pinning workout warmup:', error)
+      alert('Failed to pin warmup notes')
+    }
+  }
+
   function startAddExercise(workoutId: string) {
     setAddingToWorkout(workoutId)
     setExerciseForm({
@@ -385,9 +430,9 @@ export default function MesocycleDetailPage() {
         )}
 
         {/* Phase-wide Warmup Section */}
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="mt-4 p-4 bg-gray-900 border border-gray-700 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Phase Warmup Routine</h3>
+            <h3 className="text-sm font-semibold text-white">Phase Warmup Routine</h3>
             {mesocycle.status === 'planned' && !editingMesocycleWarmup && (
               <Button
                 size="sm"
@@ -404,7 +449,7 @@ export default function MesocycleDetailPage() {
           {editingMesocycleWarmup ? (
             <div className="space-y-2">
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg text-sm placeholder-gray-400"
                 rows={3}
                 placeholder="Describe the warmup routine for this phase..."
                 value={mesocycleWarmupText}
@@ -424,7 +469,7 @@ export default function MesocycleDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-300">
               {mesocycle.warmupNotes || 'No warmup routine specified for this phase.'}
             </p>
           )}
@@ -553,9 +598,9 @@ export default function MesocycleDetailPage() {
                       {isExpanded && (
                         <div className="mt-4 pt-4 border-t">
                           {/* Workout-specific Warmup */}
-                          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="mb-4 p-3 bg-gray-900 border border-gray-700 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-sm font-medium text-gray-900">Workout Warmup</h4>
+                              <h4 className="text-sm font-medium text-white">Workout Warmup</h4>
                               {!isCompleted && editingWorkoutWarmup !== workout.id && (
                                 <Button
                                   size="sm"
@@ -573,15 +618,22 @@ export default function MesocycleDetailPage() {
                             {editingWorkoutWarmup === workout.id ? (
                               <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                                 <textarea
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  className="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg text-sm placeholder-gray-400"
                                   rows={2}
                                   placeholder="Specific warmup for this workout..."
                                   value={workoutWarmupText}
                                   onChange={(e) => setWorkoutWarmupText(e.target.value)}
                                 />
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                   <Button size="sm" onClick={() => handleSaveWorkoutWarmup(workout.id)}>
                                     Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handlePinWorkoutWarmup(workout.id)}
+                                  >
+                                    📌 Pin to Remaining Workouts
                                   </Button>
                                   <Button
                                     size="sm"
@@ -593,7 +645,7 @@ export default function MesocycleDetailPage() {
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-gray-700">
+                              <p className="text-sm text-gray-300">
                                 {workout.warmupNotes || 'Use phase warmup routine or add workout-specific warmup.'}
                               </p>
                             )}
