@@ -35,6 +35,7 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
+                warmupNotes: true,
                 macrocycle: {
                   select: {
                     id: true,

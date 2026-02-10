@@ -81,6 +81,9 @@ export default function MesocycleDetailPage() {
   const [mesocycleWarmupText, setMesocycleWarmupText] = useState('')
   const [editingWorkoutWarmup, setEditingWorkoutWarmup] = useState<string | null>(null)
   const [workoutWarmupText, setWorkoutWarmupText] = useState('')
+  const [confirmPinWorkout, setConfirmPinWorkout] = useState<string | null>(null)
+  const [pinCount, setPinCount] = useState(0)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [exerciseForm, setExerciseForm] = useState<{
     exerciseId: string
     targetSets: number
@@ -187,6 +190,7 @@ export default function MesocycleDetailPage() {
   }
 
   async function handleSaveWorkoutWarmup(workoutId: string) {
+    setSaveError(null)
     try {
       const response = await fetch(`/api/workouts/${workoutId}`, {
         method: 'PATCH',
@@ -199,15 +203,15 @@ export default function MesocycleDetailPage() {
         await fetchMesocycle()
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to update workout warmup notes')
+        setSaveError(data.error || 'Failed to update workout warmup notes')
       }
     } catch (error) {
       console.error('Error updating workout warmup notes:', error)
-      alert('Failed to update workout warmup notes')
+      setSaveError('Failed to update workout warmup notes. Please try again.')
     }
   }
 
-  async function handlePinWorkoutWarmup(workoutId: string) {
+  function startPinWorkoutWarmup(workoutId: string) {
     if (!mesocycle) return
 
     // Get all uncompleted workouts in the phase (excluding the current one)
@@ -216,15 +220,24 @@ export default function MesocycleDetailPage() {
       .filter(w => w.id !== workoutId && w.workoutLogs.length === 0)
 
     if (uncompletedWorkouts.length === 0) {
-      alert('No remaining uncompleted workouts to pin to.')
+      setSaveError('No remaining uncompleted workouts to pin to.')
       return
     }
 
-    const confirmed = confirm(
-      `Pin this warmup to ${uncompletedWorkouts.length} remaining uncompleted workout(s)?`
-    )
+    setPinCount(uncompletedWorkouts.length)
+    setConfirmPinWorkout(workoutId)
+  }
 
-    if (!confirmed) return
+  async function confirmPinWorkoutWarmup() {
+    if (!mesocycle || !confirmPinWorkout) return
+
+    setSaveError(null)
+    const workoutId = confirmPinWorkout
+
+    // Get all uncompleted workouts in the phase (excluding the current one)
+    const uncompletedWorkouts = mesocycle.microcycles
+      .flatMap(mc => mc.workouts)
+      .filter(w => w.id !== workoutId && w.workoutLogs.length === 0)
 
     try {
       // Update all uncompleted workouts with this warmup
@@ -237,18 +250,18 @@ export default function MesocycleDetailPage() {
       )
 
       const results = await Promise.all(updates)
-      const allSuccessful = results.every(r => r.ok)
+      const failedResults = results.filter(r => !r.ok)
 
-      if (allSuccessful) {
+      if (failedResults.length === 0) {
         setEditingWorkoutWarmup(null)
+        setConfirmPinWorkout(null)
         await fetchMesocycle()
-        alert(`Warmup pinned to ${uncompletedWorkouts.length} workout(s)!`)
       } else {
-        alert('Some workouts failed to update. Please try again.')
+        setSaveError(`${failedResults.length} of ${results.length} workouts failed to update. Please try again.`)
       }
     } catch (error) {
       console.error('Error pinning workout warmup:', error)
-      alert('Failed to pin warmup notes')
+      setSaveError('Failed to pin warmup notes. Please try again.')
     }
   }
 
@@ -624,25 +637,53 @@ export default function MesocycleDetailPage() {
                                   value={workoutWarmupText}
                                   onChange={(e) => setWorkoutWarmupText(e.target.value)}
                                 />
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  <Button size="sm" onClick={() => handleSaveWorkoutWarmup(workout.id)}>
-                                    Save
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => handlePinWorkoutWarmup(workout.id)}
-                                  >
-                                    📌 Pin to Remaining Workouts
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => setEditingWorkoutWarmup(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
+                                {saveError && (
+                                  <div className="p-2 bg-red-100 border border-red-300 rounded text-sm text-red-800">
+                                    {saveError}
+                                  </div>
+                                )}
+                                {confirmPinWorkout === workout.id ? (
+                                  <div className="p-3 bg-blue-900 border border-blue-700 rounded">
+                                    <p className="text-sm text-white mb-2">
+                                      Pin this warmup to {pinCount} remaining uncompleted workout(s)?
+                                    </p>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={confirmPinWorkoutWarmup}>
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => setConfirmPinWorkout(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <Button size="sm" onClick={() => handleSaveWorkoutWarmup(workout.id)}>
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => startPinWorkoutWarmup(workout.id)}
+                                    >
+                                      📌 Pin to Remaining Workouts
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => {
+                                        setEditingWorkoutWarmup(null)
+                                        setSaveError(null)
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <p className="text-sm text-gray-300">
