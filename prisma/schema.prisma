@@ -194,6 +194,7 @@ model WorkoutLog {
   duration          Int?     // actual duration in minutes
   notes             String?
   overallRating     Int?     // 1-5 rating
+  overallRpe        Float?   // average exercise RPE (1-5 scale)
 
   workoutId         String?
   workout           Workout? @relation(fields: [workoutId], references: [id], onDelete: Cascade)
@@ -221,6 +222,7 @@ model ExerciseLog {
   rir               Int?     // Reps In Reserve (actual)
   skipped           Boolean  @default(false)
   notes             String?
+  exerciseRpe       Int?     // Exercise-level RPE (1-5 scale)
 
   workoutLogId      String
   workoutLog        WorkoutLog @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)

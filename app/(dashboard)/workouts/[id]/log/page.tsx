@@ -94,6 +94,9 @@ export default function WorkoutLogPage() {
   // Exercise-level notes (one note per exercise, not per set)
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
 
+  // Exercise-level RPE (1-5 scale: Too Easy → Too Much)
+  const [exerciseRpes, setExerciseRpes] = useState<Record<string, number>>({})
+
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0)
@@ -149,6 +152,7 @@ export default function WorkoutLogPage() {
         // Build lookup from most recent completed workout log
         const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number }[]>()
         const lastExerciseNotes: Record<string, string> = {}
+        const lastExerciseRpes: Record<string, number> = {}
 
         if (data.workoutLogs && data.workoutLogs.length > 0) {
           for (const el of data.workoutLogs[0].exerciseLogs) {
@@ -159,11 +163,17 @@ export default function WorkoutLogPage() {
             if (el.setNumber === 1 && el.notes) {
               lastExerciseNotes[el.exerciseId] = el.notes
             }
+
+            // Extract exercise-level RPE from first set (where we store it)
+            if (el.setNumber === 1 && el.exerciseRpe) {
+              lastExerciseRpes[el.exerciseId] = el.exerciseRpe
+            }
           }
         }
 
-        // Set exercise notes from history
+        // Set exercise notes and RPEs from history
         setExerciseNotes(lastExerciseNotes)
+        setExerciseRpes(lastExerciseRpes)
 
         // Pre-populate sets from the workout plan, using last log values where available
         const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
@@ -336,11 +346,18 @@ export default function WorkoutLogPage() {
     const endTime = new Date()
     const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000 / 60)
 
+    // Calculate overall workout RPE (average of exercise RPEs)
+    const rpeValues = Object.values(exerciseRpes).filter(rpe => rpe !== undefined && rpe > 0)
+    const overallRpe = rpeValues.length > 0
+      ? rpeValues.reduce((sum, rpe) => sum + rpe, 0) / rpeValues.length
+      : undefined
+
     const data = {
       workoutId: params.id,
       duration,
       notes: overallNotes,
       overallRating,
+      overallRpe,
       exerciseLogs: exerciseLogs.map((log) => {
         if (log.skipped) {
           return {
@@ -351,6 +368,7 @@ export default function WorkoutLogPage() {
             skipped: true,
             rir: undefined,
             notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
+            exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
           }
         }
 
@@ -373,6 +391,7 @@ export default function WorkoutLogPage() {
           rir: rirValue,
           skipped: false,
           notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
+          exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
         }
       }),
     }
@@ -613,8 +632,39 @@ export default function WorkoutLogPage() {
                 </Button>
               </div>
 
-              {/* Exercise-level notes */}
+              {/* Exercise-level RPE (1-5 scale) */}
               <div className="mt-4 pt-4 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How hard was this exercise?
+                </label>
+                <select
+                  value={exerciseRpes[we.exercise.id] || ''}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined
+                    if (value) {
+                      setExerciseRpes({
+                        ...exerciseRpes,
+                        [we.exercise.id]: value,
+                      })
+                    } else {
+                      const newRpes = { ...exerciseRpes }
+                      delete newRpes[we.exercise.id]
+                      setExerciseRpes(newRpes)
+                    }
+                  }}
+                  className="w-full px-3 py-3 md:py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                >
+                  <option value="">Select RPE (optional)</option>
+                  <option value="1">1 - Too Easy</option>
+                  <option value="2">2 - Easy</option>
+                  <option value="3">3 - Just Right</option>
+                  <option value="4">4 - Hard</option>
+                  <option value="5">5 - Too Much</option>
+                </select>
+              </div>
+
+              {/* Exercise-level notes */}
+              <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Exercise Notes
                 </label>
@@ -684,6 +734,17 @@ export default function WorkoutLogPage() {
             <p className="text-sm text-gray-600">
               Duration: {Math.round((new Date().getTime() - startTime.getTime()) / 1000 / 60)} minutes
             </p>
+            {Object.values(exerciseRpes).filter(rpe => rpe !== undefined && rpe > 0).length > 0 && (
+              <p className="text-sm text-gray-600">
+                Overall RPE: {
+                  (() => {
+                    const rpeValues = Object.values(exerciseRpes).filter(rpe => rpe !== undefined && rpe > 0)
+                    const avg = rpeValues.reduce((sum, rpe) => sum + rpe, 0) / rpeValues.length
+                    return avg.toFixed(1)
+                  })()
+                } / 5
+              </p>
+            )}
           </div>
         </CardBody>
       </Card>
