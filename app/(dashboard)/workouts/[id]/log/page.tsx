@@ -111,6 +111,10 @@ export default function WorkoutLogPage() {
     }
   } | null>(null)
 
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [setToDelete, setSetToDelete] = useState<{ exerciseId: string; setNumber: number } | null>(null)
+
   // Exercise-level notes (one note per exercise, not per set)
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
 
@@ -610,15 +614,23 @@ export default function WorkoutLogPage() {
                     return (
                       <div
                         key={timerKey}
-                        className="flex items-center gap-2 bg-gray-100 opacity-60 rounded-md px-3 py-3"
+                        className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 rounded-md px-3 py-3"
                       >
-                        <span className="text-sm md:text-base font-semibold text-gray-600 w-[2rem]">{log.setNumber}</span>
-                        <span className="text-sm md:text-base italic text-gray-500 flex-1">Skipped</span>
-                        <Button variant="ghost" size="sm" className="min-h-[36px]" onClick={() => skipSet(log.exerciseId, log.setNumber)}>
+                        <span className="text-sm md:text-base font-semibold text-gray-600 w-[2rem] line-through">{log.setNumber}</span>
+                        <span className="text-sm md:text-base font-medium text-yellow-700 flex-1 line-through">⊘ Skipped</span>
+                        <Button variant="ghost" size="sm" className="min-h-[36px] text-yellow-700 hover:bg-yellow-100" onClick={() => skipSet(log.exerciseId, log.setNumber)}>
                           Unskip
                         </Button>
-                        <Button variant="danger" size="sm" className="min-h-[36px] min-w-[36px]" onClick={() => removeSet(log.exerciseId, log.setNumber)}>
-                          ×
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="min-h-[36px]"
+                          onClick={() => {
+                            setSetToDelete({ exerciseId: log.exerciseId, setNumber: log.setNumber })
+                            setShowDeleteModal(true)
+                          }}
+                        >
+                          Remove
                         </Button>
                       </div>
                     )
@@ -676,22 +688,21 @@ export default function WorkoutLogPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="min-h-[36px]"
-                            onClick={() => {
-                              if (window.confirm('Skip this set?')) {
-                                skipSet(log.exerciseId, log.setNumber)
-                              }
-                            }}
+                            className="min-h-[36px] text-yellow-600 hover:bg-yellow-50 border border-yellow-300"
+                            onClick={() => skipSet(log.exerciseId, log.setNumber)}
                           >
                             Skip
                           </Button>
                           <Button
                             variant="danger"
                             size="sm"
-                            className="min-h-[36px] min-w-[36px]"
-                            onClick={() => removeSet(log.exerciseId, log.setNumber)}
+                            className="min-h-[36px]"
+                            onClick={() => {
+                              setSetToDelete({ exerciseId: log.exerciseId, setNumber: log.setNumber })
+                              setShowDeleteModal(true)
+                            }}
                           >
-                            ×
+                            Remove
                           </Button>
                         </div>
                       </div>
@@ -927,6 +938,49 @@ export default function WorkoutLogPage() {
               }}
             >
               Continue
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Set Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setSetToDelete(null)
+        }}
+        title="Remove Set?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to remove this set? This action cannot be undone.
+          </p>
+          <p className="text-sm text-gray-600">
+            Tip: If you didn&apos;t complete this set, consider using <span className="font-semibold text-yellow-600">Skip</span> instead. Skipped sets are preserved in your log.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteModal(false)
+                setSetToDelete(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (setToDelete) {
+                  removeSet(setToDelete.exerciseId, setToDelete.setNumber)
+                }
+                setShowDeleteModal(false)
+                setSetToDelete(null)
+              }}
+            >
+              Remove Set
             </Button>
           </div>
         </div>
