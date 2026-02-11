@@ -91,6 +91,9 @@ export default function WorkoutLogPage() {
   const [showIncompleteModal, setShowIncompleteModal] = useState(false)
   const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
 
+  // Exercise-level notes (one note per exercise, not per set)
+  const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
+
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0)
@@ -145,12 +148,22 @@ export default function WorkoutLogPage() {
 
         // Build lookup from most recent completed workout log
         const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number }[]>()
+        const lastExerciseNotes: Record<string, string> = {}
+
         if (data.workoutLogs && data.workoutLogs.length > 0) {
           for (const el of data.workoutLogs[0].exerciseLogs) {
             if (!lastLogSets.has(el.exerciseId)) lastLogSets.set(el.exerciseId, [])
             lastLogSets.get(el.exerciseId)!.push(el)
+
+            // Extract exercise-level notes from first set (where we store them)
+            if (el.setNumber === 1 && el.notes) {
+              lastExerciseNotes[el.exerciseId] = el.notes
+            }
           }
         }
+
+        // Set exercise notes from history
+        setExerciseNotes(lastExerciseNotes)
 
         // Pre-populate sets from the workout plan, using last log values where available
         const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
@@ -337,7 +350,7 @@ export default function WorkoutLogPage() {
             weight: 0,
             skipped: true,
             rir: undefined,
-            notes: log.notes,
+            notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
           }
         }
 
@@ -359,7 +372,7 @@ export default function WorkoutLogPage() {
           weight: weightValue,
           rir: rirValue,
           skipped: false,
-          notes: log.notes,
+          notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
         }
       }),
     }
@@ -583,13 +596,6 @@ export default function WorkoutLogPage() {
                             ×
                           </Button>
                         </div>
-                        <input
-                          type="text"
-                          placeholder="Notes for this set…"
-                          value={log.notes || ''}
-                          onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'notes', e.target.value)}
-                          className="w-full px-3 py-2 text-sm md:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
-                        />
                       </div>
                     </div>
                   )
@@ -605,6 +611,25 @@ export default function WorkoutLogPage() {
                 >
                   + Add Set
                 </Button>
+              </div>
+
+              {/* Exercise-level notes */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Exercise Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Notes for this exercise…"
+                  value={exerciseNotes[we.exercise.id] || ''}
+                  onChange={(e) => {
+                    setExerciseNotes({
+                      ...exerciseNotes,
+                      [we.exercise.id]: e.target.value,
+                    })
+                  }}
+                  className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
+                />
               </div>
             </CardBody>
           </Card>
