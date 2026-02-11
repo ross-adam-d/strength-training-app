@@ -57,6 +57,8 @@ interface ExerciseLog {
   skipped: boolean
 }
 
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
 function formatTimer(s: number) {
   return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`
 }
@@ -90,6 +92,24 @@ export default function WorkoutLogPage() {
   // Missing fields modal state
   const [showIncompleteModal, setShowIncompleteModal] = useState(false)
   const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
+
+  // "Up Next" modal state
+  const [showUpNextModal, setShowUpNextModal] = useState(false)
+  const [nextWorkout, setNextWorkout] = useState<{
+    id: string
+    name: string
+    dayOfWeek: number | null
+    microcycle: {
+      id: string
+      weekNumber: number
+      startDate: string
+      endDate: string
+      mesocycle: {
+        id: string
+        name: string
+      }
+    }
+  } | null>(null)
 
   // Exercise-level notes (one note per exercise, not per set)
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
@@ -319,6 +339,64 @@ export default function WorkoutLogPage() {
     await saveWorkout()
   }
 
+  async function fetchNextWorkout() {
+    if (!workout) return
+
+    try {
+      // Fetch the mesocycle with all workouts to find the next one
+      const response = await fetch(`/api/mesocycles/${workout.microcycle.mesocycle.id}`)
+      if (!response.ok) {
+        // If fetch fails, just show modal with no next workout
+        setShowUpNextModal(true)
+        return
+      }
+
+      const mesocycleData = await response.json()
+
+      // Find all uncompleted workouts in the phase
+      const allWorkouts: any[] = []
+      for (const microcycle of mesocycleData.microcycles) {
+        for (const w of microcycle.workouts) {
+          allWorkouts.push({
+            ...w,
+            microcycle: {
+              id: microcycle.id,
+              weekNumber: microcycle.weekNumber,
+              startDate: microcycle.startDate,
+              endDate: microcycle.endDate,
+              mesocycle: {
+                id: mesocycleData.id,
+                name: mesocycleData.name,
+              },
+            },
+          })
+        }
+      }
+
+      // Find current workout index and get next uncompleted workout
+      const currentIndex = allWorkouts.findIndex((w) => w.id === workout.id)
+      if (currentIndex >= 0) {
+        for (let i = currentIndex + 1; i < allWorkouts.length; i++) {
+          const w = allWorkouts[i]
+          if (!w.workoutLogs || w.workoutLogs.length === 0) {
+            // Found next uncompleted workout
+            setNextWorkout(w)
+            setShowUpNextModal(true)
+            return
+          }
+        }
+      }
+
+      // No next workout found (phase complete)
+      setNextWorkout(null)
+      setShowUpNextModal(true)
+    } catch (error) {
+      console.error('Error fetching next workout:', error)
+      // Show modal anyway
+      setShowUpNextModal(true)
+    }
+  }
+
   async function handleCompleteWithAutoSkip() {
     // Auto-skip incomplete sets
     setExerciseLogs((prev) =>
@@ -404,7 +482,8 @@ export default function WorkoutLogPage() {
       })
 
       if (response.ok && workout) {
-        router.push(`/microcycles/${workout.microcycle.id}`)
+        // Fetch next workout after successful save
+        await fetchNextWorkout()
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
@@ -786,6 +865,68 @@ export default function WorkoutLogPage() {
               onClick={handleCompleteWithAutoSkip}
             >
               Complete Workout
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Up Next Modal */}
+      <Modal
+        isOpen={showUpNextModal}
+        onClose={() => {
+          setShowUpNextModal(false)
+          if (workout) {
+            router.push(`/microcycles/${workout.microcycle.id}`)
+          }
+        }}
+        title="Workout Complete!"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-lg font-semibold text-green-600">
+            ✓ Great work! Workout logged successfully.
+          </p>
+
+          {nextWorkout ? (
+            <div className="mt-4">
+              <p className="text-gray-700 font-medium mb-3">Up Next:</p>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {nextWorkout.name}
+                </h3>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>
+                    <span className="font-medium">Week:</span> {nextWorkout.microcycle.weekNumber}
+                  </p>
+                  {nextWorkout.dayOfWeek !== null && (
+                    <p>
+                      <span className="font-medium">Day:</span> {DAYS_OF_WEEK[nextWorkout.dayOfWeek]}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-medium">Phase:</span> {nextWorkout.microcycle.mesocycle.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-gray-700">
+                🎉 You&apos;ve completed all workouts in this phase!
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              onClick={() => {
+                setShowUpNextModal(false)
+                if (workout) {
+                  router.push(`/microcycles/${workout.microcycle.id}`)
+                }
+              }}
+            >
+              Continue
             </Button>
           </div>
         </div>
