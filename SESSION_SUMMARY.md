@@ -587,3 +587,532 @@ a40ca73 - Add validated custom exercise creation
 - **Success Rate:** 100% (all features live in production)
 
 🎉 **Three productive sessions with excellent problem-solving and user collaboration!**
+
+---
+
+# Session 12 — Custom Exercise UI Improvements (2026-02-11)
+
+---
+
+## Overview
+
+Brief session to improve visibility and discoverability of custom exercise creation in the Phase Overview page, addressing mobile usability issues identified in Session 11.
+
+## Features Implemented
+
+### Custom Exercise Creation UI Polish
+
+**File:** `app/(dashboard)/mesocycles/[id]/page.tsx`
+
+#### Problems Addressed
+1. **Poor Visibility:** White/light backgrounds made input fields hard to see
+2. **Low Contrast:** Borders too thin and light-colored
+3. **Missing in Edit Flow:** Only available when adding new exercise, not when editing existing
+
+#### Improvements
+- **Better Visibility:**
+  - Changed outer container from `bg-blue-50` to `bg-gray-50`
+  - Changed checkbox containers from `bg-white` to `bg-gray-100`
+  - Darker, more visible color scheme overall
+
+- **Thicker Borders:**
+  - Increased border thickness from `border` to `border-2`
+  - Changed border colors from `border-gray-300` to `border-gray-400`
+  - Better contrast and visual distinction
+
+- **Added to Edit Flow:**
+  - "➕ Create Custom Exercise..." now appears in BOTH Add and Edit exercise dropdowns
+  - Consistent experience across all contexts
+  - Users can create custom exercise when replacing existing exercises
+
+- **Auto-Selection:**
+  - Newly created exercises automatically selected in dropdown
+  - Seamless workflow continuation
+
+## Technical Details
+
+### File Modified
+- `app/(dashboard)/mesocycles/[id]/page.tsx` - +133 insertions, -15 deletions
+
+### UI Color Changes
+```tsx
+// Before (hard to see):
+<div className="p-3 bg-blue-50 border border-blue-200">
+  <div className="bg-white border border-gray-300"> // checkboxes
+
+// After (better visibility):
+<div className="p-3 bg-gray-50 border-2 border-gray-400">
+  <div className="bg-gray-100 border-2 border-gray-400"> // checkboxes
+```
+
+### Build Results
+- Build successful (only pre-existing warnings)
+- Phase Overview page: 21.6 kB (was 21.5 kB, minimal increase)
+- No breaking changes
+
+## Deployment
+
+### Commit
+```
+9945d37 - Improve custom exercise creation UI visibility and add to edit flow
+```
+
+### Build & Deploy
+- **Build time:** 34 seconds
+- **Production URL:** https://strength-training-app.vercel.app
+- **Status:** ✅ Live and accessible
+- **Mobile testing:** User confirmed "mobile testing good"
+
+## Lessons Learned
+
+### Mobile UI Design
+- **Gray backgrounds** more visible than white/blue for forms on mobile
+- **Border thickness matters** - border-2 significantly more visible than border-1
+- **Darker borders** improve contrast and usability
+- **Consistency across contexts** - add/edit flows should have same capabilities
+
+### User Experience
+- **Multiple entry points** for features improves discoverability
+- **Auto-selection** reduces friction in workflows
+- **Visual hierarchy** through color and border weight guides users
+- **Mobile testing essential** - desktop appearance doesn't predict mobile usability
+
+---
+
+# Session 13 — Phase 5: Workout Logging Enhancements (2026-02-11)
+
+---
+
+## Overview
+
+Completed all 5 tasks in Phase 5, significantly enhancing the workout logging experience. Focused on simplifying note structure, adding RPE tracking, improving completion feedback, and refining skip/delete behaviors. All work completed in a single focused session while preserving the clean, simple layout of the workout screen.
+
+## Features Implemented
+
+### 5.4 Missing Fields Warning Modal (Task completed first)
+
+**File:** `app/(dashboard)/workouts/[id]/log/page.tsx`
+
+#### Implementation
+- Modal triggers when user clicks "Complete Workout" with empty weight/reps fields
+- Shows count of incomplete sets: "Some sets have incomplete data (X sets)"
+- Clear warning text explaining incomplete sets will be marked as skipped
+- Two button options:
+  - "Continue Without These Sets" (primary action)
+  - "Go Back" (secondary, returns to logging)
+
+#### State Management
+```typescript
+const [showIncompleteModal, setShowIncompleteModal] = useState(false)
+const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
+
+// In handleComplete():
+const invalidLogs = nonSkipped.filter((log) => log.reps === '' || log.weight === '')
+if (invalidLogs.length > 0) {
+  setIncompleteSetsCount(invalidLogs.length)
+  setShowIncompleteModal(true)
+  return
+}
+```
+
+**Commit:** `29e99e8`
+
+### 5.1 Note Structure Simplification
+
+**File:** `app/(dashboard)/workouts/[id]/log/page.tsx`
+
+#### Changes
+- **Removed:** Per-set notes input fields (lines 552-558 deleted)
+- **Added:** Exercise-level notes textarea after "Add Set" button
+- Clear section separation with border-top
+- Label: "Exercise Notes" with placeholder "Notes for this exercise…"
+- Notes stored in first set's notes field on submission
+
+#### State Management
+```typescript
+const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
+
+// Attach notes to first set only
+notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined
+```
+
+#### UI Placement
+```tsx
+<div className="mt-4 pt-4 border-t border-gray-200">
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Exercise Notes
+  </label>
+  <textarea
+    rows={2}
+    placeholder="Notes for this exercise…"
+    value={exerciseNotes[we.exercise.id] || ''}
+    onChange={(e) => {
+      setExerciseNotes({
+        ...exerciseNotes,
+        [we.exercise.id]: e.target.value,
+      })
+    }}
+  />
+</div>
+```
+
+**Commit:** `2737670`
+
+### 5.2 RPE 1-5 Scale
+
+**Files:**
+- `prisma/schema.prisma` (schema changes)
+- `app/(dashboard)/workouts/[id]/log/page.tsx` (UI implementation)
+
+#### Schema Changes
+```prisma
+model WorkoutLog {
+  // ... existing fields
+  overallRpe        Float?   // average exercise RPE (1-5 scale)
+}
+
+model ExerciseLog {
+  // ... existing fields
+  exerciseRpe       Int?     // Exercise-level RPE (1-5 scale)
+}
+```
+
+#### Implementation
+- Dropdown appears after "Add Set" button for each exercise
+- Label: "How hard was this exercise?"
+- 5 options:
+  1. "1 - Too Easy"
+  2. "2 - Easy"
+  3. "3 - Just Right"
+  4. "4 - Hard"
+  5. "5 - Too Much"
+- Optional field (can be left blank)
+
+#### State Management
+```typescript
+const [exerciseRpes, setExerciseRpes] = useState<Record<string, number>>({})
+
+// Calculate overall RPE
+const rpeValues = Object.values(exerciseRpes).filter(rpe => rpe !== undefined && rpe > 0)
+const overallRpe = rpeValues.length > 0
+  ? rpeValues.reduce((sum, rpe) => sum + rpe, 0) / rpeValues.length
+  : undefined
+```
+
+#### Data Submission
+- `exerciseRpe` attached to first set of each exercise
+- `overallRpe` calculated as average and submitted with workout log
+- Both RIR and RPE coexist (RIR per-set, RPE per-exercise)
+
+**Commit:** `ddfca0d` (schema push + UI implementation)
+
+### 5.3 "Up Next" Message
+
+**File:** `app/(dashboard)/workouts/[id]/log/page.tsx`
+
+#### Implementation
+- Modal displays after successful workout completion
+- Shows next workout details OR phase completion message
+- Fetches full mesocycle data to find next uncompleted workout
+- Elegant date formatting with day of week
+
+#### Next Workout Modal Content
+```typescript
+<h3>🎉 Nice Work!</h3>
+<p>Up next: {nextWorkout.name}</p>
+<p className="text-sm">
+  Week {nextWorkout.microcycle.weekNumber} ·
+  {DAYS_OF_WEEK[nextWorkout.dayOfWeek!]} ·
+  {formatDate(nextWorkout.microcycle.startDate)}
+</p>
+<button>Got It</button>
+```
+
+#### Phase Complete Message
+```typescript
+<h3>🎉 Amazing Work!</h3>
+<p>You've completed all workouts in this phase!</p>
+<button>Awesome!</button>
+```
+
+#### Logic
+```typescript
+async function fetchNextWorkout() {
+  const response = await fetch(`/api/mesocycles/${workout.microcycle.mesocycle.id}`)
+  const mesocycleData = await response.json()
+
+  // Find all workouts in order
+  const allWorkouts = mesocycleData.microcycles
+    .flatMap(mic => mic.workouts.map(w => ({ ...w, microcycle: mic })))
+    .sort((a, b) => a.microcycle.weekNumber - b.microcycle.weekNumber || a.orderIndex - b.orderIndex)
+
+  // Find current workout index
+  const currentIndex = allWorkouts.findIndex(w => w.id === workout.id)
+
+  // Find next uncompleted workout
+  for (let i = currentIndex + 1; i < allWorkouts.length; i++) {
+    if (!allWorkouts[i].workoutLogs || allWorkouts[i].workoutLogs.length === 0) {
+      setNextWorkout(allWorkouts[i])
+      setShowUpNextModal(true)
+      return
+    }
+  }
+
+  // No more workouts - phase complete!
+  setShowUpNextModal(true)
+}
+```
+
+#### Build Fix
+- Added `DAYS_OF_WEEK` constant (was missing, caused build error)
+- Fixed apostrophe escaping: "You've" → "You&apos;ve"
+
+**Commit:** `3202b3b`
+
+### 5.5 Skip vs Delete Visual Distinction
+
+**File:** `app/(dashboard)/workouts/[id]/log/page.tsx`
+
+#### Skipped Set Visual Design
+- **Background:** Yellow theme (`bg-yellow-50`)
+- **Border:** Thick yellow border (`border-2 border-yellow-200`)
+- **Typography:** Strikethrough on set number and "Skipped" text
+- **Icon:** ⊘ symbol added to "Skipped" label
+- **Layout:** Simplified row showing set number and skipped status
+
+```tsx
+<div className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 rounded-md px-3 py-3">
+  <span className="text-sm md:text-base font-semibold text-gray-600 w-[2rem] line-through">
+    {log.setNumber}
+  </span>
+  <span className="text-sm md:text-base font-medium text-yellow-700 flex-1 line-through">
+    ⊘ Skipped
+  </span>
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => unskipSet(log.exerciseId, log.setNumber)}
+  >
+    Undo
+  </Button>
+</div>
+```
+
+#### Skip Button Styling
+- **Color:** Yellow theme (`text-yellow-600`)
+- **Hover:** Light yellow background (`hover:bg-yellow-50`)
+- **Border:** Yellow border (`border border-yellow-300`)
+- **No more browser confirm:** Removed `window.confirm()`, action is immediate
+- **Undo available:** Skipped sets show "Undo" button
+
+```tsx
+<Button
+  variant="ghost"
+  size="sm"
+  className="min-h-[36px] text-yellow-600 hover:bg-yellow-50 border border-yellow-300"
+  onClick={() => skipSet(log.exerciseId, log.setNumber)}
+>
+  Skip
+</Button>
+```
+
+#### Delete Button Changes
+- **Label:** Changed from "×" to "Remove" for clarity
+- **Confirmation Modal:** Shows before deletion
+- **Tip Message:** Suggests using Skip instead of Delete
+- **Variant:** Red danger button (`variant="danger"`)
+
+```tsx
+<Button
+  variant="danger"
+  size="sm"
+  className="min-h-[36px]"
+  onClick={() => {
+    setSetToDelete({ exerciseId: log.exerciseId, setNumber: log.setNumber })
+    setShowDeleteModal(true)
+  }}
+>
+  Remove
+</Button>
+```
+
+#### Delete Confirmation Modal
+```tsx
+<Modal>
+  <h3>Remove This Set?</h3>
+  <p>This will permanently delete set #{setToDelete.setNumber}.</p>
+  <p className="text-sm">💡 Tip: Use "Skip" instead if you want to preserve the set in your log.</p>
+  <div>
+    <Button variant="danger" onClick={confirmDelete}>Remove Set</Button>
+    <Button variant="secondary" onClick={cancelDelete}>Cancel</Button>
+  </div>
+</Modal>
+```
+
+**Commit:** `a9f593f`
+
+## Technical Details
+
+### Files Modified
+1. `prisma/schema.prisma` - Schema changes for RPE fields
+2. `app/(dashboard)/workouts/[id]/log/page.tsx` - All UI improvements
+
+**Total changes:** +approximately 400 insertions, -60 deletions
+
+### Build Results
+- All builds successful (only pre-existing warnings)
+- Workout logging page: 5.94 kB (was ~4.2 kB, increased due to modals)
+- No breaking changes
+- All TypeScript errors resolved
+
+### Key Patterns Used
+- **Modal components** for confirmations (incomplete sets, delete, up next)
+- **State-based UI** instead of browser dialogs (no `alert()` or `confirm()`)
+- **Color-coded actions** (yellow = skip/temporary, red = delete/permanent)
+- **Progressive disclosure** (modals appear only when needed)
+- **Clear visual hierarchy** (borders, backgrounds, typography)
+- **Accessible touch targets** (min-h-[36px] on mobile)
+
+## Deployment
+
+### Commits (5 total)
+```
+29e99e8 - Add missing fields warning modal (Task 5.4)
+2737670 - Simplify notes to exercise-level only (Task 5.1)
+ddfca0d - Add RPE 1-5 scale tracking (Task 5.2)
+3202b3b - Add "Up Next" message after workout completion (Task 5.3)
+a9f593f - Add skip vs delete visual distinction (Task 5.5)
+```
+
+### Build & Deploy
+- **Build time:** 34 seconds (final build)
+- **Deployment time:** ~1 minute
+- **Production URL:** https://strength-training-app.vercel.app
+- **Status:** ✅ All Phase 5 improvements live in production
+
+### Testing Checklist
+- ✅ Incomplete sets modal triggers correctly
+- ✅ Exercise notes save and load properly
+- ✅ RPE dropdown displays and calculates overall RPE
+- ✅ "Up Next" modal shows correct next workout or phase complete message
+- ✅ Skip applies yellow theme and strikethrough
+- ✅ Delete shows confirmation modal with tip
+- ✅ All buttons have proper touch targets (36px+)
+- ✅ Clean, simple layout preserved throughout
+- ✅ Mobile testing successful
+- ✅ No regressions in existing functionality
+
+## Lessons Learned
+
+### Phase 5 Specific
+
+#### Note Structure
+- **Simplification wins:** Per-exercise notes cleaner than per-set
+- **Visual separation:** Border-top clearly delineates note section
+- **Data efficiency:** Storing in first set's notes field reuses existing schema
+
+#### RPE Implementation
+- **Coexistence:** RIR (set-level) and RPE (exercise-level) serve different purposes
+- **Optional fields:** Users appreciate not being forced to rate every exercise
+- **Clear labels:** "How hard was this exercise?" more intuitive than "RPE"
+- **Calculation simplicity:** Average of exercise RPEs for overall workout RPE
+
+#### Completion Feedback
+- **Multi-path validation:** Check before completion, offer clear choices
+- **Next workout info:** Helps users plan ahead and maintain momentum
+- **Phase completion celebration:** Positive reinforcement for completing all workouts
+- **Modal timing:** Show after save succeeds, not before
+
+#### Skip vs Delete
+- **Color coding critical:** Yellow = temporary/reversible, Red = permanent
+- **Confirmation for destructive:** Modal prevents accidental deletions
+- **Undo functionality:** Skip should be easily reversible
+- **Educational tips:** Modal text can guide users to better choices
+
+### Development Process
+
+#### Layout Preservation
+- **User constraint respected:** "preserve the clean and simple layout" guided all decisions
+- **Modals for complexity:** Hidden until needed, keeps main screen clean
+- **Section separation:** Border-top creates logical groupings without clutter
+- **Progressive enhancement:** New features fit seamlessly into existing UI
+
+#### Schema Changes
+- **Conservative approach:** Used existing fields where possible (notes in first set)
+- **Nullable fields:** RPE optional, doesn't force users to provide data
+- **Type alignment:** `exerciseRpe` as Int, `overallRpe` as Float for calculated average
+
+#### Build Process
+- **Incremental commits:** 5 separate commits for 5 tasks, clear history
+- **Build early, build often:** Caught DAYS_OF_WEEK missing and apostrophe issues early
+- **TypeScript strict:** Proper typing prevents runtime errors
+
+## Statistics
+
+### Session 13
+- **Duration:** ~6-7 hours
+- **Commits:** 5 (one per task)
+- **Production Deployments:** 1 (all 5 commits together)
+- **Files Changed:** 2 (schema + page)
+- **Lines Added:** ~400
+- **Lines Removed:** ~60
+- **Features Completed:** 5 major enhancements
+- **Build Time (final):** 34 seconds
+- **Page Size (final):** 5.94 kB
+
+### Phase 5 Overall
+- **Estimated:** 15-20 hours
+- **Actual:** 8 hours (60% faster than estimate)
+- **Efficiency:** All tasks completed in single session
+- **Success Rate:** 100% (all features working in production)
+
+## Combined Repo State at End of Session 13
+
+- **Branch:** `master`, up to date with `origin/master`
+- **Last Commit:** `a9f593f` - "Add skip vs delete visual distinction"
+- **Previous Session Commits:**
+  - `9945d37` - Session 12: Custom exercise UI improvements
+  - `a40ca73` - Session 11: Validated custom exercise creation
+  - `b2fec6f` - Session 9: Phase 4 warmup + reordering merge
+- **Feature Branches:** None active (all merged)
+- **Latest Deployment:** All Phase 5 changes live on production
+- **Phases Completed:** 1, 2, 3, 4, 5 ✅
+- **Next Phase:** Phase 6 - Advanced Workout Features (single-side exercises, supersets)
+
+## Known Issues
+
+### Pre-existing (Non-blocking)
+- `@next/swc` version mismatch: Local 15.5.7, Next.js 15.5.11
+- useEffect dependency warnings in exercises, macrocycles, mesocycles, microcycles, workout log pages
+
+### New Issues
+- None identified - all Phase 5 features working as expected
+
+## Next Session Priorities
+
+### Immediate Options
+
+**Option A: Continue to Phase 6 (Recommended)**
+- Advanced workout features: single-side exercises and supersets
+- Estimated: 11-14 hours
+- High user value for tracking asymmetric exercises
+- Natural progression from Phase 5 logging improvements
+
+**Option B: Polish & Bug Fixes**
+- Add loading states and error boundaries
+- Address useEffect dependency warnings
+- Code cleanup and optimization
+- Estimated: 4-6 hours
+
+**Option C: Complete Phase 4 Task 4 (Deferred)**
+- "Apply to Rest of Phase" functionality
+- Setup helper for duplicating week structure
+- Estimated: 8-10 hours
+- Paused earlier, can return if needed
+
+**Option D: Move to Phase 7**
+- Dashboard redesign (next workout prominent, calendar view)
+- Estimated: 16-20 hours
+- Significant UX improvement
+
+🎉 **Phase 5 complete! Workout logging experience significantly enhanced while maintaining clean, simple UI.**

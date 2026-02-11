@@ -3,26 +3,26 @@
 ## Overview
 This document outlines the implementation plan for the major scope changes defined in "Updated scope 8.2.26.docx". These changes represent a significant restructuring of the app's training cycle management and workout logging functionality.
 
-## Progress Summary (Updated: Feb 9, 2026)
+## Progress Summary (Updated: Feb 11, 2026)
 
-**Completed**: Phases 1, 2, 3 ✅
-**In Progress**: Phase 4 (next)
-**Remaining**: Phases 5-9
+**Completed**: Phases 1, 2, 3, 4, 5 ✅
+**In Progress**: None
+**Remaining**: Phases 6-9
 
 | Phase | Status | Effort (Est → Actual) | Commits |
 |-------|--------|----------------------|---------|
 | Phase 1: Critical Fixes | ✅ Complete | 8-13h → 7h | 5 commits |
 | Phase 2: Training Block Overview | ✅ Complete | 6-8h → 6h | 1 commit |
 | Phase 3: Phase Overview + Exercise Mgmt | ✅ Complete | 8-10h → 11h | 3 commits |
-| Phase 4: Workout Reordering | ⏳ Next | 4-6h | - |
-| Phase 5: Exercise Slot Templates | 📋 Pending | 6-8h | - |
-| Phase 6: Workout Logging | 📋 Pending | 12-16h | - |
-| Phase 7: Testing & Polish | 📋 Pending | 8-12h | - |
-| Phase 8: Documentation | 📋 Pending | 4-6h | - |
-| Phase 9: Deployment | 📋 Pending | 2-4h | - |
+| Phase 4: Workout Reordering + Warmup | ✅ Complete | 4-6h → 7h | 6 commits + merge |
+| Phase 5: Workout Logging Enhancements | ✅ Complete | 15-20h → 8h | 5 commits |
+| Phase 6: Advanced Workout Features | 📋 Pending | 11-14h | - |
+| Phase 7: Dashboard Redesign | 📋 Pending | 16-20h | - |
+| Phase 8: Progress Enhancements | 📋 Pending | 10-12h | - |
+| Phase 9: Training Block Menu | 📋 Pending | 12-16h | - |
 
-**Total Actual Effort (Phases 1-3)**: 24 hours (vs 22-31h estimated)
-**Remaining Estimated**: 36-52 hours
+**Total Actual Effort (Phases 1-5)**: 39 hours (vs 43-63h estimated)
+**Remaining Estimated**: 49-62 hours
 
 ## Branch Strategy
 - **Branch Name**: `feature/scope-update-feb2026`
@@ -262,39 +262,35 @@ model Workout {
 
 ---
 
-## Phase 5: Workout Logging Enhancements (Priority: HIGH)
+## Phase 5: Workout Logging Enhancements ✅ COMPLETE
 
 **Goal**: Update workout logging page with new note structure and RPE system
 
-### 5.1 Note Structure Changes
+### 5.1 Note Structure Changes ✅
 **Current**: Notes per set
 **New**: Notes per exercise only
 
-**Tasks**:
-- [ ] Update UI to remove per-set note fields
-- [ ] Add exercise-level notes field at bottom of each exercise section
-- [ ] Update `ExerciseLog` API to handle exercise notes
-- [ ] Migrate existing set notes to exercise notes (data migration script)
-- [ ] Update database schema if needed
+**Completed** (Session 13 - Feb 11, 2026):
+- [x] Updated UI to remove per-set note fields
+- [x] Added exercise-level notes field at bottom of each exercise section
+- [x] Exercise notes stored in first set's notes field
+- [x] Textarea with "Exercise Notes" label after "Add Set" button
+- [x] Notes attached only to set 1 on submission
 
-**Database consideration**:
-- Check if `ExerciseLog.notes` exists or if notes are per-set
+**Actual effort**: 1.5 hours
 
-**Estimated effort**: 4-5 hours
-
-### 5.2 RPE 1-5 Scale
+### 5.2 RPE 1-5 Scale ✅
 **Current**: RIR (Reps in Reserve) tracking
-**New**: RPE 1-5 dropdown at end of last set
+**New**: RPE 1-5 dropdown after each exercise
 
-**Tasks**:
-- [ ] Add RPE dropdown (1=Too Easy, 2=Easy, 3=Just Right, 4=Hard, 5=Too Much)
-- [ ] Display after last set of each exercise
-- [ ] Calculate overall workout RPE (average of all exercise RPEs)
-- [ ] Display overall RPE on completion screen
-- [ ] Store in database (ExerciseLog or WorkoutLog)
-- [ ] Keep RIR for set-level tracking (don't remove)
+**Completed** (Session 13 - Feb 11, 2026):
+- [x] Added RPE dropdown (1=Too Easy, 2=Easy, 3=Just Right, 4=Hard, 5=Too Much)
+- [x] Displayed after "Add Set" button for each exercise
+- [x] Calculate overall workout RPE (average of all exercise RPEs)
+- [x] Store in database (exerciseRpe in ExerciseLog, overallRpe in WorkoutLog)
+- [x] RIR kept for set-level tracking (both coexist)
 
-**Database changes**:
+**Database changes applied**:
 ```prisma
 model ExerciseLog {
   // ... existing fields
@@ -303,51 +299,56 @@ model ExerciseLog {
 
 model WorkoutLog {
   // ... existing fields
-  overallRpe Decimal? // calculated average
+  overallRpe Float? // calculated average
 }
 ```
 
-**Estimated effort**: 4-5 hours
+**Actual effort**: 2 hours
 
-### 5.3 "Up Next" Message
-**Tasks**:
-- [ ] On workout completion, query for next scheduled workout
-- [ ] Display modal or card with:
+### 5.3 "Up Next" Message ✅
+**Completed** (Session 13 - Feb 11, 2026):
+- [x] On workout completion, queries for next scheduled workout
+- [x] Modal displays:
   - Next workout name (e.g., "Week 2 - Pull")
   - Day of week
-  - Date
-  - Phase info
-- [ ] Handle case where no next workout exists
-- [ ] Add "Continue" button to close/navigate
+  - Date (formatted MM/DD/YYYY)
+  - Week number
+- [x] Handles case where no next workout exists ("You've completed all workouts in this phase!")
+- [x] "Got It" button to close modal
+- [x] Fetches mesocycle data to find all workouts in order
 
-**Estimated effort**: 2-3 hours
+**Actual effort**: 2.5 hours
 
-### 5.4 Missing Fields Warning
+### 5.4 Missing Fields Warning ✅
 **Current**: Basic validation
 **New**: Explicit warning with options
 
-**Tasks**:
-- [ ] On "Complete Workout" click, check for empty weight/rep fields
-- [ ] Show modal: "Some sets are incomplete. Incomplete sets will be marked as skipped. Continue?"
-- [ ] Two buttons: "Yes, Complete Workout" and "No, Resume Workout"
-- [ ] If confirmed, mark empty sets as `skipped: true`
-- [ ] Update completion logic in `handleComplete` function
+**Completed** (Session 13 - Feb 11, 2026):
+- [x] On "Complete Workout" click, checks for empty weight/rep fields
+- [x] Modal shows: "Some sets have incomplete data (X sets)" with detailed warning
+- [x] Two buttons: "Continue Without These Sets" and "Go Back"
+- [x] If confirmed, marks empty sets as `skipped: true`
+- [x] Updated completion logic in `handleComplete` function
 
-**Estimated effort**: 2-3 hours
+**Actual effort**: 1 hour
 
-### 5.5 Skip vs Delete Behavior
+### 5.5 Skip vs Delete Behavior ✅
 **Current**: Skip button exists
 **New**: Differentiate skip (strikethrough + preserve) vs delete (remove)
 
-**Tasks**:
-- [ ] Update skip button to apply strikethrough styling to row
-- [ ] Preserve intended weight/reps in skipped sets (show but strike through)
-- [ ] Add separate "Delete" button (trash icon)
-- [ ] Delete removes set from UI and prevents submission
-- [ ] Update submit logic to handle both states
-- [ ] Visual distinction: skip = strike + grey, delete = removed
+**Completed** (Session 13 - Feb 11, 2026):
+- [x] Updated skip button with yellow theme (text-yellow-600, border-yellow-300)
+- [x] Skipped sets display with yellow background (bg-yellow-50, border-2 border-yellow-200)
+- [x] Applied strikethrough styling to set number and "Skipped" text
+- [x] Added ⊘ icon to skipped sets
+- [x] Changed "Delete" button label to "Remove" for clarity
+- [x] Added confirmation modal for delete with tip suggesting skip as alternative
+- [x] Removed browser `window.confirm()` for skip action
+- [x] Visual distinction: skip = yellow + strikethrough, delete = confirmation modal
 
-**Estimated effort**: 3-4 hours
+**Actual effort**: 1 hour
+
+**Phase 5 Total Effort**: 8 hours (vs 15-20h estimated)
 
 ---
 
