@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
+import { Modal } from '@/components/ui/modal'
 
 interface WorkoutExercise {
   id: string
@@ -85,6 +86,10 @@ export default function WorkoutLogPage() {
   const [overallNotes, setOverallNotes] = useState('')
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
+
+  // Missing fields modal state
+  const [showIncompleteModal, setShowIncompleteModal] = useState(false)
+  const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
 
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
@@ -275,15 +280,44 @@ export default function WorkoutLogPage() {
       return
     }
 
+    // Check for incomplete sets
     const invalidLogs = nonSkipped.filter(
       (log) => log.reps === '' || log.weight === ''
     )
 
     if (invalidLogs.length > 0) {
-      alert('Please fill in reps and weight for all non-skipped sets')
+      // Show modal instead of alert
+      setIncompleteSetsCount(invalidLogs.length)
+      setShowIncompleteModal(true)
       return
     }
 
+    // All sets are valid, proceed with save
+    await saveWorkout()
+  }
+
+  async function handleCompleteWithAutoSkip() {
+    // Auto-skip incomplete sets
+    setExerciseLogs((prev) =>
+      prev.map((log) => {
+        if (log.skipped) return log
+        if (log.reps === '' || log.weight === '') {
+          return { ...log, skipped: true, reps: '', weight: '', rir: undefined, notes: '' }
+        }
+        return log
+      })
+    )
+
+    // Close modal and proceed
+    setShowIncompleteModal(false)
+
+    // Use setTimeout to ensure state update completes
+    setTimeout(() => {
+      saveWorkout()
+    }, 0)
+  }
+
+  async function saveWorkout() {
     setSaving(true)
 
     const endTime = new Date()
@@ -640,6 +674,36 @@ export default function WorkoutLogPage() {
           {saving ? 'Saving...' : 'Complete Workout'}
         </Button>
       </div>
+
+      {/* Incomplete Sets Warning Modal */}
+      <Modal
+        isOpen={showIncompleteModal}
+        onClose={() => setShowIncompleteModal(false)}
+        title="Incomplete Sets"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            {incompleteSetsCount} {incompleteSetsCount === 1 ? 'set is' : 'sets are'} incomplete (missing weight or reps).
+          </p>
+          <p className="text-gray-700">
+            Incomplete sets will be marked as skipped. Do you want to continue?
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setShowIncompleteModal(false)}
+            >
+              Continue Editing
+            </Button>
+            <Button
+              onClick={handleCompleteWithAutoSkip}
+            >
+              Complete Workout
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
