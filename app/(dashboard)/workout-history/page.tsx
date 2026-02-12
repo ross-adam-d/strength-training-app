@@ -182,16 +182,16 @@ export default function WorkoutHistoryPage() {
               >
                 <div className="text-sm font-medium text-gray-700">{day}</div>
                 {hasWorkouts && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl" role="img" aria-label="Workout completed">
-                      🏋️
-                    </span>
+                  <>
+                    <div className="absolute bottom-1 right-1 text-sm" role="img" aria-label="Workout completed">
+                      🏋️‍♂️
+                    </div>
                     {dayWorkouts.length > 1 && (
-                      <span className="absolute top-1 right-1 text-xs bg-primary-600 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="absolute top-1 right-1 text-xs bg-primary-600 text-white rounded-full w-4 h-4 flex items-center justify-center font-semibold">
                         {dayWorkouts.length}
                       </span>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             )

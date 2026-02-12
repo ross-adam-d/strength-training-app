@@ -576,7 +576,7 @@ export default function WorkoutLogPage() {
         return (
           <Card key={we.id} className="mb-6">
             <CardHeader>
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <h2 className="text-xl font-bold">{we.exercise.name}</h2>
                   <p className="text-sm text-gray-600 mt-1">
@@ -588,10 +588,10 @@ export default function WorkoutLogPage() {
                     setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
                     setShowLiftHistory(true)
                   }}
-                  className="ml-2 px-3 py-1.5 text-sm bg-primary-50 text-primary-700 border border-primary-200 rounded-md hover:bg-primary-100 transition font-medium"
+                  className="px-2 py-1 text-lg bg-gray-900 rounded-md hover:bg-gray-800 transition"
                   aria-label="View lift history"
                 >
-                  📊 History
+                  📊
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
