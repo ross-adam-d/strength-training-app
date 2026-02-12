@@ -38,6 +38,7 @@ interface WorkoutExercise {
   targetRir: number | null
   tempo: string | null
   restPeriod: number | null
+  supersetWithPrevious: boolean
   notes: string | null
   exercise: Exercise
 }
@@ -175,6 +176,7 @@ export default function EditWorkoutPage() {
     targetRir: 2,
     tempo: '',
     restPeriod: 90,
+    supersetWithPrevious: false,
     notes: '',
   })
 
@@ -251,6 +253,7 @@ export default function EditWorkoutPage() {
       targetRir: ex.targetRir ?? 2,
       tempo: ex.tempo || '',
       restPeriod: ex.restPeriod ?? 90,
+      supersetWithPrevious: ex.supersetWithPrevious,
       notes: ex.notes || '',
     })
     setEditingExercise(exerciseId)
@@ -272,6 +275,7 @@ export default function EditWorkoutPage() {
       targetRir: exerciseForm.targetRir || null,
       tempo: exerciseForm.tempo || null,
       restPeriod: exerciseForm.restPeriod || null,
+      supersetWithPrevious: exerciseForm.supersetWithPrevious,
       notes: exerciseForm.notes || null,
     }
 
@@ -326,6 +330,7 @@ export default function EditWorkoutPage() {
       targetRir: 2,
       tempo: '',
       restPeriod: 90,
+      supersetWithPrevious: false,
       notes: '',
     })
   }
@@ -564,6 +569,19 @@ export default function EditWorkoutPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="supersetWithPrevious"
+                checked={exerciseForm.supersetWithPrevious}
+                onChange={(e) => setExerciseForm({ ...exerciseForm, supersetWithPrevious: e.target.checked })}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <label htmlFor="supersetWithPrevious" className="text-sm text-gray-700">
+                Superset with previous exercise (no rest between exercises)
+              </label>
             </div>
 
             <div>

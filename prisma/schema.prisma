@@ -173,6 +173,7 @@ model WorkoutExercise {
   targetRir         Int?     // Reps in Reserve target
   notes             String?
   restPeriod        Int?     // rest in seconds
+  supersetWithPrevious Boolean @default(false) // true if this exercise is supersetted with the previous one
 
   workoutId         String
   workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
