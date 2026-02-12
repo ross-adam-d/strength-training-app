@@ -23,6 +23,7 @@ export function Navigation() {
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/macrocycles', label: 'Training Blocks' },
+    { href: '/workout-history', label: 'History' },
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
   ]
