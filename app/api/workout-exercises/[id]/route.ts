@@ -13,6 +13,7 @@ const updateSchema = z.object({
   notes: z.string().nullable().optional(),
   orderIndex: z.number().int().optional(),
   restPeriod: z.number().int().nullable().optional(),
+  supersetWithPrevious: z.boolean().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {
