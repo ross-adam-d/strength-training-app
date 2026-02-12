@@ -266,6 +266,7 @@ export default function EditWorkoutPage() {
     const method = editingExercise ? 'PATCH' : 'POST'
 
     const payload: any = {
+      exerciseId: exerciseForm.exerciseId,
       targetSets: exerciseForm.targetSets,
       targetReps: exerciseForm.targetReps || null,
       targetRir: exerciseForm.targetRir || null,
@@ -276,7 +277,6 @@ export default function EditWorkoutPage() {
 
     if (!editingExercise) {
       payload.workoutId = params.id
-      payload.exerciseId = exerciseForm.exerciseId
       payload.orderIndex = exercises.length
     }
 
@@ -505,19 +505,17 @@ export default function EditWorkoutPage() {
           title={editingExercise ? 'Edit Exercise' : 'Add Exercise'}
         >
           <div className="space-y-4">
-            {addingExercise && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Exercise</label>
-                <Select
-                  options={allExercises.map((ex) => ({
-                    value: ex.id,
-                    label: ex.name,
-                  }))}
-                  value={exerciseForm.exerciseId}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })}
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Exercise</label>
+              <Select
+                options={allExercises.map((ex) => ({
+                  value: ex.id,
+                  label: ex.name,
+                }))}
+                value={exerciseForm.exerciseId}
+                onChange={(e) => setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>

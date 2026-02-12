@@ -119,8 +119,16 @@ export default function MesocycleDetailPage() {
     }
   }
 
-  function handleWorkoutClick(workoutId: string) {
+  function handleStartWorkout(workoutId: string) {
+    router.push(`/workouts/${workoutId}/log`)
+  }
+
+  function handleEditWorkout(workoutId: string) {
     router.push(`/workouts/${workoutId}/edit`)
+  }
+
+  function handleViewCompleted(workoutLogId: string) {
+    router.push(`/workout-logs/${workoutLogId}`)
   }
 
   return (
@@ -214,13 +222,10 @@ export default function MesocycleDetailPage() {
                   workout.dayOfWeek !== null ? DAYS_OF_WEEK[workout.dayOfWeek] : 'Unscheduled'
 
                 return (
-                  <div
-                    key={workout.id}
-                    className="cursor-pointer hover:opacity-90 transition-all duration-200"
-                    onClick={() => handleWorkoutClick(workout.id)}
-                  >
-                    <Card>
-                      <CardBody className="py-4">
+                  <Card key={workout.id}>
+                    <CardBody className="py-4">
+                      <div className="space-y-3">
+                        {/* Workout Info */}
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 text-base truncate">
@@ -228,19 +233,50 @@ export default function MesocycleDetailPage() {
                             </h3>
                             <p className="text-sm text-gray-600 mt-0.5">{dayLabel}</p>
                           </div>
-                          <div className="flex-shrink-0">
-                            {isCompleted ? (
-                              <span className="px-2.5 py-1 text-xs bg-green-100 text-green-800 rounded-md font-medium whitespace-nowrap">
-                                ✓ Completed
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">›</span>
-                            )}
-                          </div>
+                          {isCompleted && (
+                            <span className="px-2.5 py-1 text-xs bg-green-100 text-green-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
+                              ✓ Completed
+                            </span>
+                          )}
                         </div>
-                      </CardBody>
-                    </Card>
-                  </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          {isCompleted ? (
+                            <>
+                              <button
+                                onClick={() => handleViewCompleted(workout.workoutLogs[0].id)}
+                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
+                              >
+                                View Details
+                              </button>
+                              <button
+                                onClick={() => handleEditWorkout(workout.id)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                              >
+                                Edit
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleStartWorkout(workout.id)}
+                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
+                              >
+                                Start Workout
+                              </button>
+                              <button
+                                onClick={() => handleEditWorkout(workout.id)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                              >
+                                Edit
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
                 )
               })}
           </div>
