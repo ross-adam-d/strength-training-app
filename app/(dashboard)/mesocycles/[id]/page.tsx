@@ -39,6 +39,7 @@ export default function MesocycleDetailPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const weekParam = searchParams.get('week')
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
@@ -56,6 +57,14 @@ export default function MesocycleDetailPage() {
         if (response.ok) {
           const data = await response.json()
           setMesocycle(data)
+
+          // Set initial week from URL parameter
+          if (weekParam) {
+            const weekIndex = parseInt(weekParam)
+            if (weekIndex >= 0 && weekIndex < data.microcycles.length) {
+              setCurrentWeekIndex(weekIndex)
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching mesocycle:', error)
@@ -64,20 +73,7 @@ export default function MesocycleDetailPage() {
       }
     }
     fetchMesocycle()
-  }, [params.id])
-
-  // Separate effect to handle week parameter changes
-  useEffect(() => {
-    if (!mesocycle) return
-
-    const weekParam = searchParams.get('week')
-    if (weekParam) {
-      const weekIndex = parseInt(weekParam)
-      if (weekIndex >= 0 && weekIndex < mesocycle.microcycles.length) {
-        setCurrentWeekIndex(weekIndex)
-      }
-    }
-  }, [searchParams, mesocycle])
+  }, [params.id, weekParam])
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
@@ -276,8 +272,8 @@ export default function MesocycleDetailPage() {
                                 View Details
                               </button>
                               <button
-                                onClick={() => handleEditWorkout(workout.id)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                                disabled
+                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed"
                               >
                                 Edit
                               </button>
