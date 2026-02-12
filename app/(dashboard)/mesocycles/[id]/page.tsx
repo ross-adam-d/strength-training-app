@@ -273,7 +273,7 @@ export default function MesocycleDetailPage() {
                               </button>
                               <button
                                 disabled
-                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed"
+                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed opacity-50"
                               >
                                 Edit
                               </button>
