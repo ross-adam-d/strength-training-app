@@ -56,53 +56,263 @@
 
 ---
 
-## 🎯 Next Priorities
+## 🚀 Upcoming Work
 
-### Option A: Phase 6 - Advanced Workout Features (Recommended)
-**Effort**: 11-14 hours
-**Value**: High - better tracking for single-side exercises and supersets
+### Phase 6A: Phase Details Redesign ⭐ NEXT UP
+**Priority**: CRITICAL
+**Effort**: 17-22 hours (2-3 sessions)
+**Impact**: Major UX overhaul for daily use
 
-**Tasks**:
-- Single-side exercise tracking (left/right reps separately)
-- Superset functionality (group exercises, suppress rest timer)
-- Schema changes for `isSingleSide` and `supersetWithPrevious` fields
+**Goals**: Clean, mobile-first phase overview with reduced screen real estate
 
-### Option B: Polish & Bug Fixes
-**Effort**: 4-6 hours
-**Tasks**:
-- Add loading states and error boundaries
-- Address useEffect dependency warnings
-- Mobile UX refinements
-- Code cleanup and optimization
+**Key Features**:
+1. **Clean Up Layout**
+   - Remove phase warmup box
+   - Remove dates, goal, training details from top
+   - Shrink heading, move "Back to Training Block" higher
+   - Remove dysfunctional drag-and-drop for workouts
 
-### Option C: Complete Phase 4 Task 3 (Deferred)
-**Effort**: 8-10 hours
-**Tasks**:
-- "Apply to Rest of Phase" functionality
-- Week-level and workout-level copying
-- Confirmation modal with preview
-- Skip completed workouts logic
+2. **Swipeable Week Navigation**
+   - Remove disconnected day slider at top
+   - Make entire page swipeable (swipe left/right for weeks)
+   - Smooth transitions between weeks
 
-### Option D: Phase 7 - Dashboard Redesign
-**Effort**: 16-20 hours
-**Tasks**:
-- Next workout prominent card
-- Horizontal daily calendar (30 days with workout indicators)
-- Phase volume graph
-- Reposition manual workout button
+3. **Compact Workout Display**
+   - Show workouts as small boxes (title only: "Upper Body 1", "Lower Body 2")
+   - All week workouts fit on mobile screen without scrolling
+   - Click to navigate to edit page
+
+4. **Separate Edit Workout Page** (`/workouts/[id]/edit`)
+   - Format similar to log workout page (clean, streamlined)
+   - Exercise details spread across page
+   - Delete/Edit buttons at bottom of exercise cards
+   - **Drag-and-drop exercise reordering** (remove promote/demote arrows)
+   - Save with scope prompt (see below)
+
+5. **"Apply to Rest of Phase" Prompt**
+   - On save: "Do you want these changes to apply to '[Workout Name]' for the remainder of the phase?"
+   - Two options: "Yes - Apply to All" / "No - This Week Only"
+   - Updates all matching workouts in remaining weeks if "Yes"
+
+6. **Remove Week View**
+   - Delete week detail view (consolidated into phase overview)
+
+**Files to Modify**:
+- `app/(dashboard)/mesocycles/[id]/page.tsx` - Major redesign
+- Create: `app/(dashboard)/workouts/[id]/edit/page.tsx` - New edit page
+- Update: `app/api/workouts/[id]/route.ts` - Handle bulk updates for "apply to rest"
 
 ---
 
-## 🚀 Remaining Phases
+### Phase 6B: Workout History Calendar
+**Priority**: CRITICAL
+**Effort**: 10-14 hours
+**Impact**: Better progress tracking and workout reference (replaces week view)
 
-| Phase | Description | Estimated Effort | Priority |
-|-------|-------------|-----------------|----------|
-| Phase 6 | Advanced Workout Features | 11-14h | Medium |
-| Phase 7 | Dashboard Redesign | 16-20h | Medium |
-| Phase 8 | Progress Enhancements | 10-12h | Medium |
-| Phase 9 | Training Block Menu | 12-16h | Low |
+**Key Features**:
+1. **Monthly Calendar View** (`/workout-history`)
+   - Monthly calendar grid (current month by default)
+   - Previous/next month navigation
+   - Completed workouts: show strongman stick figure icon 🏋️
+   - Click workout to see details (modal or navigate to log)
+   - Highlight today's date
 
-**Remaining Total**: 49-62 hours
+2. **Workout History List**
+   - Below calendar: list of completed workouts
+   - Order: most recent first (same as dashboard)
+   - Display: name, date, duration, RPE
+   - Click to view full workout details
+
+3. **Banner Menu Integration**
+   - Add calendar icon to bottom navigation (mobile)
+   - Add to sidebar (desktop)
+   - Navigate to workout history page
+
+4. **Lift History Popup (CRITICAL)**
+   - Quick access during active workout
+   - Modal/popup from each exercise
+   - Shows previous workout logs for same exercise
+   - Display: sets, reps, weight, date
+   - Essential since week summary is removed
+
+**Files to Create/Modify**:
+- Create: `app/(dashboard)/workout-history/page.tsx` - Calendar page
+- Create: `components/LiftHistoryModal.tsx` - Popup component
+- Update: `app/(dashboard)/workouts/[id]/log/page.tsx` - Add history popup
+- Update: `components/navigation.tsx` - Add calendar icon
+
+---
+
+### Phase 6C: Advanced Exercise Features
+**Priority**: HIGH
+**Effort**: 20-25 hours
+**Impact**: Improved workout logging flexibility
+
+**Key Features**:
+1. **Exercise Swap with Scope**
+   - "Swap Exercise" button during workout logging
+   - Select replacement from exercise library
+   - Prompt: "Apply to just this week, or remainder of phase?"
+   - Update single workout OR all remaining in phase
+
+2. **Progressive Workout Saving (Active Workout State)**
+   - Workout remains active when navigating away
+   - Save draft to localStorage or database (`status: 'draft'`)
+   - "Resume Workout" button in navigation
+   - Auto-restore all entered data when returning
+   - Warning if trying to start new workout while one is active
+   - Cleanup logic for abandoned drafts
+
+3. **Unilateral Exercise Tracking**
+   - Flag exercises as unilateral (single-side) vs bilateral
+   - If unilateral: split reps input into "Left" and "Right"
+   - Store as `repsLeft` and `repsRight` in ExerciseLog
+   - Progress tracking split by side
+   - Schema: `isUnilateral: Boolean` on Exercise model
+
+4. **Superset Functionality**
+   - Mark exercises as "superset with previous"
+   - Visual grouping in workout log (bracket/connector)
+   - Suppress rest timer between supersetted exercises
+   - Rest timer shows after completing superset group
+   - Schema: `supersetWithPrevious: Boolean` on WorkoutExercise
+
+5. **Per-Exercise "Complete" Button**
+   - Button at end of last set for each exercise
+   - Save progress after completing each exercise
+   - Allows pausing and resuming mid-workout
+
+**Database Changes**:
+```prisma
+model Exercise {
+  isUnilateral Boolean @default(false)
+}
+
+model ExerciseLog {
+  repsLeft  Int?  // for unilateral exercises
+  repsRight Int?  // for unilateral exercises
+}
+
+model WorkoutExercise {
+  supersetWithPrevious Boolean @default(false)
+}
+
+model WorkoutLog {
+  status String @default("completed") // "draft" or "completed"
+}
+```
+
+**Files to Create/Modify**:
+- Update: `app/(dashboard)/workouts/[id]/log/page.tsx` - All new features
+- Update: `app/(dashboard)/exercises/page.tsx` - Unilateral flag
+- Update: Exercise edit forms - Superset checkbox
+- Create: localStorage hooks for draft persistence
+
+---
+
+### Phase 6D: Additional Exercise Types
+**Priority**: MEDIUM
+**Effort**: 7-9 hours
+**Impact**: More exercise type flexibility
+
+**Key Features**:
+1. **Reps vs Timed Exercises**
+   - Exercise type: "Reps" or "Timed" (radio buttons in creation)
+   - If timed: replace "Reps" input with "Duration (seconds)"
+   - Built-in timer in workout log (start/stop per set)
+   - Log duration in seconds instead of reps
+   - Schema: `exerciseType: Enum('REPS', 'TIMED')`
+
+2. **Bodyweight Exercise Default**
+   - Flag exercises as bodyweight
+   - Weight input shows "BW" placeholder
+   - User can override (e.g., "+10" for weighted pull-ups)
+   - Display as "BW" if no override, "BW +10kg" if added
+   - Schema: `isBodyweight: Boolean`
+
+3. **Heading Format Cleanup**
+   - Standardize to "Week X, [Workout Name] - [Day], [Date]"
+   - Clean, consistent formatting
+
+**Database Changes**:
+```prisma
+enum ExerciseType {
+  REPS
+  TIMED
+}
+
+model Exercise {
+  exerciseType ExerciseType @default(REPS)
+  isBodyweight Boolean @default(false)
+}
+
+model ExerciseLog {
+  duration Int? // for timed exercises (seconds)
+}
+```
+
+---
+
+### Phase 7: Dashboard Redesign
+**Priority**: MEDIUM
+**Effort**: 16-20 hours
+**Impact**: Better workout-focused UX
+
+**Key Features**:
+- Next workout prominent card (large, at top)
+- Manual workout button repositioned (bottom, secondary style)
+- Current phase progress graphic (animated bar)
+- Horizontal daily calendar (last 30 days with workout indicators)
+- Phase volume graph (total sets × weight × reps per week)
+
+---
+
+### Phase 8: Progress Enhancements
+**Priority**: MEDIUM
+**Effort**: 10-12 hours
+**Impact**: Better analytics and tracking
+
+**Key Features**:
+- Volume graph with muscle group filter
+- RM table for active phase (1RM, 5RM, 10RM estimates)
+- Weak point identification
+- Training readiness score
+
+---
+
+### Phase 9: Training Block Menu & Wizard
+**Priority**: LOW
+**Effort**: 12-16 hours
+**Impact**: Better training block management
+
+**Key Features**:
+- Clone training block (deep copy all structure)
+- Enhanced delete with warnings
+- Status editing in list view
+- Simplified wizard (stop after duration, configure on overview)
+
+---
+
+## 📊 Phase Summary
+
+| Phase | Description | Effort | Priority | Status |
+|-------|-------------|--------|----------|--------|
+| Phase 1 | Critical Fixes | 8-13h → 7h | - | ✅ Complete |
+| Phase 2 | Training Block Overview | 6-8h → 6h | - | ✅ Complete |
+| Phase 3 | Phase Overview + Exercise Mgmt | 8-10h → 14h | - | ✅ Complete |
+| Phase 4 | Warmup + Reordering | 4-6h → 7h | - | ✅ Complete (67%) |
+| Phase 5 | Workout Logging Enhancements | 15-20h → 8h | - | ✅ Complete |
+| **Phase 6A** | **Phase Details Redesign** | **17-22h** | **CRITICAL** | 📋 Next |
+| **Phase 6B** | **Workout History Calendar** | **10-14h** | **CRITICAL** | 📋 Pending |
+| **Phase 6C** | **Advanced Exercise Features** | **20-25h** | **HIGH** | 📋 Pending |
+| Phase 6D | Additional Exercise Types | 7-9h | MEDIUM | 📋 Pending |
+| Phase 7 | Dashboard Redesign | 16-20h | MEDIUM | 📋 Pending |
+| Phase 8 | Progress Enhancements | 10-12h | MEDIUM | 📋 Pending |
+| Phase 9 | Training Block Menu | 12-16h | LOW | 📋 Pending |
+
+**Completed**: 42 hours (Phases 1-5)
+**Remaining**: 92-117 hours (Phases 6A-9)
+**Total Project**: 134-159 hours
 
 ---
 
@@ -184,4 +394,4 @@
 ---
 
 **Last Updated**: Feb 12, 2026
-**Next Session**: Choose from Option A-D above
+**Next Session**: Phase 6A - Phase Details Redesign (17-22h)
