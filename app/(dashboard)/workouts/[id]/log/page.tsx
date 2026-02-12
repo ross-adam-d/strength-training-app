@@ -283,11 +283,32 @@ export default function WorkoutLogPage() {
   }
 
   function completeExercise(exerciseId: string) {
+    // Find the exercise to check if it's unilateral
+    const workoutExercise = workout?.workoutExercises.find((we) => we.exercise.id === exerciseId)
+    if (!workoutExercise) return
+
     // Validate that all sets are either completed or skipped
     const exerciseSets = exerciseLogs.filter((log) => log.exerciseId === exerciseId)
-    const incompleteSets = exerciseSets.filter(
-      (log) => !log.skipped && (log.reps === '' || log.weight === '')
-    )
+
+    const incompleteSets = exerciseSets.filter((log) => {
+      if (log.skipped) return false
+
+      // Check weight (common to all exercises)
+      const weightEmpty = log.weight === '' || log.weight === undefined || log.weight === null
+      if (weightEmpty) return true
+
+      // Check reps based on exercise type
+      if (workoutExercise.exercise.isUnilateral) {
+        // For unilateral: check repsLeft and repsRight
+        const leftEmpty = log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null
+        const rightEmpty = log.repsRight === '' || log.repsRight === undefined || log.repsRight === null
+        return leftEmpty || rightEmpty
+      } else {
+        // For regular: check reps
+        const repsEmpty = log.reps === '' || log.reps === undefined || log.reps === null
+        return repsEmpty
+      }
+    })
 
     if (incompleteSets.length > 0) {
       alert(`Please complete or skip all sets before marking this exercise as done (${incompleteSets.length} incomplete sets)`)
