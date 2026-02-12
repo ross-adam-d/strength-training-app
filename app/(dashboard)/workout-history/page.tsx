@@ -176,16 +176,14 @@ export default function WorkoutHistoryPage() {
             return (
               <div
                 key={day}
-                className={`aspect-square border rounded-md p-2 relative ${
+                className={`aspect-square border rounded-md p-2 relative flex flex-col items-center justify-center ${
                   isToday ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
                 } ${hasWorkouts ? 'bg-green-50' : ''}`}
               >
                 <div className="text-sm font-medium text-gray-700">{day}</div>
                 {hasWorkouts && (
                   <>
-                    <div className="absolute bottom-1 right-1 text-sm" role="img" aria-label="Workout completed">
-                      🏋️‍♂️
-                    </div>
+                    <div className="w-1.5 h-1.5 bg-primary-600 rounded-full mt-1" aria-label="Workout completed" />
                     {dayWorkouts.length > 1 && (
                       <span className="absolute top-1 right-1 text-xs bg-primary-600 text-white rounded-full w-4 h-4 flex items-center justify-center font-semibold">
                         {dayWorkouts.length}

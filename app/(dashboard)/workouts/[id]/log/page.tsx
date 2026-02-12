@@ -588,7 +588,7 @@ export default function WorkoutLogPage() {
                     setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
                     setShowLiftHistory(true)
                   }}
-                  className="px-2 py-1 text-lg bg-gray-900 rounded-md hover:bg-gray-800 transition"
+                  className="text-xl hover:opacity-70 transition"
                   aria-label="View lift history"
                 >
                   📊
