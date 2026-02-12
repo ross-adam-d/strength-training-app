@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
 
@@ -38,6 +38,7 @@ const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export default function MesocycleDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
@@ -54,6 +55,15 @@ export default function MesocycleDetailPage() {
         if (response.ok) {
           const data = await response.json()
           setMesocycle(data)
+
+          // Set initial week index from URL parameter
+          const weekParam = searchParams.get('week')
+          if (weekParam) {
+            const weekIndex = parseInt(weekParam)
+            if (weekIndex >= 0 && weekIndex < data.microcycles.length) {
+              setCurrentWeekIndex(weekIndex)
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching mesocycle:', error)
@@ -62,7 +72,7 @@ export default function MesocycleDetailPage() {
       }
     }
     fetchMesocycle()
-  }, [params.id])
+  }, [params.id, searchParams])
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)

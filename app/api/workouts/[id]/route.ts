@@ -166,19 +166,59 @@ export async function PATCH(
         .flatMap((mic) => mic.workouts)
         .filter((w) => w.name === originalName)
 
-      // Update current workout + all remaining workouts
-      await prisma.$transaction([
+      // Fetch current workout's exercises to clone them
+      const currentExercises = await prisma.workoutExercise.findMany({
+        where: { workoutId: id },
+        orderBy: { orderIndex: 'asc' },
+      })
+
+      // Build transaction array (properly typed)
+      const transactionOps: any[] = [
+        // Update current workout
         prisma.workout.update({
           where: { id },
           data: updateData,
         }),
+        // Update remaining workouts
         ...remainingWorkouts.map((w) =>
           prisma.workout.update({
             where: { id: w.id },
             data: updateData,
           })
         ),
-      ])
+      ]
+
+      // For each remaining workout, delete old exercises and clone current ones
+      for (const w of remainingWorkouts) {
+        // Delete existing exercises for this workout
+        transactionOps.push(
+          prisma.workoutExercise.deleteMany({
+            where: { workoutId: w.id },
+          })
+        )
+
+        // Clone current exercises to this workout
+        for (const ex of currentExercises) {
+          transactionOps.push(
+            prisma.workoutExercise.create({
+              data: {
+                workoutId: w.id,
+                exerciseId: ex.exerciseId,
+                orderIndex: ex.orderIndex,
+                targetSets: ex.targetSets,
+                targetReps: ex.targetReps,
+                targetRir: ex.targetRir,
+                tempo: ex.tempo,
+                restPeriod: ex.restPeriod,
+                notes: ex.notes,
+              },
+            })
+          )
+        }
+      }
+
+      // Execute all operations in a transaction
+      await prisma.$transaction(transactionOps)
 
       return NextResponse.json({ success: true, updatedCount: remainingWorkouts.length + 1 })
     } else {

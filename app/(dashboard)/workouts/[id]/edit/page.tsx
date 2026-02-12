@@ -388,7 +388,7 @@ export default function EditWorkoutPage() {
       <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
         <div className="flex items-center justify-between">
           <Link
-            href={`/mesocycles/${workout.microcycle.mesocycle.id}`}
+            href={`/mesocycles/${workout.microcycle.mesocycle.id}?week=${workout.microcycle.weekNumber - 1}`}
             className="text-primary-600 hover:text-primary-700 text-sm font-medium"
           >
             ← Back
