@@ -126,6 +126,9 @@ export default function WorkoutLogPage() {
   // Exercise-level RPE (1-5 scale: Too Easy → Too Much)
   const [exerciseRpes, setExerciseRpes] = useState<Record<string, number>>({})
 
+  // Completed exercises tracking
+  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
+
   // Lift history modal state
   const [showLiftHistory, setShowLiftHistory] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
@@ -277,6 +280,22 @@ export default function WorkoutLogPage() {
         skipped: false,
       },
     ])
+  }
+
+  function completeExercise(exerciseId: string) {
+    // Validate that all sets are either completed or skipped
+    const exerciseSets = exerciseLogs.filter((log) => log.exerciseId === exerciseId)
+    const incompleteSets = exerciseSets.filter(
+      (log) => !log.skipped && (log.reps === '' || log.weight === '')
+    )
+
+    if (incompleteSets.length > 0) {
+      alert(`Please complete or skip all sets before marking this exercise as done (${incompleteSets.length} incomplete sets)`)
+      return
+    }
+
+    // Mark exercise as complete
+    setCompletedExercises(new Set([...completedExercises, exerciseId]))
   }
 
   function updateLog(exerciseId: string, setNumber: number, field: string, value: any) {
@@ -590,7 +609,17 @@ export default function WorkoutLogPage() {
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold">{we.exercise.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold">{we.exercise.name}</h2>
+                    {completedExercises.has(we.exercise.id) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Done
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600 mt-1">
                     Target: {we.targetSets} sets × {we.targetReps} reps
                   </p>
@@ -839,6 +868,27 @@ export default function WorkoutLogPage() {
                   className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
                 />
               </div>
+
+              {/* Complete Exercise button */}
+              {completedExercises.has(we.exercise.id) ? (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-700 font-medium">Exercise Completed</span>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Button
+                    onClick={() => completeExercise(we.exercise.id)}
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                  >
+                    ✓ Complete Exercise
+                  </Button>
+                </div>
+              )}
             </CardBody>
           </Card>
         )
