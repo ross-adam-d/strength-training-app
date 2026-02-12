@@ -212,16 +212,16 @@ export default function MesocycleDetailPage() {
         </p>
       </div>
 
-      {/* Compact Workout Grid with Swipe Frame */}
+      {/* Compact Workout Grid */}
       <div
         className="px-4"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Swipeable content area with border frame */}
+        {/* Swipeable content area with smooth transition */}
         <div
-          className={`border-l-2 border-r-2 border-primary-200 pl-3 pr-3 -mx-3 transition-opacity duration-300 ${
+          className={`transition-opacity duration-300 ${
             isTransitioning ? 'opacity-50' : 'opacity-100'
           }`}
         >

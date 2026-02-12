@@ -352,7 +352,13 @@ export default function EditWorkoutPage() {
       })
 
       if (response.ok) {
-        router.back()
+        // Navigate back to the correct week in phase overview
+        if (workout) {
+          const weekIndex = workout.microcycle.weekNumber - 1
+          router.push(`/mesocycles/${workout.microcycle.mesocycle.id}?week=${weekIndex}`)
+        } else {
+          router.back()
+        }
       } else {
         const data = await response.json()
         alert(data.error || 'Failed to save workout')
