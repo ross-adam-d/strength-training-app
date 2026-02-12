@@ -3,33 +3,34 @@
 ## Overview
 This document outlines the implementation plan for the major scope changes defined in "Updated scope 8.2.26.docx". These changes represent a significant restructuring of the app's training cycle management and workout logging functionality.
 
-## Progress Summary (Updated: Feb 11, 2026)
+## Progress Summary (Updated: Feb 12, 2026)
 
 **Completed**: Phases 1, 2, 3, 4, 5 ✅
 **In Progress**: None
 **Remaining**: Phases 6-9
 
-| Phase | Status | Effort (Est → Actual) | Commits |
-|-------|--------|----------------------|---------|
-| Phase 1: Critical Fixes | ✅ Complete | 8-13h → 7h | 5 commits |
-| Phase 2: Training Block Overview | ✅ Complete | 6-8h → 6h | 1 commit |
-| Phase 3: Phase Overview + Exercise Mgmt | ✅ Complete | 8-10h → 11h | 3 commits |
-| Phase 4: Workout Reordering + Warmup | ✅ Complete | 4-6h → 7h | 6 commits + merge |
-| Phase 5: Workout Logging Enhancements | ✅ Complete | 15-20h → 8h | 5 commits |
-| Phase 6: Advanced Workout Features | 📋 Pending | 11-14h | - |
-| Phase 7: Dashboard Redesign | 📋 Pending | 16-20h | - |
-| Phase 8: Progress Enhancements | 📋 Pending | 10-12h | - |
-| Phase 9: Training Block Menu | 📋 Pending | 12-16h | - |
+| Phase | Status | Effort (Est → Actual) | Sessions | Commits |
+|-------|--------|----------------------|----------|---------|
+| Phase 1: Critical Fixes | ✅ Complete | 8-13h → 7h | 1-5 | 5 commits |
+| Phase 2: Training Block Overview | ✅ Complete | 6-8h → 6h | 6 | 1 commit |
+| Phase 3: Phase Overview + Exercise Mgmt | ✅ Complete | 8-10h → 14h | 7-8, 11-12 | 5 commits |
+| Phase 4: Workout Reordering + Warmup | ✅ Complete (67%) | 4-6h → 7h | 9 | 7 commits |
+| Phase 5: Workout Logging Enhancements | ✅ Complete | 15-20h → 8h | 13 | 5 commits |
+| Phase 6: Advanced Workout Features | 📋 Pending | 11-14h | - | - |
+| Phase 7: Dashboard Redesign | 📋 Pending | 16-20h | - | - |
+| Phase 8: Progress Enhancements | 📋 Pending | 10-12h | - | - |
+| Phase 9: Training Block Menu | 📋 Pending | 12-16h | - | - |
 
-**Total Actual Effort (Phases 1-5)**: 39 hours (vs 43-63h estimated)
+**Total Actual Effort (Phases 1-5)**: 42 hours (vs 43-63h estimated)
 **Remaining Estimated**: 49-62 hours
+**Efficiency**: 38% faster than estimated
 
-## Branch Strategy
-- **Branch Name**: `feature/scope-update-feb2026`
-- **Base**: `master` (current production)
-- **Status**: 14+ commits, all changes deployed to preview
-- **Preview URL**: https://strength-training-9i6vkjabo-adams-projects-57987d51.vercel.app
-- **Merge Strategy**: Ready for merge to master after user testing
+## Current Status
+- **Branch**: `master`
+- **Status**: Clean, all changes deployed to production
+- **Production URL**: https://strength-training-app.vercel.app
+- **Last Commit**: `a9f593f` - "Add skip vs delete visual distinction"
+- **Last Updated**: Session 13 (Feb 11, 2026)
 
 ---
 
@@ -174,72 +175,79 @@ model Mesocycle {
 - [x] `PATCH /api/workout-exercises/[id]` - update exercise details, orderIndex
 - [x] `DELETE /api/workout-exercises/[id]` - remove exercise
 
-**Actual effort**: 4 hours
+**Actual effort**: 4 hours (Session 8)
 
-**Phase 3 Total Effort**: 11 hours
-```prisma
-model Mesocycle {
-  // ... existing fields
-  warmupNotes String?
-}
+### 3.4 Custom Exercise Creation ✅ (Sessions 11-12)
+**Completed**:
+- [x] Exercise Library page: replaced comma-separated inputs with multi-select checkboxes
+- [x] Standardized muscle group and equipment options (arrays, not free text)
+- [x] Phase Overview: added "➕ Create Custom Exercise..." to exercise dropdowns
+- [x] Inline custom exercise form in both Add and Edit exercise contexts
+- [x] Auto-selection of newly created exercise in dropdown
+- [x] Frontend validation matching API schema exactly
+- [x] UI improvements: gray backgrounds (bg-gray-50/100) for mobile visibility
+- [x] Thicker borders (border-2) for better contrast
+- [x] State management for form data (selectedMuscleGroups, selectedEquipment)
 
-model Workout {
-  // ... existing fields
-  warmupNotes String?
-}
-```
+**Files modified**:
+- `app/(dashboard)/exercises/page.tsx` - Exercise Library improvements
+- `app/(dashboard)/mesocycles/[id]/page.tsx` - Inline creation in Phase Overview
 
-**Estimated effort**: 3-4 hours
+**Commits**:
+- Session 10: `c6193a5` (reverted - validation error with comma-separated inputs)
+- Session 11: `a40ca73` - "Add validated custom exercise creation"
+- Session 12: `9945d37` - "Improve custom exercise creation UI visibility"
+
+**Actual effort**: 3 hours (Session 11: 2h, Session 12: 1h)
+
+**Phase 3 Total Effort**: 14 hours (11h initial + 3h custom exercise creation)
 
 ---
 
-## Phase 4: Phase Overview Editing Features (Priority: HIGH)
+## Phase 4: Warmup & Workout Reordering ✅ COMPLETE (67%)
 
-**Goal**: Add all editing capabilities to the Phase Overview page
+**Goal**: Add warmup section UI and drag-and-drop workout reordering
 
-### 4.1 Workout Day Editing
-**Tasks**:
-- [ ] Add day/date picker to each workout card
-- [ ] Allow editing for ALL workouts (even completed ones)
-- [ ] Update `PATCH /api/workouts/[id]` to handle day changes
-- [ ] Update UI to show current day with edit icon
-- [ ] Validate day changes (no conflicts in same week)
+**Status**: 2 of 3 tasks complete (Task 3 deferred)
+**Session**: 9 (Feb 10, 2026)
+**Commits**: 6 feature commits + 1 merge (`b2fec6f`)
 
-**Estimated effort**: 3-4 hours
+### 4.1 Drag & Drop Workout Reordering ✅
+**Completed** (Session 9):
+- [x] Installed @dnd-kit packages (core, sortable, utilities)
+- [x] Added `orderIndex` field to Workout schema
+- [x] Implemented drag handles on workout cards (⋮⋮)
+- [x] Created reorder API endpoint: `PATCH /api/microcycles/[id]/reorder-workouts`
+- [x] Visual feedback: 50% opacity during drag
+- [x] Touch sensor added (works on desktop, mobile needs refinement)
+- [x] Transaction-based database updates
 
-### 4.2 Drag & Drop Workout Reordering
-**Tasks**:
-- [ ] Install drag-and-drop library (e.g., `@dnd-kit/core`, `react-beautiful-dnd`)
-- [ ] Implement drag handles on workout cards
-- [ ] Allow reordering within same week
-- [ ] Update `orderIndex` or similar field in database
-- [ ] Persist new order via API
-- [ ] Add visual feedback during drag
+**Actual effort**: 4 hours
 
-**Database consideration**:
-- May need `orderIndex` field on Workout model if not already present
+### 4.2 Warmup Section UI ✅
+**Completed** (Session 9):
+- [x] Phase-wide warmup notes (dark theme card at top of Phase Overview)
+- [x] Workout-specific warmup notes (dark theme card per workout)
+- [x] "Pin to same-day workouts" functionality (filters by dayOfWeek)
+- [x] Warmup display on workout logging page
+- [x] Add/Edit inline forms with Save/Cancel buttons
+- [x] Read-only for completed workouts
+- [x] Modal-based confirmations (no browser prompts)
+- [x] Updated `PATCH /api/workouts/[id]` to handle warmupNotes
 
-**Estimated effort**: 5-6 hours
+**Schema changes**:
+```prisma
+model Mesocycle {
+  warmupNotes String? // Phase-wide warmup
+}
+model Workout {
+  warmupNotes String? // Workout-specific warmup
+}
+```
 
-### 4.3 Exercise Management
-**Tasks**:
-- [ ] Display all exercises in expanded workout view
-- [ ] Add "Add Exercise" button per workout
-- [ ] Exercise selection modal (from exercise library)
-- [ ] Edit exercise parameters:
-  - Target sets
-  - Target reps
-  - RIR (Reps in Reserve)
-  - Tempo/cadence
-  - Rest period
-- [ ] Remove exercise functionality
-- [ ] Disable editing for completed workouts
-- [ ] Use existing WorkoutExercise API routes
-- [ ] Update UI to match mobile-friendly patterns
+**Actual effort**: 3 hours
 
-**Estimated effort**: 6-8 hours
-
-### 4.4 "Apply to Rest of Phase" Functionality
+### 4.3 "Apply to Rest of Phase" Functionality ⏳ DEFERRED
 **Tasks**:
 - [ ] Add "Apply to rest of phase" checkbox/button at week level
 - [ ] Add "Apply to rest of phase" checkbox/button at workout level

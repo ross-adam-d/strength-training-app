@@ -1,93 +1,27 @@
 # Known Issues & Pending Fixes
 
-## 🐛 Critical Issues
+## ✅ Recently Fixed
 
-### Custom Exercise Creation - UI Issues (Feb 11, 2026)
+### Custom Exercise Creation - UI Issues (Fixed: Session 12, Feb 11, 2026)
 
-**Status:** 🟡 UI improvement needed
+**Status:** ✅ Fixed - Commit `9945d37`
 
-**Affected Pages:**
-- Phase Overview (`/mesocycles/[id]`) → Add Exercise → Create Custom Exercise
+**Issues Resolved:**
+1. ✅ **Poor visibility** - Changed from white backgrounds to gray (bg-gray-50, bg-gray-100)
+2. ✅ **Low contrast** - Increased border thickness (border → border-2, border-gray-400)
+3. ✅ **Missing from edit workflow** - Added "➕ Create Custom Exercise..." to both Add and Edit dropdowns
+4. ✅ **Auto-selection** - Newly created exercises automatically selected in dropdown
 
-**Issues:**
-1. **Poor discoverability**
-   - Form is expandable but requires clicking small arrow to the right
-   - Arrow is not obvious/easy to miss on mobile
-   - Users may not realize the form is there
+**Changes Made:**
+- Inline form: gray background (bg-gray-50) instead of blue/white
+- Checkbox containers: darker gray (bg-gray-100) with thicker borders (border-2)
+- Available in both "Add Exercise" and "Edit Exercise" contexts
+- Better mobile visibility confirmed by user testing
 
-2. **Poor visibility - White background**
-   - Form uses white/light background making text fields hard to see
-   - Input fields blend into background
-   - Difficult to read and interact with on mobile
-   - Needs better contrast and visual distinction
+**Files Modified:**
+- `app/(dashboard)/mesocycles/[id]/page.tsx` (+133, -15 lines)
 
-3. **Missing in exercise edit workflow**
-   - "Create Custom Exercise" only appears when adding new exercise
-   - Should also appear when changing/editing existing exercise
-   - Use case: Replace an existing exercise with a new custom one
-
-**Impact:**
-- Form is functional but hard to discover (small arrow)
-- Poor visibility makes it difficult to use (white background)
-- Missing from exercise edit workflow
-
-**Proposed Solution:**
-
-1. **Improve inline form UI visibility**
-   ```
-   Phase Overview (mesocycles/[id]/page.tsx, lines ~1089-1200):
-
-   Current issues:
-   - White background (bg-white) makes fields hard to see
-   - Small checkboxes with light styling
-   - May need larger arrow or auto-expand behavior
-
-   Improvements needed:
-   - Change background to darker color (bg-gray-100 or bg-blue-50)
-   - Increase input field contrast (darker borders, bg-white for inputs)
-   - Larger, more visible expand/collapse indicator
-   - Consider auto-expanding when "Create Custom Exercise" selected
-   - Better label contrast and sizing for mobile
-   ```
-
-2. **Add to exercise edit dropdown**
-   ```
-   When editing existing exercise (Phase Overview):
-   - Find exercise select dropdown in edit mode
-   - Add "➕ Create Custom Exercise..." option
-   - Show same inline form when selected
-   - Auto-select newly created exercise in dropdown
-   ```
-
-**Specific UI Changes:**
-
-```tsx
-// Current inline form (lines ~1089-1200):
-<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-  // Nested white background checkboxes:
-  <div className="... bg-white"> // ← PROBLEM: Hard to see
-
-// Proposed changes:
-<div className="p-3 bg-gray-50 border border-gray-300 rounded-lg space-y-3">
-  // Make input fields stand out:
-  <input className="... bg-white border-2 border-gray-400 ...">
-
-  // Checkbox containers with better contrast:
-  <div className="... bg-gray-100 border-2 border-gray-300">
-    <label className="... text-gray-900 font-medium">
-```
-
-**Benefits:**
-- ✅ Simpler implementation (no component extraction needed)
-- ✅ Improved visibility on mobile and desktop
-- ✅ Better discoverability with darker backgrounds
-- ✅ Works in both add and edit workflows
-- ✅ Maintains existing validation logic
-
-**Estimated Effort:** 1-2 hours
-- Improve inline form styling: 45min
-- Add to edit workflow: 45min
-- Testing: 30min
+**Testing:** ✅ Mobile testing confirmed successful
 
 ---
 
