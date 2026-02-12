@@ -17,6 +17,7 @@ interface WorkoutExercise {
   targetRir?: number
   tempo?: string
   restPeriod?: number
+  supersetWithPrevious: boolean
   notes?: string
   exercise: {
     id: string
@@ -571,13 +572,21 @@ export default function WorkoutLogPage() {
       )}
 
       {/* Vertical exercise cards */}
-      {workout.workoutExercises.map((we) => {
+      {workout.workoutExercises.map((we, index) => {
         const setsForExercise = exerciseLogs.filter(
           (log) => log.exerciseId === we.exercise.id
         )
 
+        // Check if next exercise is also part of this superset
+        const nextExercise = workout.workoutExercises[index + 1]
+        const isLastInSuperset = !nextExercise || !nextExercise.supersetWithPrevious
+        const showRestTimer = we.restPeriod != null && (!we.supersetWithPrevious || isLastInSuperset)
+
         return (
-          <Card key={we.id} className="mb-6">
+          <Card
+            key={we.id}
+            className={`${we.supersetWithPrevious ? 'mb-2 border-l-4 border-l-primary-500 bg-primary-50' : 'mb-6'}`}
+          >
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
@@ -608,9 +617,14 @@ export default function WorkoutLogPage() {
                     Tempo {we.tempo}
                   </span>
                 )}
-                {we.restPeriod != null && (
+                {showRestTimer && (
                   <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
-                    Rest {formatTimer(we.restPeriod)}
+                    Rest {formatTimer(we.restPeriod!)}
+                  </span>
+                )}
+                {we.supersetWithPrevious && (
+                  <span className="inline-block bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">
+                    Superset
                   </span>
                 )}
               </div>
@@ -729,14 +743,14 @@ export default function WorkoutLogPage() {
                       <div className="ml-[2.5rem] space-y-2">
                         {/* Better spacing and larger buttons for mobile */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          {we.restPeriod != null && (
+                          {showRestTimer && (
                             <Button
                               variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}
                               size="sm"
                               className={`min-h-[36px] ${isFlashing ? 'animate-pulse' : ''}`}
                               onClick={() => startTimer(log.exerciseId, log.setNumber, we.restPeriod!)}
                             >
-                              {isTimerActive ? formatTimer(timerSecondsLeft) : `Rest ${formatTimer(we.restPeriod)}`}
+                              {isTimerActive ? formatTimer(timerSecondsLeft) : `Rest ${formatTimer(we.restPeriod!)}`}
                             </Button>
                           )}
                           <Button
