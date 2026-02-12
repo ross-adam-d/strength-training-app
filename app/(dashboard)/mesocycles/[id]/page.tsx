@@ -44,6 +44,7 @@ export default function MesocycleDetailPage() {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -55,15 +56,6 @@ export default function MesocycleDetailPage() {
         if (response.ok) {
           const data = await response.json()
           setMesocycle(data)
-
-          // Set initial week index from URL parameter
-          const weekParam = searchParams.get('week')
-          if (weekParam) {
-            const weekIndex = parseInt(weekParam)
-            if (weekIndex >= 0 && weekIndex < data.microcycles.length) {
-              setCurrentWeekIndex(weekIndex)
-            }
-          }
         }
       } catch (error) {
         console.error('Error fetching mesocycle:', error)
@@ -72,7 +64,20 @@ export default function MesocycleDetailPage() {
       }
     }
     fetchMesocycle()
-  }, [params.id, searchParams])
+  }, [params.id])
+
+  // Separate effect to handle week parameter changes
+  useEffect(() => {
+    if (!mesocycle) return
+
+    const weekParam = searchParams.get('week')
+    if (weekParam) {
+      const weekIndex = parseInt(weekParam)
+      if (weekIndex >= 0 && weekIndex < mesocycle.microcycles.length) {
+        setCurrentWeekIndex(weekIndex)
+      }
+    }
+  }, [searchParams, mesocycle])
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
@@ -118,14 +123,18 @@ export default function MesocycleDetailPage() {
   const canGoNext = currentWeekIndex < mesocycle.microcycles.length - 1
 
   function handlePreviousWeek() {
-    if (canGoPrevious) {
+    if (canGoPrevious && !isTransitioning) {
+      setIsTransitioning(true)
       setCurrentWeekIndex(currentWeekIndex - 1)
+      setTimeout(() => setIsTransitioning(false), 300)
     }
   }
 
   function handleNextWeek() {
-    if (canGoNext) {
+    if (canGoNext && !isTransitioning) {
+      setIsTransitioning(true)
       setCurrentWeekIndex(currentWeekIndex + 1)
+      setTimeout(() => setIsTransitioning(false), 300)
     }
   }
 
@@ -142,12 +151,7 @@ export default function MesocycleDetailPage() {
   }
 
   return (
-    <div
-      className="min-h-screen pb-20"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="min-h-screen pb-20">
       {/* Clean Header */}
       <div className="mb-4 px-4 pt-4">
         <Link
@@ -208,20 +212,31 @@ export default function MesocycleDetailPage() {
         </p>
       </div>
 
-      {/* Compact Workout Grid */}
-      <div className="px-4">
-        {currentWeek.workouts.length === 0 ? (
-          <Card>
-            <CardBody>
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">No workouts for this week</p>
-                <p className="text-sm mt-1">Add workouts from the workout template</p>
-              </div>
-            </CardBody>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {currentWeek.workouts
+      {/* Compact Workout Grid with Swipe Frame */}
+      <div
+        className="px-4"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Swipeable content area with border frame */}
+        <div
+          className={`border-l-2 border-r-2 border-primary-200 pl-3 pr-3 -mx-3 transition-opacity duration-300 ${
+            isTransitioning ? 'opacity-50' : 'opacity-100'
+          }`}
+        >
+          {currentWeek.workouts.length === 0 ? (
+            <Card>
+              <CardBody>
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg">No workouts for this week</p>
+                  <p className="text-sm mt-1">Add workouts from the workout template</p>
+                </div>
+              </CardBody>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {currentWeek.workouts
               .sort((a, b) => {
                 // Sort by orderIndex if available, otherwise by dayOfWeek
                 return (a.dayOfWeek ?? 999) - (b.dayOfWeek ?? 999)
@@ -289,8 +304,9 @@ export default function MesocycleDetailPage() {
                   </Card>
                 )
               })}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Week Progress Indicator */}
