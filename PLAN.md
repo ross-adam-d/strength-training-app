@@ -1,11 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 12, 2026)
+## 📍 Current Status (Updated: Feb 12, 2026 - End of Session 14)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
-**Branch**: `master` (clean, all changes deployed)
-**Last Commit**: `a9f593f` - "Add skip vs delete visual distinction"
+**Branch**: `feature/phase6a-phase-details-redesign` (ready to merge)
+**Master Branch**: `a9f593f` - "Add skip vs delete visual distinction"
+**Feature Branch**: `c11a8b6` - "Improve disabled button visibility with opacity"
 
 ---
 
@@ -51,60 +52,25 @@
 - ✅ Inline custom exercise creation in Phase Overview (Session 11)
 - ✅ Custom exercise UI improvements for mobile visibility (Session 12)
 
-**Total Effort (Phases 1-5)**: 39 hours (vs 43-63h estimated)
-**Efficiency**: 38% faster than estimated
+### Phase 6A: Phase Details Redesign (9h - 95% complete)
+- ✅ **Task 1**: Clean up layout (removed clutter, simplified header)
+- ✅ **Task 2**: Swipeable week navigation (touch gestures + smooth transitions)
+- ✅ **Task 3**: Compact workout display (small cards fit on mobile screen)
+- ✅ **Task 4**: Separate edit workout page (full CRUD with drag-and-drop)
+- ✅ **Task 5**: "Apply to rest of phase" prompt (modal + bulk updates)
+- ✅ **Task 6**: Remove week view (consolidated into phase overview)
+- ⏳ **Navigation polish**: Week parameter (deferred - acceptable workaround)
+- **Sessions**: 14 (Feb 12, 2026)
+- **Status**: Feature branch ready to merge to master
+
+**Total Effort (Phases 1-6A)**: 48 hours (vs 60-85h estimated)
+**Efficiency**: 43% faster than estimated
 
 ---
 
 ## 🚀 Upcoming Work
 
-### Phase 6A: Phase Details Redesign ⭐ NEXT UP
-**Priority**: CRITICAL
-**Effort**: 17-22 hours (2-3 sessions)
-**Impact**: Major UX overhaul for daily use
-
-**Goals**: Clean, mobile-first phase overview with reduced screen real estate
-
-**Key Features**:
-1. **Clean Up Layout**
-   - Remove phase warmup box
-   - Remove dates, goal, training details from top
-   - Shrink heading, move "Back to Training Block" higher
-   - Remove dysfunctional drag-and-drop for workouts
-
-2. **Swipeable Week Navigation**
-   - Remove disconnected day slider at top
-   - Make entire page swipeable (swipe left/right for weeks)
-   - Smooth transitions between weeks
-
-3. **Compact Workout Display**
-   - Show workouts as small boxes (title only: "Upper Body 1", "Lower Body 2")
-   - All week workouts fit on mobile screen without scrolling
-   - Click to navigate to edit page
-
-4. **Separate Edit Workout Page** (`/workouts/[id]/edit`)
-   - Format similar to log workout page (clean, streamlined)
-   - Exercise details spread across page
-   - Delete/Edit buttons at bottom of exercise cards
-   - **Drag-and-drop exercise reordering** (remove promote/demote arrows)
-   - Save with scope prompt (see below)
-
-5. **"Apply to Rest of Phase" Prompt**
-   - On save: "Do you want these changes to apply to '[Workout Name]' for the remainder of the phase?"
-   - Two options: "Yes - Apply to All" / "No - This Week Only"
-   - Updates all matching workouts in remaining weeks if "Yes"
-
-6. **Remove Week View**
-   - Delete week detail view (consolidated into phase overview)
-
-**Files to Modify**:
-- `app/(dashboard)/mesocycles/[id]/page.tsx` - Major redesign
-- Create: `app/(dashboard)/workouts/[id]/edit/page.tsx` - New edit page
-- Update: `app/api/workouts/[id]/route.ts` - Handle bulk updates for "apply to rest"
-
----
-
-### Phase 6B: Workout History Calendar
+### Phase 6B: Workout History Calendar ⭐ NEXT UP
 **Priority**: CRITICAL
 **Effort**: 10-14 hours
 **Impact**: Better progress tracking and workout reference (replaces week view)
@@ -302,17 +268,17 @@ model ExerciseLog {
 | Phase 3 | Phase Overview + Exercise Mgmt | 8-10h → 14h | - | ✅ Complete |
 | Phase 4 | Warmup + Reordering | 4-6h → 7h | - | ✅ Complete (67%) |
 | Phase 5 | Workout Logging Enhancements | 15-20h → 8h | - | ✅ Complete |
-| **Phase 6A** | **Phase Details Redesign** | **17-22h** | **CRITICAL** | 📋 Next |
-| **Phase 6B** | **Workout History Calendar** | **10-14h** | **CRITICAL** | 📋 Pending |
+| Phase 6A | Phase Details Redesign | 17-22h → 9h | - | ✅ Complete (95%) |
+| **Phase 6B** | **Workout History Calendar** | **10-14h** | **CRITICAL** | 📋 Next |
 | **Phase 6C** | **Advanced Exercise Features** | **20-25h** | **HIGH** | 📋 Pending |
 | Phase 6D | Additional Exercise Types | 7-9h | MEDIUM | 📋 Pending |
 | Phase 7 | Dashboard Redesign | 16-20h | MEDIUM | 📋 Pending |
 | Phase 8 | Progress Enhancements | 10-12h | MEDIUM | 📋 Pending |
 | Phase 9 | Training Block Menu | 12-16h | LOW | 📋 Pending |
 
-**Completed**: 42 hours (Phases 1-5)
-**Remaining**: 92-117 hours (Phases 6A-9)
-**Total Project**: 134-159 hours
+**Completed**: 48 hours (Phases 1-6A)
+**Remaining**: 74-99 hours (Phases 6B-9)
+**Total Project**: 122-147 hours
 
 ---
 
@@ -328,6 +294,15 @@ model ExerciseLog {
 ---
 
 ## 📦 Recent Deployments
+
+### Session 14 (Feb 12, 2026) - Phase 6A Complete
+- 8 commits on feature branch, ready to merge
+- Phase overview redesign: 82% code reduction (1,515 → 269 lines)
+- New edit workout page with drag-and-drop (706 lines)
+- Apply to rest of phase functionality
+- Swipeable week navigation with touch gestures
+- Preview deployments: 6+ iterations
+- **Status**: Feature branch ready for merge to master
 
 ### Session 13 (Feb 11, 2026) - Phase 5 Complete
 - 5 commits, 1 production deployment
@@ -367,7 +342,7 @@ model ExerciseLog {
 
 - **PLAN.md** (this file) - High-level progress summary
 - **IMPLEMENTATION_PLAN.md** - Detailed phase-by-phase guide
-- **SESSION_SUMMARY.md** - Detailed session logs (Sessions 9-13)
+- **SESSION_SUMMARY.md** - Detailed session logs (Sessions 9-14)
 - **README.md** - Setup, deployment, API docs
 - **ISSUES.md** - Known issues tracker
 
@@ -375,12 +350,13 @@ model ExerciseLog {
 
 ## 🎉 Achievements
 
-- **5 major phases complete** in 39 hours
-- **38% faster than estimated** (43-63h → 39h actual)
+- **6 major phases complete** in 48 hours (Phases 1-6A)
+- **43% faster than estimated** (60-85h → 48h actual)
 - **Production app actively used** since Feb 2026
 - **Mobile-optimized** for Samsung Chrome
-- **Zero breaking deployments** in last 8 sessions
-- **Clean, simple UI maintained** throughout Phase 5
+- **Zero breaking deployments** in last 9 sessions
+- **Clean, simple UI maintained** throughout all phases
+- **82% code reduction** on Phase Overview redesign (1,515 → 269 lines)
 
 ---
 
@@ -393,5 +369,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 12, 2026
-**Next Session**: Phase 6A - Phase Details Redesign (17-22h)
+**Last Updated**: Feb 12, 2026 (End of Session 14)
+**Next Session**: Merge Phase 6A + Phase 6B - Workout History Calendar (10-14h)

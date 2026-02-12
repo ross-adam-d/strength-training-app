@@ -105,7 +105,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { dayOfWeek, warmupNotes } = body
+    const { name, dayOfWeek, estimatedDuration, warmupNotes, applyToRestOfPhase } = body
 
     // Verify ownership before updating
     const workout = await prisma.workout.findFirst({
@@ -120,8 +120,21 @@ export async function PATCH(
         },
       },
       include: {
-        workoutLogs: {
-          select: { id: true },
+        microcycle: {
+          include: {
+            mesocycle: {
+              include: {
+                microcycles: {
+                  include: {
+                    workouts: true,
+                  },
+                  orderBy: {
+                    weekNumber: 'asc',
+                  },
+                },
+              },
+            },
+          },
         },
       },
     })
@@ -135,20 +148,88 @@ export async function PATCH(
 
     // Build update data object
     const updateData: any = {}
+    if (name !== undefined) updateData.name = name
     if (dayOfWeek !== undefined) {
       updateData.dayOfWeek = dayOfWeek === -1 || dayOfWeek === null ? null : parseInt(dayOfWeek)
     }
-    if (warmupNotes !== undefined) {
-      updateData.warmupNotes = warmupNotes
+    if (estimatedDuration !== undefined) updateData.estimatedDuration = estimatedDuration
+    if (warmupNotes !== undefined) updateData.warmupNotes = warmupNotes
+
+    // If applyToRestOfPhase is true, update all matching workouts in remaining weeks
+    if (applyToRestOfPhase && name) {
+      const currentWeekNumber = workout.microcycle.weekNumber
+      const originalName = workout.name
+
+      // Find all workouts with the same name in remaining weeks
+      const remainingWorkouts = workout.microcycle.mesocycle.microcycles
+        .filter((mic) => mic.weekNumber > currentWeekNumber)
+        .flatMap((mic) => mic.workouts)
+        .filter((w) => w.name === originalName)
+
+      // Fetch current workout's exercises to clone them
+      const currentExercises = await prisma.workoutExercise.findMany({
+        where: { workoutId: id },
+        orderBy: { orderIndex: 'asc' },
+      })
+
+      // Build transaction array (properly typed)
+      const transactionOps: any[] = [
+        // Update current workout
+        prisma.workout.update({
+          where: { id },
+          data: updateData,
+        }),
+        // Update remaining workouts
+        ...remainingWorkouts.map((w) =>
+          prisma.workout.update({
+            where: { id: w.id },
+            data: updateData,
+          })
+        ),
+      ]
+
+      // For each remaining workout, delete old exercises and clone current ones
+      for (const w of remainingWorkouts) {
+        // Delete existing exercises for this workout
+        transactionOps.push(
+          prisma.workoutExercise.deleteMany({
+            where: { workoutId: w.id },
+          })
+        )
+
+        // Clone current exercises to this workout
+        for (const ex of currentExercises) {
+          transactionOps.push(
+            prisma.workoutExercise.create({
+              data: {
+                workoutId: w.id,
+                exerciseId: ex.exerciseId,
+                orderIndex: ex.orderIndex,
+                targetSets: ex.targetSets,
+                targetReps: ex.targetReps,
+                targetRir: ex.targetRir,
+                tempo: ex.tempo,
+                restPeriod: ex.restPeriod,
+                notes: ex.notes,
+              },
+            })
+          )
+        }
+      }
+
+      // Execute all operations in a transaction
+      await prisma.$transaction(transactionOps)
+
+      return NextResponse.json({ success: true, updatedCount: remainingWorkouts.length + 1 })
+    } else {
+      // Update only this workout
+      const updated = await prisma.workout.update({
+        where: { id },
+        data: updateData,
+      })
+
+      return NextResponse.json(updated)
     }
-
-    // Allow updating day/date and warmup notes for any workout (even completed ones, per scope requirements)
-    const updated = await prisma.workout.update({
-      where: { id },
-      data: updateData,
-    })
-
-    return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating workout:', error)
     return NextResponse.json(

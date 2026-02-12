@@ -19,7 +19,20 @@ export default async function WorkoutLogDetailPage({
     where: { id, userId: session.user.id },
     include: {
       workout: {
-        select: { id: true, name: true },
+        select: {
+          id: true,
+          name: true,
+          microcycle: {
+            select: {
+              mesocycle: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       },
       exerciseLogs: {
         include: {
@@ -45,85 +58,107 @@ export default async function WorkoutLogDetailPage({
   }
   grouped.forEach((sets) => sets.sort((a, b) => a.setNumber - b.setNumber))
 
-  return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link href="/dashboard" className="text-primary-600 hover:text-primary-700 text-sm">
-          ← Back to Dashboard
-        </Link>
-      </div>
+  const mesocycleId = log.workout?.microcycle?.mesocycle?.id
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
+  return (
+    <div className="min-h-screen pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10 mb-4">
+        <Link
+          href={mesocycleId ? `/mesocycles/${mesocycleId}` : '/dashboard'}
+          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+        >
+          ← Back to {mesocycleId ? log.workout?.microcycle?.mesocycle?.name : 'Dashboard'}
+        </Link>
+        <h1 className="text-lg font-bold text-gray-900 mt-2">
           {log.workout?.name ?? 'Manual Workout'}
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-sm text-gray-600 mt-0.5">
           {new Date(log.completedAt).toLocaleDateString(undefined, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
+            weekday: 'short',
+            month: 'short',
             day: 'numeric',
           })}
+          {log.duration && ` • ${log.duration} min`}
+          {log.overallRating && ` • ${log.overallRating}⭐`}
+          {log.overallRpe && ` • RPE ${log.overallRpe.toFixed(1)}`}
         </p>
-        <div className="flex gap-4 mt-3 text-sm text-gray-600">
-          {log.duration && <span>Duration: {log.duration} min</span>}
-          {log.overallRating && <span>Rating: {log.overallRating}/5</span>}
-        </div>
-        {log.notes && <p className="mt-3 text-gray-600 italic">{log.notes}</p>}
+        {log.notes && (
+          <p className="mt-2 text-sm text-gray-600 italic border-l-2 border-primary-300 pl-3">
+            {log.notes}
+          </p>
+        )}
       </div>
 
-      {exerciseOrder.length === 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <p className="text-gray-500">No exercises logged</p>
-        </div>
-      )}
+      <div className="px-4">
 
-      {exerciseOrder.map((exerciseId) => {
-        const sets = grouped.get(exerciseId)!
-        const skippedCount = sets.filter((s) => s.skipped).length
+        {exerciseOrder.length === 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <p className="text-gray-500">No exercises logged</p>
+          </div>
+        )}
 
-        return (
-          <div key={exerciseId} className="bg-white rounded-lg shadow-md p-6 mb-4">
-            <h2 className="text-lg font-semibold mb-3">{sets[0].exercise.name}</h2>
+        {exerciseOrder.map((exerciseId) => {
+          const sets = grouped.get(exerciseId)!
+          const skippedCount = sets.filter((s) => s.skipped).length
+          const completedSets = sets.filter((s) => !s.skipped)
+          const exerciseRpe = sets[0]?.exerciseRpe
 
-            <div className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 pb-2 border-b mb-2">
-              <div />
-              <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Weight (kg)</div>
-              <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
-              <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">RIR</div>
-            </div>
+          return (
+            <div key={exerciseId} className="bg-white rounded-lg border border-gray-200 p-4 mb-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-gray-900">{sets[0].exercise.name}</h2>
+                {exerciseRpe && (
+                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                    RPE {exerciseRpe}
+                  </span>
+                )}
+              </div>
 
-            <div className="space-y-1">
-              {sets.map((set) =>
-                set.skipped ? (
-                  <div key={set.setNumber} className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 opacity-50">
-                    <span className="text-sm text-gray-600">{set.setNumber}</span>
-                    <span className="col-span-3 text-sm italic text-gray-400">Skipped</span>
-                  </div>
-                ) : (
-                  <div key={set.setNumber} className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2">
-                    <span className="text-sm font-semibold text-gray-700">{set.setNumber}</span>
-                    <span className="text-sm text-center text-gray-900">{set.weight}</span>
-                    <span className="text-sm text-center text-gray-900">{set.reps}</span>
-                    <span className="text-sm text-center text-gray-500">{set.rir ?? '—'}</span>
-                  </div>
-                )
+              <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-xs font-medium text-gray-500 mb-2">
+                <div className="text-center">#</div>
+                <div className="text-center">Weight</div>
+                <div className="text-center">Reps</div>
+                <div className="text-center">RIR</div>
+              </div>
+
+              <div className="space-y-1.5">
+                {sets.map((set) =>
+                  set.skipped ? (
+                    <div
+                      key={set.setNumber}
+                      className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5"
+                    >
+                      <span className="text-sm text-gray-400 text-center line-through">{set.setNumber}</span>
+                      <span className="col-span-3 text-sm text-yellow-700 text-center">⊘ Skipped</span>
+                    </div>
+                  ) : (
+                    <div key={set.setNumber} className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-sm">
+                      <span className="font-medium text-gray-700 text-center">{set.setNumber}</span>
+                      <span className="text-center text-gray-900">{set.weight} kg</span>
+                      <span className="text-center text-gray-900">{set.reps}</span>
+                      <span className="text-center text-gray-600">{set.rir ?? '—'}</span>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {completedSets.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
+                  {completedSets.length} set{completedSets.length !== 1 ? 's' : ''} completed
+                  {skippedCount > 0 && ` • ${skippedCount} skipped`}
+                </div>
+              )}
+
+              {sets[0]?.notes && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-xs text-gray-600 italic">{sets[0].notes}</p>
+                </div>
               )}
             </div>
-
-            {skippedCount > 0 && (
-              <p className="text-xs text-gray-400 mt-2">{skippedCount} set{skippedCount > 1 ? 's' : ''} skipped</p>
-            )}
-            {sets.some((s) => s.notes) && (
-              <div className="mt-2 pt-2 border-t">
-                {sets.filter((s) => s.notes).map((s) => (
-                  <p key={s.setNumber} className="text-xs text-gray-500">Set {s.setNumber}: {s.notes}</p>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
