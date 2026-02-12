@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { LiftHistoryModal } from '@/components/LiftHistoryModal'
 
 interface WorkoutExercise {
   id: string
@@ -120,6 +121,10 @@ export default function WorkoutLogPage() {
 
   // Exercise-level RPE (1-5 scale: Too Easy → Too Much)
   const [exerciseRpes, setExerciseRpes] = useState<Record<string, number>>({})
+
+  // Lift history modal state
+  const [showLiftHistory, setShowLiftHistory] = useState(false)
+  const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
@@ -571,10 +576,24 @@ export default function WorkoutLogPage() {
         return (
           <Card key={we.id} className="mb-6">
             <CardHeader>
-              <h2 className="text-xl font-bold">{we.exercise.name}</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Target: {we.targetSets} sets × {we.targetReps} reps
-              </p>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold">{we.exercise.name}</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Target: {we.targetSets} sets × {we.targetReps} reps
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
+                    setShowLiftHistory(true)
+                  }}
+                  className="ml-2 px-3 py-1.5 text-sm bg-primary-50 text-primary-700 border border-primary-200 rounded-md hover:bg-primary-100 transition font-medium"
+                  aria-label="View lift history"
+                >
+                  📊 History
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {we.targetRir != null && (
                   <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
@@ -985,6 +1004,18 @@ export default function WorkoutLogPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Lift History Modal */}
+      {showLiftHistory && selectedExercise && (
+        <LiftHistoryModal
+          exerciseId={selectedExercise.id}
+          exerciseName={selectedExercise.name}
+          onClose={() => {
+            setShowLiftHistory(false)
+            setSelectedExercise(null)
+          }}
+        />
+      )}
     </div>
   )
 }
