@@ -14,6 +14,7 @@ interface Exercise {
   muscleGroups: string[]
   equipment: string[]
   isPublic: boolean
+  isUnilateral: boolean
   createdById?: string
 }
 
@@ -171,6 +172,7 @@ export default function ExercisesPage() {
       videoUrl: formData.get('videoUrl') as string,
       imageUrl: formData.get('imageUrl') as string,
       isPublic: formData.get('isPublic') === 'on',
+      isUnilateral: formData.get('isUnilateral') === 'on',
     }
 
     setIsSubmitting(true)
@@ -407,11 +409,19 @@ export default function ExercisesPage() {
             placeholder="https://example.com/image.jpg"
           />
 
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="isPublic" name="isPublic" className="rounded" />
-            <label htmlFor="isPublic" className="text-sm text-gray-700">
-              Make this exercise public (visible to all users)
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="isPublic" name="isPublic" className="rounded" />
+              <label htmlFor="isPublic" className="text-sm text-gray-700">
+                Make this exercise public (visible to all users)
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="isUnilateral" name="isUnilateral" className="rounded" />
+              <label htmlFor="isUnilateral" className="text-sm text-gray-700">
+                Unilateral exercise (single-side, e.g., single-leg press, single-arm row)
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

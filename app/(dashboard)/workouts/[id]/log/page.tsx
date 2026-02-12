@@ -22,6 +22,7 @@ interface WorkoutExercise {
     id: string
     name: string
     description?: string
+    isUnilateral: boolean
   }
 }
 
@@ -52,6 +53,8 @@ interface ExerciseLog {
   exerciseId: string
   setNumber: number
   reps: number | string
+  repsLeft?: number | string  // For unilateral exercises
+  repsRight?: number | string // For unilateral exercises
   weight: number | string
   rir?: number | string
   notes?: string
@@ -616,10 +619,17 @@ export default function WorkoutLogPage() {
               )}
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 pb-2 border-b mb-3">
+              <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 pb-2 border-b mb-3`}>
                 <div />
                 <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Weight (kg)</div>
-                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
+                {we.exercise.isUnilateral ? (
+                  <>
+                    <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Left</div>
+                    <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Right</div>
+                  </>
+                ) : (
+                  <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
+                )}
                 <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">RIR</div>
               </div>
 
@@ -658,7 +668,7 @@ export default function WorkoutLogPage() {
                   return (
                     <div key={timerKey} className="space-y-2">
                       {/* Larger touch targets for mobile - min 44px height */}
-                      <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
+                      <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 items-center`}>
                         <span className="text-sm md:text-base font-semibold text-gray-600">{log.setNumber}</span>
                         <input
                           type="text"
@@ -670,16 +680,41 @@ export default function WorkoutLogPage() {
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
                           className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder="0"
-                          value={log.reps}
-                          onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
-                          onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
+                        {we.exercise.isUnilateral ? (
+                          <>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder="0"
+                              value={log.repsLeft ?? ''}
+                              onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
+                              onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
+                              className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            />
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder="0"
+                              value={log.repsRight ?? ''}
+                              onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
+                              onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
+                              className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            />
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="0"
+                            value={log.reps}
+                            onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
+                            onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
+                            className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        )}
                         <input
                           type="text"
                           inputMode="numeric"

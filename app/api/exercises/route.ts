@@ -12,6 +12,7 @@ const exerciseSchema = z.object({
   videoUrl: z.string().url().optional().or(z.literal('')),
   imageUrl: z.string().url().optional().or(z.literal('')),
   isPublic: z.boolean().default(false),
+  isUnilateral: z.boolean().default(false),
 })
 
 export async function GET(request: Request) {
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
         muscleGroups: true,
         equipment: true,
         isPublic: true,
+        isUnilateral: true,
         createdById: true,
       },
     })

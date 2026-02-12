@@ -54,6 +54,7 @@ model Exercise {
   videoUrl          String?
   imageUrl          String?
   isPublic          Boolean  @default(true)
+  isUnilateral      Boolean  @default(false) // true for single-side exercises (e.g., single-leg press, single-arm row)
 
   createdById       String?
   createdBy         User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
@@ -217,6 +218,8 @@ model ExerciseLog {
   id                String   @id @default(cuid())
   setNumber         Int
   reps              Int
+  repsLeft          Int?     // For unilateral exercises: reps on left side
+  repsRight         Int?     // For unilateral exercises: reps on right side
   weight            Float    // in kg or lbs
   rpe               Float?   // Rate of Perceived Exertion (1-10)
   rir               Int?     // Reps In Reserve (actual)
