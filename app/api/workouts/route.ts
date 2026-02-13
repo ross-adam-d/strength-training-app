@@ -52,10 +52,59 @@ export async function POST(request: Request) {
       )
     }
 
+    // Auto-label duplicate workout names (e.g., "Lower" → "Lower A", "Lower B")
+    const existingWorkouts = await prisma.workout.findMany({
+      where: { microcycleId: data.microcycleId },
+      select: { name: true },
+    })
+
+    let workoutName = data.name
+    const baseName = data.name.replace(/\s+[A-Z]$/, '') // Remove existing A/B/C suffix if present
+    const duplicates = existingWorkouts.filter((w) => {
+      const wBaseName = w.name.replace(/\s+[A-Z]$/, '')
+      return wBaseName.toLowerCase() === baseName.toLowerCase()
+    })
+
+    if (duplicates.length > 0) {
+      // Find the next available letter
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      const usedLetters = new Set(
+        duplicates
+          .map((w) => w.name.match(/\s+([A-Z])$/)?.[1])
+          .filter(Boolean)
+      )
+
+      // If first duplicate doesn't have a letter yet, it becomes "A"
+      if (duplicates.length === 1 && !usedLetters.size) {
+        // Rename the existing workout to add "A"
+        const existingWorkout = await prisma.workout.findFirst({
+          where: {
+            microcycleId: data.microcycleId,
+            name: duplicates[0].name,
+          },
+        })
+        if (existingWorkout) {
+          await prisma.workout.update({
+            where: { id: existingWorkout.id },
+            data: { name: `${baseName} A` },
+          })
+        }
+        workoutName = `${baseName} B`
+      } else {
+        // Find next available letter
+        for (const letter of letters) {
+          if (!usedLetters.has(letter)) {
+            workoutName = `${baseName} ${letter}`
+            break
+          }
+        }
+      }
+    }
+
     // Create workout with exercises
     const workout = await prisma.workout.create({
       data: {
-        name: data.name,
+        name: workoutName,
         description: data.description,
         dayOfWeek: data.dayOfWeek,
         estimatedDuration: data.estimatedDuration,
