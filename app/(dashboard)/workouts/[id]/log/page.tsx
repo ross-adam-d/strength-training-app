@@ -778,11 +778,19 @@ export default function WorkoutLogPage() {
     }
 
     try {
+      console.log('Saving workout with data:', JSON.stringify(data, null, 2))
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
       const response = await fetch('/api/workout-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       if (response.ok && workout) {
         // Clear draft on successful save
@@ -794,12 +802,17 @@ export default function WorkoutLogPage() {
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
-        alert(`Failed to save workout log: ${errorData.error || 'Unknown error'}`)
+        console.error('Full error details:', JSON.stringify(errorData, null, 2))
+        alert(`Failed to save workout log: ${JSON.stringify(errorData.details || errorData.error || 'Unknown error')}`)
         setSaving(false)
       }
     } catch (error) {
       console.error('Error saving workout log:', error)
-      alert(`Failed to save workout log: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert('Request timed out after 30 seconds. Please check your connection and try again.')
+      } else {
+        alert(`Failed to save workout log: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
       setSaving(false)
     }
   }
