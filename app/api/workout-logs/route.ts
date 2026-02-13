@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = workoutLogSchema.parse(body)
 
-    // Verify the workout belongs to the user (if provided)
+    // Optimized: Verify ownership with minimal query
     let mesocycleId: string | null = null
     let macrocycleId: string | null = null
     if (data.workoutId) {
@@ -99,17 +99,14 @@ export async function POST(request: Request) {
             },
           },
         },
-        include: {
+        select: {
+          id: true,
           microcycle: {
-            include: {
+            select: {
               mesocycle: {
-                include: {
-                  macrocycle: {
-                    select: {
-                      id: true,
-                      status: true,
-                    },
-                  },
+                select: {
+                  id: true,
+                  macrocycleId: true,
                 },
               },
             },
@@ -125,10 +122,11 @@ export async function POST(request: Request) {
       }
 
       mesocycleId = workout.microcycle.mesocycle.id
-      macrocycleId = workout.microcycle.mesocycle.macrocycle.id
+      macrocycleId = workout.microcycle.mesocycle.macrocycleId
     }
 
-    // Create workout log with exercise logs
+    // Optimized: Create workout log and update status in parallel
+    // Don't return nested data - frontend redirects immediately
     const workoutLog = await prisma.workoutLog.create({
       data: {
         workoutId: data.workoutId || null,
@@ -152,38 +150,33 @@ export async function POST(request: Request) {
           })),
         },
       },
-      include: {
-        exerciseLogs: {
-          include: {
-            exercise: true,
-          },
-        },
+      select: {
+        id: true,
+        completedAt: true,
       },
     })
 
-    // Automatically transition mesocycle and macrocycle from "planned" to "active" on first workout completion
+    // Run status updates in parallel (if needed)
+    const statusUpdates = []
     if (mesocycleId) {
-      await prisma.mesocycle.updateMany({
-        where: {
-          id: mesocycleId,
-          status: 'planned',
-        },
-        data: {
-          status: 'active',
-        },
-      })
+      statusUpdates.push(
+        prisma.mesocycle.updateMany({
+          where: { id: mesocycleId, status: 'planned' },
+          data: { status: 'active' },
+        })
+      )
+    }
+    if (macrocycleId) {
+      statusUpdates.push(
+        prisma.macrocycle.updateMany({
+          where: { id: macrocycleId, status: 'planned' },
+          data: { status: 'active' },
+        })
+      )
     }
 
-    if (macrocycleId) {
-      await prisma.macrocycle.updateMany({
-        where: {
-          id: macrocycleId,
-          status: 'planned',
-        },
-        data: {
-          status: 'active',
-        },
-      })
+    if (statusUpdates.length > 0) {
+      await Promise.all(statusUpdates)
     }
 
     return NextResponse.json(workoutLog, { status: 201 })
