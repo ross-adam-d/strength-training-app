@@ -1,4 +1,4 @@
-# Session Summary — 2026-02-10 to 2026-02-12 (Sessions 9-14)
+# Session Summary — 2026-02-10 to 2026-02-13 (Sessions 9-15)
 
 ## Project
 **strength-training-app** — Next.js 15 / Prisma / Supabase strength training web app.
@@ -9,15 +9,126 @@ Database: PostgreSQL via Supabase (AWS ap-south-1)
 
 ---
 
-## Sessions Overview
+## 📌 Session 15 — Phase 6C: Bug Fixes & Cleanup (2026-02-13)
 
-This document covers three related sessions focused on Phase 4 warmup features and custom exercise creation:
+### Overview
+Critical bug fixes, UX improvements, and repository cleanup following Phase 6A/6B completion.
+
+### Features Implemented
+
+#### 1. Critical Bug Fixes (20 commits)
+**Dashboard Next Workout Logic**
+- Fixed dashboard showing wrong workout (was showing completed workouts)
+- Added `workoutLogs` to Prisma query for completion check
+- Sort workouts by day of week before checking completion
+- Skip to first UNCOMPLETED workout in current/future weeks
+- Added defensive null checks and try-catch error handling
+
+**Workout Save Validation**
+- Fixed "Failed to save workout log: validation error" errors
+- Added `overallRpe` field to WorkoutLog schema
+- Changed `rpe` to `exerciseRpe` in ExerciseLog schema
+- Fixed NaN validation errors by handling empty strings properly
+- Convert empty strings to 0 before parsing numeric values
+- Added 30-second timeout to prevent hanging saves
+- Fixed unilateral exercise validation (repsLeft/repsRight)
+
+**Duplicate Sets Issue**
+- Reset all state in `startFresh()` before calling fetchWorkout
+- Added deduplication in `resumeDraft()` using Map with exerciseId-setNumber key
+- Prevents duplicate sets (e.g., "1, 2, 3, 4, 1, 2, 3") from appearing
+
+**Auto-Labeling Duplicate Workouts**
+- Auto-append A/B/C to duplicate workout names in same week
+- Prevents confusion between "Lower" and "Lower" workouts
+- Example: "Lower" → "Lower A", second "Lower" → "Lower B"
+- Implemented in `app/api/workouts/route.ts`
+
+#### 2. UX Improvements
+**"In Progress" Indicators**
+- Added to dashboard NextWorkoutCard component
+- Added to phase overview (mesocycles/[id]/page.tsx)
+- Uses localStorage to detect draft workouts
+- Shows "⏳ In Progress" badge and changes button from "Start" to "Resume"
+
+**Progressive Workout Saving**
+- Auto-save workout draft to localStorage
+- Debounced saves (prevent excessive writes)
+- Draft detection modal on page load
+- Options: Resume Draft or Start Fresh
+- Shows last saved timestamp
+
+**Exercise Swap Simplified**
+- Removed scope selection modal (was asking "apply to rest of phase?")
+- Now applies swap to current workout only
+- Simpler, more predictable behavior
+
+**Modal Removal**
+- Removed "Up Next" modal after workout completion (user feedback: unnecessary)
+- Now redirects directly to microcycle page after save
+- Cleaner completion flow
+
+#### 3. Repository Cleanup
+**Branch Management**
+- Merged `feature/phase6c-advanced-exercise-features` to master (20 commits)
+- Deleted 6 stale local branches
+- Deleted 6 stale remote branches
+- Clean repository with only master branch
+
+**Documentation Updates**
+- Updated PLAN.md with Phase 6C completion
+- Updated TODO.md with current priorities
+- Updated SESSION_SUMMARY.md with Session 15
+- Updated MEMORY.md in Claude directory
+
+### Technical Details
+
+**Files Modified:**
+- `app/(dashboard)/dashboard/page.tsx` - Next workout logic fixes
+- `app/(dashboard)/workouts/[id]/log/page.tsx` - Save validation, draft system, modal removal
+- `app/api/workout-logs/route.ts` - Schema updates (overallRpe, exerciseRpe)
+- `app/api/workouts/route.ts` - Auto-labeling duplicate names
+- `components/NextWorkoutCard.tsx` - Created for "In Progress" detection
+- `app/(dashboard)/mesocycles/[id]/page.tsx` - "In Progress" indicators
+
+**Commits**: 20 total
+- Dashboard fixes: 3 commits
+- Validation fixes: 4 commits
+- Duplicate sets fix: 1 commit
+- Auto-labeling: 1 commit
+- In Progress indicators: 1 commit
+- Progressive saving: 1 commit
+- Exercise swap: 1 commit
+- Modal removal: 1 commit
+- Additional fixes: 7 commits
+
+**Deployment**: Merged to master, auto-deployed via Vercel
+
+### Lessons Learned
+
+1. **Empty String Validation**: Convert empty strings to 0 before parsing to avoid NaN errors
+2. **State Management**: Always reset ALL state when starting fresh to prevent stale data
+3. **Draft Systems**: Deduplication is critical when resuming from localStorage
+4. **User Feedback**: Sometimes features seem good but aren't necessary (Up Next modal)
+5. **Repository Hygiene**: Regular branch cleanup keeps things manageable
+
+### Status
+✅ **Complete** - All bug fixes deployed, repository cleaned up, documentation updated
+
+---
+
+## Sessions Overview (9-14)
+
+This section covers previous sessions focused on Phase 4-6B features:
 
 **Session 9 (2026-02-10):** Phase 4 warmup functionality and drag-and-drop workout reordering
 **Session 10 (2026-02-10):** Failed attempt at custom exercise creation (reverted)
 **Session 11 (2026-02-11):** Successful implementation of validated custom exercise creation
+**Session 12 (2026-02-11):** Custom exercise UI improvements for mobile
+**Session 13 (2026-02-11):** Phase 5 workout logging enhancements (5 tasks)
+**Session 14 (2026-02-12):** Phase 6A/6B (redesign + calendar)
 
-### Combined Goals Accomplished
+### Combined Goals Accomplished (Sessions 9-14)
 1. ✅ Warmup section UI with dark theme (Session 9)
 2. ✅ Phase-wide and workout-specific warmup notes (Session 9)
 3. ✅ Pin warmup to same-day workouts (Session 9)
@@ -25,6 +136,8 @@ This document covers three related sessions focused on Phase 4 warmup features a
 5. ✅ Fixed exercise edit validation errors (Session 9)
 6. ✅ Validated custom exercise creation in Exercise Library (Session 11)
 7. ✅ Inline custom exercise creation in Phase Overview (Session 11)
+8. ✅ Phase details redesign with swipeable navigation (Session 14)
+9. ✅ Workout history calendar with lift history popup (Session 14)
 
 ---
 

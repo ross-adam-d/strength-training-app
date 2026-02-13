@@ -1,12 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 12, 2026 - End of Session 14)
+## 📍 Current Status (Updated: Feb 13, 2026 - End of Session 15)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
-**Branch**: `feature/phase6a-phase-details-redesign` (ready to merge)
-**Master Branch**: `a9f593f` - "Add skip vs delete visual distinction"
-**Feature Branch**: `c11a8b6` - "Improve disabled button visibility with opacity"
+**Branch**: `master`
+**Latest Commit**: `795ce2f` - "Remove unnecessary 'Up Next' modal after workout completion"
+**Status**: All feature branches merged and cleaned up
 
 ---
 
@@ -61,43 +61,51 @@
 - ✅ **Task 6**: Remove week view (consolidated into phase overview)
 - ⏳ **Navigation polish**: Week parameter (deferred - acceptable workaround)
 - **Sessions**: 14 (Feb 12, 2026)
-- **Status**: Feature branch ready to merge to master
+- **Status**: Merged to master
 
-**Total Effort (Phases 1-6A)**: 48 hours (vs 60-85h estimated)
-**Efficiency**: 43% faster than estimated
+### Phase 6B: Workout History Calendar (4h)
+- ✅ Monthly calendar view with workout indicators
+- ✅ Lift history popup during active workout
+- ✅ Navigation integration (calendar icon in bottom nav)
+- **Sessions**: 14 (Feb 12, 2026)
+- **Status**: Merged to master
+
+### Phase 6C: Critical Bug Fixes & UX Polish (3h)
+- ✅ Fixed dashboard showing wrong workout (skip completed workouts)
+- ✅ Fixed workout save validation errors (NaN handling, empty strings)
+- ✅ Fixed duplicate sets appearing in workout logs
+- ✅ Auto-label duplicate workout names (Lower A, Lower B, etc.)
+- ✅ Added defensive error handling to prevent crashes
+- ✅ Added 30-second timeout for workout save
+- ✅ Added "In Progress" indicators (dashboard + phase overview)
+- ✅ Progressive workout saving with draft detection
+- ✅ Exercise swap simplified (removed scope modal)
+- ✅ Removed "Up Next" modal after completion (unnecessary)
+- **Sessions**: 15 (Feb 13, 2026)
+- **Status**: Merged to master
+- **20 commits total** - all production-critical fixes
+
+**Total Effort (Phases 1-6C)**: 64 hours (vs 70-100h estimated)
+**Efficiency**: 36% faster than estimated
 
 ---
 
 ## 🚀 Upcoming Work
 
-### Phase 6B: Workout History Calendar ⭐ NEXT UP
-**Priority**: CRITICAL
-**Effort**: 10-14 hours
-**Impact**: Better progress tracking and workout reference (replaces week view)
+### Next Priority Options
 
-**Key Features**:
-1. **Monthly Calendar View** (`/workout-history`)
-   - Monthly calendar grid (current month by default)
-   - Previous/next month navigation
-   - Completed workouts: show strongman stick figure icon 🏋️
-   - Click workout to see details (modal or navigate to log)
-   - Highlight today's date
+**Option A: Code Quality & Polish** (2-3 hours) ⭐ RECOMMENDED
+- Fix useEffect dependency warnings (10 locations)
+- Update @next/swc version mismatch
+- Replace remaining `alert()` calls with proper modal UI
+- Add error boundaries for better error handling
+- Add loading states where missing
 
-2. **Workout History List**
-   - Below calendar: list of completed workouts
-   - Order: most recent first (same as dashboard)
-   - Display: name, date, duration, RPE
-   - Click to view full workout details
-
-3. **Banner Menu Integration**
-   - Add calendar icon to bottom navigation (mobile)
-   - Add to sidebar (desktop)
-   - Navigate to workout history page
-
-4. **Lift History Popup (CRITICAL)**
-   - Quick access during active workout
-   - Modal/popup from each exercise
-   - Shows previous workout logs for same exercise
+**Option B: Advanced Features** (8-12 hours)
+- Progressive overload recommendations
+- Exercise substitution suggestions
+- Training volume analytics
+- Export workout data (CSV/PDF)
    - Display: sets, reps, weight, date
    - Essential since week summary is removed
 
