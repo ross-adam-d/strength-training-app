@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 const workoutLogSchema = z.object({
   workoutId: z.string().optional(),
-  duration: z.number().int().positive().optional(),
+  duration: z.number().int().min(0).optional(),
   notes: z.string().optional(),
   overallRating: z.number().int().min(1).max(5).optional(),
   overallRpe: z.number().optional(),
