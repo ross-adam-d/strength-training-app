@@ -44,24 +44,43 @@ export default async function DashboardPage() {
   let nextWorkoutLabel = ''
 
   if (activeBlock) {
+    // Find the first uncompleted workout in the current or future weeks
     for (const meso of activeBlock.mesocycles) {
       for (const micro of meso.microcycles) {
-        if (now >= micro.startDate && now < micro.endDate) {
-          // Current week — find today's workout first, then next upcoming
-          const todayMatch = micro.workouts.find((w) => w.dayOfWeek === todayDow)
-          if (todayMatch) {
-            nextWorkout = todayMatch
-            nextWorkoutLabel = 'Today'
-          } else {
-            const upcoming = micro.workouts.find(
-              (w) => w.dayOfWeek !== null && w.dayOfWeek > todayDow
-            )
-            if (upcoming) {
-              nextWorkout = upcoming
-              nextWorkoutLabel = DAY_NAMES[upcoming.dayOfWeek!]
+        // Check current and future weeks
+        if (now < micro.endDate) {
+          // Sort workouts by day of week
+          const sortedWorkouts = [...micro.workouts].sort((a, b) => {
+            const dayA = a.dayOfWeek ?? 999
+            const dayB = b.dayOfWeek ?? 999
+            return dayA - dayB
+          })
+
+          // Find first uncompleted workout
+          for (const workout of sortedWorkouts) {
+            const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0
+            if (!isCompleted) {
+              nextWorkout = workout
+
+              // Determine label based on day
+              if (now >= micro.startDate && now < micro.endDate) {
+                // Current week
+                if (workout.dayOfWeek === todayDow) {
+                  nextWorkoutLabel = 'Today'
+                } else if (workout.dayOfWeek !== null) {
+                  nextWorkoutLabel = DAY_NAMES[workout.dayOfWeek]
+                } else {
+                  nextWorkoutLabel = 'This Week'
+                }
+              } else {
+                // Future week
+                nextWorkoutLabel = `Week ${micro.weekNumber}`
+              }
+              break
             }
           }
-          break
+
+          if (nextWorkout) break
         }
       }
       if (nextWorkout) break
