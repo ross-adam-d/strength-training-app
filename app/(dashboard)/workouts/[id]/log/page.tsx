@@ -175,6 +175,13 @@ export default function WorkoutLogPage() {
   const [showLiftHistory, setShowLiftHistory] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
+  // Exercise swap state
+  const [showSwapModal, setShowSwapModal] = useState(false)
+  const [exerciseToSwap, setExerciseToSwap] = useState<{ workoutExerciseId: string; exerciseId: string; name: string } | null>(null)
+  const [allExercises, setAllExercises] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedNewExercise, setSelectedNewExercise] = useState('')
+  const [showSwapScopeModal, setShowSwapScopeModal] = useState(false)
+
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0)
@@ -190,7 +197,20 @@ export default function WorkoutLogPage() {
 
   useEffect(() => {
     fetchWorkout()
+    fetchExercises()
   }, [])
+
+  async function fetchExercises() {
+    try {
+      const response = await fetch('/api/exercises')
+      if (response.ok) {
+        const data = await response.json()
+        setAllExercises(data)
+      }
+    } catch (error) {
+      console.error('Error fetching exercises:', error)
+    }
+  }
 
   // Rest timer tick effect — keyed on activeTimerKey only
   useEffect(() => {
@@ -362,6 +382,55 @@ export default function WorkoutLogPage() {
   function clearDraft() {
     localStorage.removeItem(draftKey)
     setLastSavedAt(null)
+  }
+
+  function handleSwapExercise(workoutExerciseId: string, exerciseId: string, name: string) {
+    setExerciseToSwap({ workoutExerciseId, exerciseId, name })
+    setSelectedNewExercise('')
+    setShowSwapModal(true)
+  }
+
+  async function confirmSwap(applyToRestOfPhase: boolean) {
+    if (!exerciseToSwap || !selectedNewExercise) return
+
+    try {
+      const payload: any = {
+        exerciseId: selectedNewExercise,
+      }
+
+      if (applyToRestOfPhase && workout) {
+        payload.applyToRestOfPhase = true
+        payload.mesocycleId = workout.microcycle.mesocycle.id
+        payload.swapExercise = true
+      }
+
+      const response = await fetch(`/api/workout-exercises/${exerciseToSwap.workoutExerciseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (response.ok) {
+        // Refresh workout data to show the new exercise
+        await fetchWorkout()
+        setShowSwapModal(false)
+        setShowSwapScopeModal(false)
+        setExerciseToSwap(null)
+        setSelectedNewExercise('')
+      }
+    } catch (error) {
+      console.error('Error swapping exercise:', error)
+      alert('Failed to swap exercise')
+    }
+  }
+
+  function proceedWithSwap() {
+    if (!selectedNewExercise) {
+      alert('Please select an exercise')
+      return
+    }
+    setShowSwapModal(false)
+    setShowSwapScopeModal(true)
   }
 
   function startFresh() {
@@ -721,7 +790,7 @@ export default function WorkoutLogPage() {
                   </p>
                   {lastSavedAt && (
                     <p className="text-xs text-green-600 font-medium">
-                      ✓ Draft saved {lastSavedAt.toLocaleTimeString()}
+                      ✓ In progress (saved {lastSavedAt.toLocaleTimeString()})
                     </p>
                   )}
                 </div>
@@ -802,16 +871,26 @@ export default function WorkoutLogPage() {
                       Target: {we.targetSets} sets × {we.targetReps} reps
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
-                      setShowLiftHistory(true)
-                    }}
-                    className="text-xl hover:opacity-70 transition"
-                    aria-label="View lift history"
-                  >
-                    📊
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleSwapExercise(we.id, we.exercise.id, we.exercise.name)}
+                      className="text-xl hover:opacity-70 transition"
+                      aria-label="Swap exercise"
+                      title="Swap exercise"
+                    >
+                      🔄
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
+                        setShowLiftHistory(true)
+                      }}
+                      className="text-xl hover:opacity-70 transition"
+                      aria-label="View lift history"
+                    >
+                      📊
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {we.targetRir != null && (
@@ -1290,7 +1369,7 @@ export default function WorkoutLogPage() {
         />
       )}
 
-      {/* Draft Resume Modal */}
+      {/* In-Progress Resume Modal */}
       <Modal
         isOpen={showDraftModal}
         onClose={() => {}} // Prevent closing without choosing
@@ -1299,11 +1378,11 @@ export default function WorkoutLogPage() {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            You have an in-progress workout saved. Would you like to resume where you left off or start fresh?
+            You have an in-progress workout. Would you like to resume where you left off or start fresh?
           </p>
           <div className="flex flex-col gap-3">
             <Button onClick={resumeDraft} className="w-full">
-              Resume Draft
+              Resume Workout
             </Button>
             <Button variant="secondary" onClick={startFresh} className="w-full">
               Start Fresh
@@ -1311,6 +1390,88 @@ export default function WorkoutLogPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Exercise Swap Modal - Exercise Picker */}
+      {showSwapModal && exerciseToSwap && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowSwapModal(false)
+            setExerciseToSwap(null)
+            setSelectedNewExercise('')
+          }}
+          title={`Swap ${exerciseToSwap.name}`}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Select a replacement exercise to swap in for the rest of this workout:
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Exercise
+              </label>
+              <select
+                value={selectedNewExercise}
+                onChange={(e) => setSelectedNewExercise(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Select an exercise...</option>
+                {allExercises.map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={proceedWithSwap} className="flex-1">
+                Next
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowSwapModal(false)
+                  setExerciseToSwap(null)
+                  setSelectedNewExercise('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Exercise Swap Scope Modal */}
+      {showSwapScopeModal && exerciseToSwap && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowSwapScopeModal(false)
+            setShowSwapModal(true)
+          }}
+          title="Apply Exercise Swap"
+        >
+          <p className="text-gray-700 mb-4">
+            Do you want to swap <strong>{exerciseToSwap.name}</strong> in all remaining weeks of this phase?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => confirmSwap(true)} className="w-full">
+              Yes - Apply to All Remaining
+            </Button>
+            <Button variant="secondary" onClick={() => confirmSwap(false)} className="w-full">
+              No - This Workout Only
+            </Button>
+            <Button variant="ghost" onClick={() => {
+              setShowSwapScopeModal(false)
+              setShowSwapModal(true)
+            }} className="w-full">
+              Back
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
