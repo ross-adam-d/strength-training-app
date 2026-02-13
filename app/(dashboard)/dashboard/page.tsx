@@ -27,7 +27,12 @@ export default async function DashboardPage() {
             microcycles: {
               orderBy: { weekNumber: 'asc' },
               include: {
-                workouts: { orderBy: { dayOfWeek: 'asc' } },
+                workouts: {
+                  orderBy: { dayOfWeek: 'asc' },
+                  include: {
+                    workoutLogs: { select: { id: true } },
+                  },
+                },
               },
             },
           },
