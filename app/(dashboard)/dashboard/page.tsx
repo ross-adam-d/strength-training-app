@@ -48,45 +48,50 @@ export default async function DashboardPage() {
   let nextWorkout: { id: string; name: string; dayOfWeek: number | null } | null = null
   let nextWorkoutLabel = ''
 
-  if (activeBlock) {
+  if (activeBlock?.mesocycles) {
     // Find the first uncompleted workout in the current or future weeks
     for (const meso of activeBlock.mesocycles) {
+      if (!meso?.microcycles) continue
+
       for (const micro of meso.microcycles) {
         // Check current and future weeks
-        if (now < micro.endDate) {
-          // Sort workouts by day of week
-          const sortedWorkouts = [...micro.workouts].sort((a, b) => {
-            const dayA = a.dayOfWeek ?? 999
-            const dayB = b.dayOfWeek ?? 999
-            return dayA - dayB
-          })
+        const endDate = micro.endDate ? new Date(micro.endDate) : null
+        if (!endDate || now >= endDate) continue
 
-          // Find first uncompleted workout
-          for (const workout of sortedWorkouts) {
-            const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0
-            if (!isCompleted) {
-              nextWorkout = workout
+        // Sort workouts by day of week
+        const workouts = micro.workouts || []
+        const sortedWorkouts = [...workouts].sort((a, b) => {
+          const dayA = a.dayOfWeek ?? 999
+          const dayB = b.dayOfWeek ?? 999
+          return dayA - dayB
+        })
 
-              // Determine label based on day
-              if (now >= micro.startDate && now < micro.endDate) {
-                // Current week
-                if (workout.dayOfWeek === todayDow) {
-                  nextWorkoutLabel = 'Today'
-                } else if (workout.dayOfWeek !== null) {
-                  nextWorkoutLabel = DAY_NAMES[workout.dayOfWeek]
-                } else {
-                  nextWorkoutLabel = 'This Week'
-                }
+        // Find first uncompleted workout
+        for (const workout of sortedWorkouts) {
+          const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0
+          if (!isCompleted) {
+            nextWorkout = workout
+
+            // Determine label based on day
+            const startDate = micro.startDate ? new Date(micro.startDate) : null
+            if (startDate && now >= startDate && now < endDate) {
+              // Current week
+              if (workout.dayOfWeek === todayDow) {
+                nextWorkoutLabel = 'Today'
+              } else if (workout.dayOfWeek !== null) {
+                nextWorkoutLabel = DAY_NAMES[workout.dayOfWeek]
               } else {
-                // Future week
-                nextWorkoutLabel = `Week ${micro.weekNumber}`
+                nextWorkoutLabel = 'This Week'
               }
-              break
+            } else {
+              // Future week
+              nextWorkoutLabel = `Week ${micro.weekNumber}`
             }
+            break
           }
-
-          if (nextWorkout) break
         }
+
+        if (nextWorkout) break
       }
       if (nextWorkout) break
     }
