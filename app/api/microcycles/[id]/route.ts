@@ -15,6 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Optimized: Use select instead of include, minimal nested data
     const microcycle = await prisma.microcycle.findFirst({
       where: {
         id,
@@ -24,7 +25,11 @@ export async function GET(
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        weekNumber: true,
+        startDate: true,
+        endDate: true,
         mesocycle: {
           select: {
             id: true,
@@ -41,12 +46,20 @@ export async function GET(
           orderBy: {
             dayOfWeek: 'asc',
           },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            dayOfWeek: true,
+            estimatedDuration: true,
             workoutExercises: {
               orderBy: {
                 orderIndex: 'asc',
               },
-              include: {
+              select: {
+                id: true,
+                targetSets: true,
+                targetReps: true,
+                supersetWithPrevious: true,
                 exercise: {
                   select: {
                     id: true,
@@ -55,18 +68,13 @@ export async function GET(
                 },
               },
             },
+            // Only fetch if workout is completed (just need ID and date)
             workoutLogs: {
               orderBy: { completedAt: 'desc' },
               take: 1,
-              include: {
-                exerciseLogs: {
-                  orderBy: { setNumber: 'asc' },
-                  include: {
-                    exercise: {
-                      select: { id: true, name: true },
-                    },
-                  },
-                },
+              select: {
+                id: true,
+                completedAt: true,
               },
             },
           },
@@ -81,7 +89,12 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(microcycle)
+    // Cache for 2 minutes
+    return NextResponse.json(microcycle, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=120, stale-while-revalidate=300',
+      },
+    })
   } catch (error) {
     console.error('Error fetching microcycle:', error)
     return NextResponse.json(

@@ -725,8 +725,8 @@ export default function WorkoutLogPage() {
         // Clear draft on successful save
         clearDraft()
         setSaving(false)
-        // Redirect to microcycle page
-        router.push(`/microcycles/${workout.microcycle.id}`)
+        // Redirect to dashboard
+        router.push('/dashboard')
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
