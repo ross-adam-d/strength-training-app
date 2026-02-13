@@ -721,12 +721,14 @@ export default function WorkoutLogPage() {
         }
 
         // Clean and validate numeric values before submission
-        const weightValue = parseFloat(log.weight.toString())
+        const weightStr = String(log.weight ?? '').trim()
+        const weightValue = weightStr === '' ? 0 : parseFloat(weightStr)
         const rirStr = String(log.rir ?? '').trim()
         const rirValue = rirStr === '' ? undefined : parseInt(rirStr, 10)
 
-        // Validate weight and RIR
+        // Validate weight and RIR (weight should have been caught by incomplete check, but be defensive)
         if (isNaN(weightValue) || (rirValue !== undefined && isNaN(rirValue))) {
+          console.error('Invalid numeric value:', { weight: log.weight, rir: log.rir, weightValue, rirValue })
           throw new Error('Invalid numeric value in exercise log')
         }
 
@@ -736,10 +738,13 @@ export default function WorkoutLogPage() {
 
         if (isUnilateral) {
           // For unilateral exercises, send repsLeft and repsRight
-          const repsLeftValue = parseInt((log.repsLeft ?? '').toString(), 10)
-          const repsRightValue = parseInt((log.repsRight ?? '').toString(), 10)
+          const repsLeftStr = String(log.repsLeft ?? '').trim()
+          const repsRightStr = String(log.repsRight ?? '').trim()
+          const repsLeftValue = repsLeftStr === '' ? 0 : parseInt(repsLeftStr, 10)
+          const repsRightValue = repsRightStr === '' ? 0 : parseInt(repsRightStr, 10)
 
           if (isNaN(repsLeftValue) || isNaN(repsRightValue)) {
+            console.error('Invalid reps for unilateral:', { repsLeft: log.repsLeft, repsRight: log.repsRight, repsLeftValue, repsRightValue })
             throw new Error('Invalid reps value for unilateral exercise')
           }
 
@@ -757,9 +762,11 @@ export default function WorkoutLogPage() {
           }
         } else {
           // For regular exercises, send reps
-          const repsValue = parseInt(log.reps.toString(), 10)
+          const repsStr = String(log.reps ?? '').trim()
+          const repsValue = repsStr === '' ? 0 : parseInt(repsStr, 10)
 
           if (isNaN(repsValue)) {
+            console.error('Invalid reps:', { reps: log.reps, repsValue })
             throw new Error('Invalid reps value in exercise log')
           }
 
