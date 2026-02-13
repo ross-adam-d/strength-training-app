@@ -105,7 +105,13 @@ export async function PATCH(
       console.log(`Found ${futureMicrocycles.length} future microcycles`)
 
       // Update exercises at the same orderIndex in matching workouts
-      const updatePromises: Promise<any>[] = []
+      const exercisesToUpdate: Array<{
+        id: string
+        workoutName: string
+        weekNumber: number
+        currentValue: boolean
+        newValue: boolean
+      }> = []
 
       for (const microcycle of futureMicrocycles) {
         // Find workouts with the same day or name (to match recurring workouts)
@@ -124,32 +130,35 @@ export async function PATCH(
           )
 
           if (exerciseToUpdate) {
-            console.log(`  - Updating exercise at orderIndex ${currentOrderIndex} in workout "${workout.name}"`, {
-              exerciseId: exerciseToUpdate.id,
+            exercisesToUpdate.push({
+              id: exerciseToUpdate.id,
+              workoutName: workout.name,
+              weekNumber: microcycle.weekNumber,
               currentValue: exerciseToUpdate.supersetWithPrevious,
-              newValue: updateData.supersetWithPrevious
+              newValue: updateData.supersetWithPrevious!
             })
-            updatePromises.push(
-              prisma.workoutExercise.update({
-                where: { id: exerciseToUpdate.id },
-                data: { supersetWithPrevious: updateData.supersetWithPrevious },
-              }).then((result) => {
-                console.log(`    ✓ Updated ${exerciseToUpdate.id}:`, result.supersetWithPrevious)
-                return result
-              }).catch((err) => {
-                console.error(`    ✗ Failed to update ${exerciseToUpdate.id}:`, err)
-                throw err
-              })
-            )
+            console.log(`  - Will update exercise in Week ${microcycle.weekNumber} "${workout.name}": ${exerciseToUpdate.supersetWithPrevious} → ${updateData.supersetWithPrevious}`)
           } else {
             console.log(`  - No exercise found at orderIndex ${currentOrderIndex} in workout "${workout.name}"`)
           }
         }
       }
 
-      console.log(`Updating ${updatePromises.length} exercises total`)
-      const results = await Promise.all(updatePromises)
-      console.log('✅ Superset propagation complete -', results.length, 'exercises updated')
+      console.log('\n📝 Summary of updates:', exercisesToUpdate)
+      console.log(`\n🔄 Executing ${exercisesToUpdate.length} database updates...`)
+
+      // Execute all updates
+      const updateResults = await Promise.all(
+        exercisesToUpdate.map(ex =>
+          prisma.workoutExercise.update({
+            where: { id: ex.id },
+            data: { supersetWithPrevious: ex.newValue },
+          })
+        )
+      )
+
+      console.log('✅ Superset propagation complete -', updateResults.length, 'exercises updated')
+      console.log('Updated exercise IDs:', updateResults.map(r => r.id))
     } else {
       console.log('⏭️  Skipping phase propagation:', {
         applyToRestOfPhase,
