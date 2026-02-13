@@ -73,7 +73,12 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json(exercises)
+    // Cache for 10 minutes - exercises don't change frequently
+    return NextResponse.json(exercises, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200',
+      },
+    })
   } catch (error) {
     console.error('Error fetching exercises:', error)
     return NextResponse.json(

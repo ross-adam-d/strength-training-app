@@ -15,6 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Optimized: Use select instead of include, only fetch needed fields
     const workout = await prisma.workout.findFirst({
       where: {
         id,
@@ -26,7 +27,13 @@ export async function GET(
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        estimatedDuration: true,
+        warmupNotes: true,
+        notes: true,
         microcycle: {
           select: {
             id: true,
@@ -50,8 +57,25 @@ export async function GET(
           orderBy: {
             orderIndex: 'asc',
           },
-          include: {
-            exercise: true,
+          select: {
+            id: true,
+            orderIndex: true,
+            targetSets: true,
+            targetReps: true,
+            targetRpe: true,
+            targetRir: true,
+            tempo: true,
+            restPeriod: true,
+            supersetWithPrevious: true,
+            notes: true,
+            exercise: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                isUnilateral: true,
+              },
+            },
           },
         },
         workoutLogs: {
@@ -59,7 +83,9 @@ export async function GET(
             completedAt: 'desc',
           },
           take: 1,
-          include: {
+          select: {
+            id: true,
+            completedAt: true,
             exerciseLogs: {
               where: { skipped: false },
               orderBy: { setNumber: 'asc' },
@@ -67,6 +93,8 @@ export async function GET(
                 exerciseId: true,
                 setNumber: true,
                 reps: true,
+                repsLeft: true,
+                repsRight: true,
                 weight: true,
               },
             },
@@ -82,7 +110,12 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(workout)
+    // Add cache headers (2 minutes - workouts don't change often during a session)
+    return NextResponse.json(workout, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=120, stale-while-revalidate=300',
+      },
+    })
   } catch (error) {
     console.error('Error fetching workout:', error)
     return NextResponse.json(
