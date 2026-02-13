@@ -181,6 +181,13 @@ export default function WorkoutLogPage() {
   const [timerFlashing, setTimerFlashing] = useState(false)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Draft state
+  const [showDraftModal, setShowDraftModal] = useState(false)
+  const [hasDraft, setHasDraft] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const draftKey = `workout-draft-${params.id}`
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     fetchWorkout()
   }, [])
@@ -220,12 +227,43 @@ export default function WorkoutLogPage() {
     }
   }, [activeTimerKey])
 
+  // Auto-save draft with debouncing
+  useEffect(() => {
+    if (!workout || loading || hasDraft) return
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Set new timeout to save after 2 seconds of inactivity
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft()
+    }, 2000)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, workout, loading, hasDraft])
+
   async function fetchWorkout() {
     try {
       const response = await fetch(`/api/workouts/${params.id}`)
       if (response.ok) {
         const data = await response.json()
         setWorkout(data)
+
+        // Check for draft before populating from history
+        const draft = loadDraft()
+        if (draft) {
+          setHasDraft(true)
+          setShowDraftModal(true)
+          // Don't populate yet - wait for user to choose resume or start fresh
+          setLoading(false)
+          return
+        }
 
         // Build lookup from most recent completed workout log
         const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number }[]>()
@@ -275,6 +313,63 @@ export default function WorkoutLogPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function saveDraft() {
+    if (!workout) return
+
+    const draft = {
+      exerciseLogs,
+      exerciseNotes,
+      exerciseRpes,
+      completedExercises: Array.from(completedExercises),
+      overallNotes,
+      overallRating,
+      startTime: startTime.toISOString(),
+      savedAt: new Date().toISOString(),
+    }
+
+    localStorage.setItem(draftKey, JSON.stringify(draft))
+    setLastSavedAt(new Date())
+  }
+
+  function loadDraft() {
+    try {
+      const saved = localStorage.getItem(draftKey)
+      if (!saved) return null
+      return JSON.parse(saved)
+    } catch (error) {
+      console.error('Error loading draft:', error)
+      return null
+    }
+  }
+
+  function resumeDraft() {
+    const draft = loadDraft()
+    if (!draft) return
+
+    setExerciseLogs(draft.exerciseLogs)
+    setExerciseNotes(draft.exerciseNotes)
+    setExerciseRpes(draft.exerciseRpes)
+    setCompletedExercises(new Set(draft.completedExercises))
+    setOverallNotes(draft.overallNotes)
+    setOverallRating(draft.overallRating)
+    setLastSavedAt(new Date(draft.savedAt))
+    setShowDraftModal(false)
+    setHasDraft(false)
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(draftKey)
+    setLastSavedAt(null)
+  }
+
+  function startFresh() {
+    clearDraft()
+    setShowDraftModal(false)
+    setHasDraft(false)
+    // Trigger normal fetch workflow
+    fetchWorkout()
   }
 
   function startTimer(exerciseId: string, setNumber: number, restPeriod: number) {
@@ -577,6 +672,8 @@ export default function WorkoutLogPage() {
       })
 
       if (response.ok && workout) {
+        // Clear draft on successful save
+        clearDraft()
         // Fetch next workout after successful save
         await fetchNextWorkout()
       } else {
@@ -618,9 +715,16 @@ export default function WorkoutLogPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{workout.name}</h1>
-                <p className="text-xs md:text-sm text-gray-600 mt-1">
-                  Started {startTime.toLocaleTimeString()}
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xs md:text-sm text-gray-600">
+                    Started {startTime.toLocaleTimeString()}
+                  </p>
+                  {lastSavedAt && (
+                    <p className="text-xs text-green-600 font-medium">
+                      ✓ Draft saved {lastSavedAt.toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
               </div>
               <Button onClick={handleComplete} disabled={saving} className="shrink-0">
                 {saving ? 'Saving...' : 'Complete'}
@@ -1185,6 +1289,28 @@ export default function WorkoutLogPage() {
           }}
         />
       )}
+
+      {/* Draft Resume Modal */}
+      <Modal
+        isOpen={showDraftModal}
+        onClose={() => {}} // Prevent closing without choosing
+        title="Resume Workout?"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            You have an in-progress workout saved. Would you like to resume where you left off or start fresh?
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button onClick={resumeDraft} className="w-full">
+              Resume Draft
+            </Button>
+            <Button variant="secondary" onClick={startFresh} className="w-full">
+              Start Fresh
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
