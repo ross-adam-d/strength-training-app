@@ -733,7 +733,7 @@ export default function WorkoutLogPage() {
                     <div key={timerKey} className="space-y-2">
                       {/* Larger touch targets for mobile - min 44px height */}
                       <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 items-center`}>
-                        <span className="text-sm md:text-base font-semibold text-gray-600">{log.setNumber}</span>
+                        <span className={`text-sm md:text-base font-semibold ${completedExercises.has(we.exercise.id) ? 'text-gray-400' : 'text-gray-600'}`}>{log.setNumber}</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -742,7 +742,7 @@ export default function WorkoutLogPage() {
                           value={log.weight}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                         />
                         {we.exercise.isUnilateral ? (
                           <>
@@ -754,7 +754,7 @@ export default function WorkoutLogPage() {
                               value={log.repsLeft ?? ''}
                               onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
-                              className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                              className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                             />
                             <input
                               type="text"
@@ -764,7 +764,7 @@ export default function WorkoutLogPage() {
                               value={log.repsRight ?? ''}
                               onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
-                              className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                              className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                             />
                           </>
                         ) : (
@@ -776,7 +776,7 @@ export default function WorkoutLogPage() {
                             value={log.reps}
                             onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                            className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                           />
                         )}
                         <input
@@ -787,12 +787,12 @@ export default function WorkoutLogPage() {
                           value={log.rir ?? ''}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'rir', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'rir', log.rir ?? '')}
-                          className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                         />
                       </div>
                       <div className="ml-[2.5rem] space-y-2">
                         {/* Better spacing and larger buttons for mobile */}
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className={`flex items-center gap-2 flex-wrap ${completedExercises.has(we.exercise.id) ? 'opacity-60' : ''}`}>
                           {showRestTimer && (
                             <Button
                               variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}

@@ -14,6 +14,8 @@ const updateSchema = z.object({
   orderIndex: z.number().int().optional(),
   restPeriod: z.number().int().nullable().optional(),
   supersetWithPrevious: z.boolean().optional(),
+  applyToRestOfPhase: z.boolean().optional(),
+  mesocycleId: z.string().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {
@@ -48,13 +50,79 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const data = updateSchema.parse(body)
+    const { applyToRestOfPhase, mesocycleId, ...updateData } = updateSchema.parse(body)
 
+    // Update the current exercise
     const updated = await prisma.workoutExercise.update({
       where: { id },
-      data,
-      include: { exercise: { select: { id: true, name: true } } },
+      data: updateData,
+      include: {
+        exercise: { select: { id: true, name: true } },
+        workout: {
+          include: {
+            microcycle: {
+              include: {
+                mesocycle: true,
+              },
+            },
+          },
+        },
+      },
     })
+
+    // If applyToRestOfPhase is true and supersetWithPrevious was updated
+    if (applyToRestOfPhase && updateData.supersetWithPrevious !== undefined && mesocycleId) {
+      const currentWorkout = updated.workout
+      const currentMicrocycle = currentWorkout.microcycle
+      const currentOrderIndex = updated.orderIndex
+
+      // Find all future microcycles in the same mesocycle
+      const futureMicrocycles = await prisma.microcycle.findMany({
+        where: {
+          mesocycleId,
+          weekNumber: { gt: currentMicrocycle.weekNumber },
+        },
+        include: {
+          workouts: {
+            include: {
+              workoutExercises: {
+                orderBy: { orderIndex: 'asc' },
+              },
+            },
+          },
+        },
+      })
+
+      // Update exercises at the same orderIndex in matching workouts
+      const updatePromises: Promise<any>[] = []
+
+      for (const microcycle of futureMicrocycles) {
+        // Find workouts with the same day or name (to match recurring workouts)
+        const matchingWorkouts = microcycle.workouts.filter(
+          (w) =>
+            (w.dayOfWeek !== null && w.dayOfWeek === currentWorkout.dayOfWeek) ||
+            w.name === currentWorkout.name
+        )
+
+        for (const workout of matchingWorkouts) {
+          // Find the exercise at the same orderIndex
+          const exerciseToUpdate = workout.workoutExercises.find(
+            (we) => we.orderIndex === currentOrderIndex
+          )
+
+          if (exerciseToUpdate) {
+            updatePromises.push(
+              prisma.workoutExercise.update({
+                where: { id: exerciseToUpdate.id },
+                data: { supersetWithPrevious: updateData.supersetWithPrevious },
+              })
+            )
+          }
+        }
+      }
+
+      await Promise.all(updatePromises)
+    }
 
     return NextResponse.json(updated)
   } catch (error) {

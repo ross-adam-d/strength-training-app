@@ -66,13 +66,56 @@ interface Workout {
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+// Calculate superset groups: returns Map of exercise.id -> group number (1, 2, 3...) or null
+function calculateSupersetGroups(exercises: WorkoutExercise[]): Map<string, number | null> {
+  const groups = new Map<string, number | null>()
+  let currentGroup = 0
+  let inSuperset = false
+
+  for (let i = 0; i < exercises.length; i++) {
+    const ex = exercises[i]
+    const nextEx = exercises[i + 1]
+
+    if (ex.supersetWithPrevious) {
+      // This exercise is part of a superset
+      if (!inSuperset) {
+        // Start a new superset group
+        currentGroup++
+        // Mark the previous exercise as part of this group too
+        if (i > 0) {
+          groups.set(exercises[i - 1].id, currentGroup)
+        }
+      }
+      groups.set(ex.id, currentGroup)
+      inSuperset = true
+    } else {
+      // Not in a superset
+      if (!inSuperset) {
+        groups.set(ex.id, null)
+      } else {
+        // Previous exercise(s) were in a superset, but this one isn't
+        groups.set(ex.id, null)
+        inSuperset = false
+      }
+    }
+
+    // Check if next exercise continues the superset
+    if (inSuperset && (!nextEx || !nextEx.supersetWithPrevious)) {
+      inSuperset = false
+    }
+  }
+
+  return groups
+}
+
 interface SortableExerciseProps {
   exercise: WorkoutExercise
+  supersetGroup: number | null  // SS1, SS2, etc. or null if not in superset
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }
 
-function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps) {
+function SortableExercise({ exercise, supersetGroup, onEdit, onDelete }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: exercise.id,
   })
@@ -83,9 +126,11 @@ function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps)
     opacity: isDragging ? 0.5 : 1,
   }
 
+  const isInSuperset = supersetGroup !== null
+
   return (
     <div ref={setNodeRef} style={style}>
-      <Card>
+      <Card className={isInSuperset ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''}>
         <CardBody className="py-4">
           <div className="flex items-start gap-3">
             {/* Drag Handle */}
@@ -99,7 +144,14 @@ function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps)
 
             {/* Exercise Info */}
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-2">{exercise.exercise.name}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-gray-900">{exercise.exercise.name}</h3>
+                {isInSuperset && (
+                  <span className="inline-block bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">
+                    SS{supersetGroup}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div>
                   <span className="text-gray-600">Sets:</span>{' '}
@@ -180,8 +232,13 @@ export default function EditWorkoutPage() {
     notes: '',
   })
 
-  // Apply to rest of phase modal
+  // Apply to rest of phase modal (workout-level)
   const [showScopeModal, setShowScopeModal] = useState(false)
+
+  // Apply to rest of phase modal (exercise-level)
+  const [showExerciseScopeModal, setShowExerciseScopeModal] = useState(false)
+  const [originalSupersetValue, setOriginalSupersetValue] = useState(false)
+  const [pendingExerciseSave, setPendingExerciseSave] = useState<any>(null)
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -256,10 +313,26 @@ export default function EditWorkoutPage() {
       supersetWithPrevious: ex.supersetWithPrevious,
       notes: ex.notes || '',
     })
+    setOriginalSupersetValue(ex.supersetWithPrevious)
     setEditingExercise(exerciseId)
   }
 
   async function handleSaveExercise() {
+    if (!editingExercise && !addingExercise) return
+
+    // Check if we're editing and the superset value changed
+    if (editingExercise && exerciseForm.supersetWithPrevious !== originalSupersetValue) {
+      // Show scope modal
+      setPendingExerciseSave({ applyToRest: false })
+      setShowExerciseScopeModal(true)
+      return
+    }
+
+    // Otherwise save immediately (no superset change)
+    await performExerciseSave(false)
+  }
+
+  async function performExerciseSave(applyToRestOfPhase: boolean) {
     if (!editingExercise && !addingExercise) return
 
     const endpoint = editingExercise
@@ -284,6 +357,11 @@ export default function EditWorkoutPage() {
       payload.orderIndex = exercises.length
     }
 
+    if (editingExercise && applyToRestOfPhase) {
+      payload.applyToRestOfPhase = true
+      payload.mesocycleId = workout?.microcycle.mesocycle.id
+    }
+
     try {
       const response = await fetch(endpoint, {
         method,
@@ -300,6 +378,8 @@ export default function EditWorkoutPage() {
         }
         setEditingExercise(null)
         setAddingExercise(false)
+        setShowExerciseScopeModal(false)
+        setPendingExerciseSave(null)
         resetExerciseForm()
       }
     } catch (error) {
@@ -483,14 +563,18 @@ export default function EditWorkoutPage() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={exercises.map((e) => e.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
-                {exercises.map((exercise) => (
-                  <SortableExercise
-                    key={exercise.id}
-                    exercise={exercise}
-                    onEdit={handleEditExercise}
-                    onDelete={(id) => setExerciseToDelete(id)}
-                  />
-                ))}
+                {(() => {
+                  const supersetGroups = calculateSupersetGroups(exercises)
+                  return exercises.map((exercise) => (
+                    <SortableExercise
+                      key={exercise.id}
+                      exercise={exercise}
+                      supersetGroup={supersetGroups.get(exercise.id) ?? null}
+                      onEdit={handleEditExercise}
+                      onDelete={(id) => setExerciseToDelete(id)}
+                    />
+                  ))
+                })()}
               </div>
             </SortableContext>
           </DndContext>
@@ -646,7 +730,7 @@ export default function EditWorkoutPage() {
         </Modal>
       )}
 
-      {/* Apply to Rest of Phase Modal */}
+      {/* Apply to Rest of Phase Modal (Workout-level) */}
       {showScopeModal && (
         <Modal
           isOpen={true}
@@ -664,6 +748,36 @@ export default function EditWorkoutPage() {
               No - This Week Only
             </Button>
             <Button variant="ghost" onClick={() => setShowScopeModal(false)} className="w-full">
+              Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Apply to Rest of Phase Modal (Exercise-level) */}
+      {showExerciseScopeModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowExerciseScopeModal(false)
+            setPendingExerciseSave(null)
+          }}
+          title="Apply Superset Change"
+        >
+          <p className="text-gray-700 mb-4">
+            You changed the superset setting for this exercise. Do you want this change to apply to <strong>all remaining weeks</strong> in this phase?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => performExerciseSave(true)} className="w-full">
+              Yes - Apply to All Remaining
+            </Button>
+            <Button variant="secondary" onClick={() => performExerciseSave(false)} className="w-full">
+              No - This Week Only
+            </Button>
+            <Button variant="ghost" onClick={() => {
+              setShowExerciseScopeModal(false)
+              setPendingExerciseSave(null)
+            }} className="w-full">
               Cancel
             </Button>
           </div>
