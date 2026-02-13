@@ -46,6 +46,7 @@ export default function MesocycleDetailPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [inProgressWorkouts, setInProgressWorkouts] = useState<Set<string>>(new Set())
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -57,6 +58,18 @@ export default function MesocycleDetailPage() {
         if (response.ok) {
           const data = await response.json()
           setMesocycle(data)
+
+          // Check for in-progress workouts in localStorage
+          const inProgress = new Set<string>()
+          data.microcycles.forEach((microcycle: Microcycle) => {
+            microcycle.workouts.forEach((workout: Workout) => {
+              const draftKey = `workout-draft-${workout.id}`
+              if (localStorage.getItem(draftKey)) {
+                inProgress.add(workout.id)
+              }
+            })
+          })
+          setInProgressWorkouts(inProgress)
 
           // Set initial week from URL parameter
           if (weekParam) {
@@ -257,6 +270,11 @@ export default function MesocycleDetailPage() {
                           {isCompleted && (
                             <span className="px-2.5 py-1 text-xs bg-green-100 text-green-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
                               ✓ Completed
+                            </span>
+                          )}
+                          {!isCompleted && inProgressWorkouts.has(workout.id) && (
+                            <span className="px-2.5 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
+                              ⏳ In Progress
                             </span>
                           )}
                         </div>

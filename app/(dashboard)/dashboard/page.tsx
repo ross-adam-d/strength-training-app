@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { NextWorkoutCard } from '@/components/NextWorkoutCard'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -133,24 +134,7 @@ export default async function DashboardPage() {
 
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold mb-3">Next Workout</h2>
-        {nextWorkout ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{nextWorkoutLabel}</p>
-              <p className="text-xl font-bold text-gray-900">{nextWorkout.name}</p>
-            </div>
-            <Link
-              href={`/workouts/${nextWorkout.id}/log`}
-              className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-medium"
-            >
-              Start
-            </Link>
-          </div>
-        ) : activeBlock ? (
-          <p className="text-gray-500">All workouts completed this week</p>
-        ) : (
-          <p className="text-gray-500">No active training block</p>
-        )}
+        <NextWorkoutCard workout={nextWorkout} label={nextWorkoutLabel} hasActiveBlock={!!activeBlock} />
         <div className="mt-3 pt-3 border-t">
           <Link href="/workout/start" className="text-sm text-primary-600 hover:text-primary-700">
             + Log a manual workout

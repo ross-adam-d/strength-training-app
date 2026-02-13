@@ -790,7 +790,7 @@ export default function WorkoutLogPage() {
                   </p>
                   {lastSavedAt && (
                     <p className="text-xs text-green-600 font-medium">
-                      ✓ In progress (saved {lastSavedAt.toLocaleTimeString()})
+                      ✓ In progress
                     </p>
                   )}
                 </div>
