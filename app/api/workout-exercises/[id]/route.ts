@@ -124,11 +124,21 @@ export async function PATCH(
           )
 
           if (exerciseToUpdate) {
-            console.log(`  - Updating exercise at orderIndex ${currentOrderIndex} in workout "${workout.name}"`)
+            console.log(`  - Updating exercise at orderIndex ${currentOrderIndex} in workout "${workout.name}"`, {
+              exerciseId: exerciseToUpdate.id,
+              currentValue: exerciseToUpdate.supersetWithPrevious,
+              newValue: updateData.supersetWithPrevious
+            })
             updatePromises.push(
               prisma.workoutExercise.update({
                 where: { id: exerciseToUpdate.id },
                 data: { supersetWithPrevious: updateData.supersetWithPrevious },
+              }).then((result) => {
+                console.log(`    ✓ Updated ${exerciseToUpdate.id}:`, result.supersetWithPrevious)
+                return result
+              }).catch((err) => {
+                console.error(`    ✗ Failed to update ${exerciseToUpdate.id}:`, err)
+                throw err
               })
             )
           } else {
@@ -138,8 +148,8 @@ export async function PATCH(
       }
 
       console.log(`Updating ${updatePromises.length} exercises total`)
-      await Promise.all(updatePromises)
-      console.log('✅ Superset propagation complete')
+      const results = await Promise.all(updatePromises)
+      console.log('✅ Superset propagation complete -', results.length, 'exercises updated')
     } else {
       console.log('⏭️  Skipping phase propagation:', {
         applyToRestOfPhase,
