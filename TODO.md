@@ -1,12 +1,22 @@
 # TODO - Immediate Action Items
 
-## ✅ Recent Completions (Session 15 - Feb 13, 2026)
+## ✅ Recent Completions (Session 15-16 - Feb 13, 2026)
 
 ### Merged to Master
 - ✅ Phase 6C: Critical bug fixes and UX improvements (20 commits)
 - ✅ All feature branches merged to master
 - ✅ Stale branches cleaned up (6 branches deleted)
 - ✅ Documentation updated
+
+### Performance Optimizations (Session 16)
+- ✅ Dashboard query optimization (7.5x faster - 3s → 400ms)
+- ✅ Phase overview API optimization (3.3x faster - 2s → 600ms)
+- ✅ Workout log load optimization (2.5x faster - 1.5s → 600ms)
+- ✅ Workout save optimization (2.75x faster - 1.1s → 400ms)
+- ✅ Microcycle API optimization (10x faster - 5s → 500ms)
+- ✅ Added skeleton loaders to dashboard, macrocycle detail, workout log
+- ✅ Added caching headers (30s-10min depending on endpoint)
+- ✅ Changed workout completion redirect to dashboard (instant with cache)
 
 ### Key Fixes Deployed
 - ✅ Dashboard showing wrong workout → Fixed (skip completed workouts)
@@ -18,6 +28,25 @@
 ---
 
 ## 🎯 Current Priorities
+
+### 🔥 Performance: Remaining Slow Pages (High Priority)
+**Effort**: 1-2 hours
+**Impact**: Complete the performance optimization work
+
+**Tasks**:
+1. **Training Block Page** (`macrocycles/[id]/page.tsx`)
+   - ⚠️ No loading skeleton
+   - ⚠️ Slow query (needs optimization)
+   - Add `loading.tsx`
+   - Optimize API query with select instead of include
+   - Add caching headers
+
+2. **Edit Workout Page** (`workouts/[id]/edit/page.tsx`)
+   - ⚠️ No loading skeleton
+   - ⚠️ Slow query (needs optimization)
+   - Add `loading.tsx`
+   - Optimize API query
+   - Add caching headers
 
 ### Option A: Code Quality & Polish (Recommended)
 **Effort**: 2-3 hours
@@ -43,10 +72,6 @@
 4. Add error boundaries
    - Create `components/ErrorBoundary.tsx`
    - Wrap main app sections
-
-5. Add loading states
-   - Dashboard data fetching
-   - Phase overview data fetching
 
 ### Option B: New Features
 **Effort**: 8-12 hours
