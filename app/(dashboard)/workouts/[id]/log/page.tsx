@@ -734,17 +734,19 @@ export default function WorkoutLogPage() {
       if (response.ok && workout) {
         // Clear draft on successful save
         clearDraft()
-        // Fetch next workout after successful save
-        await fetchNextWorkout()
+        // Show success modal immediately, fetch next workout in background
+        setShowUpNextModal(true)
+        setSaving(false)
+        fetchNextWorkout().catch(err => console.error('Error fetching next workout:', err))
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
         alert(`Failed to save workout log: ${errorData.error || 'Unknown error'}`)
+        setSaving(false)
       }
     } catch (error) {
       console.error('Error saving workout log:', error)
       alert(`Failed to save workout log: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
       setSaving(false)
     }
   }
@@ -1260,7 +1262,13 @@ export default function WorkoutLogPage() {
             ✓ Great work! Workout logged successfully.
           </p>
 
-          {nextWorkout ? (
+          {nextWorkout === null ? (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-gray-700">
+                🎉 You&apos;ve completed all workouts in this phase!
+              </p>
+            </div>
+          ) : nextWorkout ? (
             <div className="mt-4">
               <p className="text-gray-700 font-medium mb-3">Up Next:</p>
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1283,10 +1291,8 @@ export default function WorkoutLogPage() {
               </div>
             </div>
           ) : (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-gray-700">
-                🎉 You&apos;ve completed all workouts in this phase!
-              </p>
+            <div className="mt-4 flex items-center justify-center py-4">
+              <div className="text-gray-500">Loading next workout...</div>
             </div>
           )}
 
