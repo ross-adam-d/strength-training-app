@@ -688,10 +688,16 @@ export default function WorkoutLogPage() {
       overallRpe,
       exerciseLogs: exerciseLogs.map((log) => {
         if (log.skipped) {
+          // Check if exercise is unilateral
+          const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+          const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+
           return {
             exerciseId: log.exerciseId,
             setNumber: log.setNumber,
             reps: 0,
+            repsLeft: isUnilateral ? 0 : undefined,
+            repsRight: isUnilateral ? 0 : undefined,
             weight: 0,
             skipped: true,
             rir: undefined,
@@ -701,25 +707,58 @@ export default function WorkoutLogPage() {
         }
 
         // Clean and validate numeric values before submission
-        const repsValue = parseInt(log.reps.toString(), 10)
         const weightValue = parseFloat(log.weight.toString())
         const rirStr = String(log.rir ?? '').trim()
         const rirValue = rirStr === '' ? undefined : parseInt(rirStr, 10)
 
-        // Validate cleaned values
-        if (isNaN(repsValue) || isNaN(weightValue) || (rirValue !== undefined && isNaN(rirValue))) {
+        // Validate weight and RIR
+        if (isNaN(weightValue) || (rirValue !== undefined && isNaN(rirValue))) {
           throw new Error('Invalid numeric value in exercise log')
         }
 
-        return {
-          exerciseId: log.exerciseId,
-          setNumber: log.setNumber,
-          reps: repsValue,
-          weight: weightValue,
-          rir: rirValue,
-          skipped: false,
-          notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
-          exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
+        // Handle unilateral vs regular exercises
+        const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+        const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+
+        if (isUnilateral) {
+          // For unilateral exercises, send repsLeft and repsRight
+          const repsLeftValue = parseInt((log.repsLeft ?? '').toString(), 10)
+          const repsRightValue = parseInt((log.repsRight ?? '').toString(), 10)
+
+          if (isNaN(repsLeftValue) || isNaN(repsRightValue)) {
+            throw new Error('Invalid reps value for unilateral exercise')
+          }
+
+          return {
+            exerciseId: log.exerciseId,
+            setNumber: log.setNumber,
+            reps: 0, // Required field, but not used for unilateral
+            repsLeft: repsLeftValue,
+            repsRight: repsRightValue,
+            weight: weightValue,
+            rir: rirValue,
+            skipped: false,
+            notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
+            exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
+          }
+        } else {
+          // For regular exercises, send reps
+          const repsValue = parseInt(log.reps.toString(), 10)
+
+          if (isNaN(repsValue)) {
+            throw new Error('Invalid reps value in exercise log')
+          }
+
+          return {
+            exerciseId: log.exerciseId,
+            setNumber: log.setNumber,
+            reps: repsValue,
+            weight: weightValue,
+            rir: rirValue,
+            skipped: false,
+            notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
+            exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
+          }
         }
       }),
     }
