@@ -9,6 +9,7 @@ const workoutLogSchema = z.object({
   duration: z.number().int().positive().optional(),
   notes: z.string().optional(),
   overallRating: z.number().int().min(1).max(5).optional(),
+  overallRpe: z.number().optional(),
   exerciseLogs: z.array(z.object({
     exerciseId: z.string(),
     setNumber: z.number().int().positive(),
@@ -16,7 +17,7 @@ const workoutLogSchema = z.object({
     repsLeft: z.number().int().min(0).optional(),
     repsRight: z.number().int().min(0).optional(),
     weight: z.number().min(0),
-    rpe: z.number().optional(),
+    exerciseRpe: z.number().optional(),
     rir: z.number().int().min(0).optional(),
     skipped: z.boolean().optional(),
     notes: z.string().optional(),
@@ -135,6 +136,7 @@ export async function POST(request: Request) {
         duration: data.duration,
         notes: data.notes,
         overallRating: data.overallRating,
+        overallRpe: data.overallRpe,
         exerciseLogs: {
           create: data.exerciseLogs.map((log) => ({
             exerciseId: log.exerciseId,
@@ -143,7 +145,7 @@ export async function POST(request: Request) {
             repsLeft: log.repsLeft,
             repsRight: log.repsRight,
             weight: log.weight,
-            rpe: log.rpe,
+            exerciseRpe: log.exerciseRpe,
             rir: log.rir,
             skipped: log.skipped ?? false,
             notes: log.notes,
