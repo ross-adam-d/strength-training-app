@@ -72,9 +72,18 @@ export async function PATCH(
 
     // If applyToRestOfPhase is true and supersetWithPrevious was updated
     if (applyToRestOfPhase && updateData.supersetWithPrevious !== undefined && mesocycleId) {
+      console.log('🔄 Applying superset changes to rest of phase...')
       const currentWorkout = updated.workout
       const currentMicrocycle = currentWorkout.microcycle
       const currentOrderIndex = updated.orderIndex
+
+      console.log('Current workout:', {
+        name: currentWorkout.name,
+        dayOfWeek: currentWorkout.dayOfWeek,
+        weekNumber: currentMicrocycle.weekNumber,
+        orderIndex: currentOrderIndex,
+        supersetValue: updateData.supersetWithPrevious
+      })
 
       // Find all future microcycles in the same mesocycle
       const futureMicrocycles = await prisma.microcycle.findMany({
@@ -93,6 +102,8 @@ export async function PATCH(
         },
       })
 
+      console.log(`Found ${futureMicrocycles.length} future microcycles`)
+
       // Update exercises at the same orderIndex in matching workouts
       const updatePromises: Promise<any>[] = []
 
@@ -104,6 +115,8 @@ export async function PATCH(
             w.name === currentWorkout.name
         )
 
+        console.log(`Week ${microcycle.weekNumber}: Found ${matchingWorkouts.length} matching workouts`)
+
         for (const workout of matchingWorkouts) {
           // Find the exercise at the same orderIndex
           const exerciseToUpdate = workout.workoutExercises.find(
@@ -111,17 +124,28 @@ export async function PATCH(
           )
 
           if (exerciseToUpdate) {
+            console.log(`  - Updating exercise at orderIndex ${currentOrderIndex} in workout "${workout.name}"`)
             updatePromises.push(
               prisma.workoutExercise.update({
                 where: { id: exerciseToUpdate.id },
                 data: { supersetWithPrevious: updateData.supersetWithPrevious },
               })
             )
+          } else {
+            console.log(`  - No exercise found at orderIndex ${currentOrderIndex} in workout "${workout.name}"`)
           }
         }
       }
 
+      console.log(`Updating ${updatePromises.length} exercises total`)
       await Promise.all(updatePromises)
+      console.log('✅ Superset propagation complete')
+    } else {
+      console.log('⏭️  Skipping phase propagation:', {
+        applyToRestOfPhase,
+        hasSupersetUpdate: updateData.supersetWithPrevious !== undefined,
+        hasMesocycleId: !!mesocycleId
+      })
     }
 
     return NextResponse.json(updated)

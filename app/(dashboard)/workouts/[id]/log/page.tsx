@@ -64,6 +64,48 @@ interface ExerciseLog {
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+// Calculate superset groups: returns Map of exercise.id -> group number (1, 2, 3...) or null
+function calculateSupersetGroups(exercises: WorkoutExercise[]): Map<string, number | null> {
+  const groups = new Map<string, number | null>()
+  let currentGroup = 0
+  let inSuperset = false
+
+  for (let i = 0; i < exercises.length; i++) {
+    const ex = exercises[i]
+    const nextEx = exercises[i + 1]
+
+    if (ex.supersetWithPrevious) {
+      // This exercise is part of a superset
+      if (!inSuperset) {
+        // Start a new superset group
+        currentGroup++
+        // Mark the previous exercise as part of this group too
+        if (i > 0) {
+          groups.set(exercises[i - 1].exercise.id, currentGroup)
+        }
+      }
+      groups.set(ex.exercise.id, currentGroup)
+      inSuperset = true
+    } else {
+      // Not in a superset
+      if (!inSuperset) {
+        groups.set(ex.exercise.id, null)
+      } else {
+        // Previous exercise(s) were in a superset, but this one isn't
+        groups.set(ex.exercise.id, null)
+        inSuperset = false
+      }
+    }
+
+    // Check if next exercise continues the superset
+    if (inSuperset && (!nextEx || !nextEx.supersetWithPrevious)) {
+      inSuperset = false
+    }
+  }
+
+  return groups
+}
+
 function formatTimer(s: number) {
   return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`
 }
@@ -612,72 +654,78 @@ export default function WorkoutLogPage() {
       )}
 
       {/* Vertical exercise cards */}
-      {workout.workoutExercises.map((we, index) => {
-        const setsForExercise = exerciseLogs.filter(
-          (log) => log.exerciseId === we.exercise.id
-        )
+      {(() => {
+        const supersetGroups = calculateSupersetGroups(workout.workoutExercises)
 
-        // Check if next exercise is also part of this superset
-        const nextExercise = workout.workoutExercises[index + 1]
-        const isLastInSuperset = !nextExercise || !nextExercise.supersetWithPrevious
-        const showRestTimer = we.restPeriod != null && (!we.supersetWithPrevious || isLastInSuperset)
+        return workout.workoutExercises.map((we, index) => {
+          const setsForExercise = exerciseLogs.filter(
+            (log) => log.exerciseId === we.exercise.id
+          )
 
-        return (
-          <Card
-            key={we.id}
-            className={`${we.supersetWithPrevious ? 'mb-2 border-l-4 border-l-primary-500 bg-primary-50' : 'mb-6'}`}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold">{we.exercise.name}</h2>
-                    {completedExercises.has(we.exercise.id) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Done
-                      </span>
-                    )}
+          const supersetGroup = supersetGroups.get(we.exercise.id)
+          const isInSuperset = supersetGroup !== null
+
+          // Check if next exercise is also part of this superset
+          const nextExercise = workout.workoutExercises[index + 1]
+          const isLastInSuperset = !nextExercise || !nextExercise.supersetWithPrevious
+          const showRestTimer = we.restPeriod != null && (!we.supersetWithPrevious || isLastInSuperset)
+
+          return (
+            <Card
+              key={we.id}
+              className={`${isInSuperset ? 'mb-2 border-l-4 border-l-primary-500 bg-primary-50' : 'mb-6'}`}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold">{we.exercise.name}</h2>
+                      {isInSuperset && (
+                        <span className="inline-block bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">
+                          SS{supersetGroup}
+                        </span>
+                      )}
+                      {completedExercises.has(we.exercise.id) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Done
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Target: {we.targetSets} sets × {we.targetReps} reps
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Target: {we.targetSets} sets × {we.targetReps} reps
-                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
+                      setShowLiftHistory(true)
+                    }}
+                    className="text-xl hover:opacity-70 transition"
+                    aria-label="View lift history"
+                  >
+                    📊
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedExercise({ id: we.exercise.id, name: we.exercise.name })
-                    setShowLiftHistory(true)
-                  }}
-                  className="text-xl hover:opacity-70 transition"
-                  aria-label="View lift history"
-                >
-                  📊
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {we.targetRir != null && (
-                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
-                    RIR {we.targetRir}
-                  </span>
-                )}
-                {we.tempo != null && (
-                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
-                    Tempo {we.tempo}
-                  </span>
-                )}
-                {showRestTimer && (
-                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
-                    Rest {formatTimer(we.restPeriod!)}
-                  </span>
-                )}
-                {we.supersetWithPrevious && (
-                  <span className="inline-block bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">
-                    Superset
-                  </span>
-                )}
-              </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {we.targetRir != null && (
+                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                      RIR {we.targetRir}
+                    </span>
+                  )}
+                  {we.tempo != null && (
+                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                      Tempo {we.tempo}
+                    </span>
+                  )}
+                  {showRestTimer && (
+                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                      Rest {formatTimer(we.restPeriod!)}
+                    </span>
+                  )}
+                </div>
               {we.notes && (
                 <p className="text-sm text-gray-600 mt-2 italic">{we.notes}</p>
               )}
@@ -912,8 +960,9 @@ export default function WorkoutLogPage() {
               )}
             </CardBody>
           </Card>
-        )
-      })}
+          )
+        })
+      })()}
 
       <Card className="mb-6">
         <CardHeader>
