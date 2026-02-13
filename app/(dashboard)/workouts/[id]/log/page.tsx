@@ -367,7 +367,14 @@ export default function WorkoutLogPage() {
     const draft = loadDraft()
     if (!draft) return
 
-    setExerciseLogs(draft.exerciseLogs)
+    // Deduplicate sets by exerciseId and setNumber (in case of corrupted draft)
+    const uniqueSets = new Map<string, ExerciseLog>()
+    draft.exerciseLogs.forEach((log: ExerciseLog) => {
+      const key = `${log.exerciseId}-${log.setNumber}`
+      uniqueSets.set(key, log)
+    })
+
+    setExerciseLogs(Array.from(uniqueSets.values()))
     setExerciseNotes(draft.exerciseNotes)
     setExerciseRpes(draft.exerciseRpes)
     setCompletedExercises(new Set(draft.completedExercises))
@@ -428,6 +435,13 @@ export default function WorkoutLogPage() {
     clearDraft()
     setShowDraftModal(false)
     setHasDraft(false)
+    // Reset all state before fetching
+    setExerciseLogs([])
+    setExerciseNotes({})
+    setExerciseRpes({})
+    setCompletedExercises(new Set())
+    setOverallNotes('')
+    setOverallRating(undefined)
     // Trigger normal fetch workflow
     fetchWorkout()
   }
