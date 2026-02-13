@@ -180,7 +180,6 @@ export default function WorkoutLogPage() {
   const [exerciseToSwap, setExerciseToSwap] = useState<{ workoutExerciseId: string; exerciseId: string; name: string } | null>(null)
   const [allExercises, setAllExercises] = useState<Array<{ id: string; name: string }>>([])
   const [selectedNewExercise, setSelectedNewExercise] = useState('')
-  const [showSwapScopeModal, setShowSwapScopeModal] = useState(false)
 
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
@@ -390,18 +389,12 @@ export default function WorkoutLogPage() {
     setShowSwapModal(true)
   }
 
-  async function confirmSwap(applyToRestOfPhase: boolean) {
+  async function confirmSwap() {
     if (!exerciseToSwap || !selectedNewExercise) return
 
     try {
-      const payload: any = {
+      const payload = {
         exerciseId: selectedNewExercise,
-      }
-
-      if (applyToRestOfPhase && workout) {
-        payload.applyToRestOfPhase = true
-        payload.mesocycleId = workout.microcycle.mesocycle.id
-        payload.swapExercise = true
       }
 
       const response = await fetch(`/api/workout-exercises/${exerciseToSwap.workoutExerciseId}`, {
@@ -414,7 +407,6 @@ export default function WorkoutLogPage() {
         // Refresh workout data to show the new exercise
         await fetchWorkout()
         setShowSwapModal(false)
-        setShowSwapScopeModal(false)
         setExerciseToSwap(null)
         setSelectedNewExercise('')
       }
@@ -424,13 +416,12 @@ export default function WorkoutLogPage() {
     }
   }
 
-  function proceedWithSwap() {
+  async function proceedWithSwap() {
     if (!selectedNewExercise) {
       alert('Please select an exercise')
       return
     }
-    setShowSwapModal(false)
-    setShowSwapScopeModal(true)
+    await confirmSwap()
   }
 
   function startFresh() {
@@ -1404,7 +1395,7 @@ export default function WorkoutLogPage() {
         >
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Select a replacement exercise to swap in for the rest of this workout:
+              Select a replacement exercise for this workout:
             </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1424,8 +1415,8 @@ export default function WorkoutLogPage() {
               </select>
             </div>
             <div className="flex gap-2">
-              <Button onClick={proceedWithSwap} className="flex-1">
-                Next
+              <Button onClick={proceedWithSwap} disabled={!selectedNewExercise} className="flex-1">
+                Swap Exercise
               </Button>
               <Button
                 variant="secondary"
@@ -1443,35 +1434,6 @@ export default function WorkoutLogPage() {
         </Modal>
       )}
 
-      {/* Exercise Swap Scope Modal */}
-      {showSwapScopeModal && exerciseToSwap && (
-        <Modal
-          isOpen={true}
-          onClose={() => {
-            setShowSwapScopeModal(false)
-            setShowSwapModal(true)
-          }}
-          title="Apply Exercise Swap"
-        >
-          <p className="text-gray-700 mb-4">
-            Do you want to swap <strong>{exerciseToSwap.name}</strong> in all remaining weeks of this phase?
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => confirmSwap(true)} className="w-full">
-              Yes - Apply to All Remaining
-            </Button>
-            <Button variant="secondary" onClick={() => confirmSwap(false)} className="w-full">
-              No - This Workout Only
-            </Button>
-            <Button variant="ghost" onClick={() => {
-              setShowSwapScopeModal(false)
-              setShowSwapModal(true)
-            }} className="w-full">
-              Back
-            </Button>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }
