@@ -27,6 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Optimized: Reduced nesting depth, only select needed fields
     const mesocycle = await prisma.mesocycle.findFirst({
       where: {
         id,
@@ -34,7 +35,14 @@ export async function GET(
           userId: session.user.id,
         },
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        focus: true,
+        goal: true,
+        startDate: true,
+        endDate: true,
+        warmupNotes: true,
         macrocycle: {
           select: {
             id: true,
@@ -45,17 +53,32 @@ export async function GET(
           orderBy: {
             weekNumber: 'asc',
           },
-          include: {
+          select: {
+            id: true,
+            weekNumber: true,
+            startDate: true,
+            endDate: true,
             workouts: {
               orderBy: {
                 dayOfWeek: 'asc',
               },
-              include: {
+              select: {
+                id: true,
+                name: true,
+                dayOfWeek: true,
+                warmupNotes: true,
                 workoutExercises: {
                   orderBy: {
                     orderIndex: 'asc',
                   },
-                  include: {
+                  select: {
+                    id: true,
+                    orderIndex: true,
+                    targetSets: true,
+                    targetReps: true,
+                    targetRpe: true,
+                    targetRir: true,
+                    supersetWithPrevious: true,
                     exercise: {
                       select: {
                         id: true,
@@ -88,7 +111,12 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(mesocycle)
+    // Add cache headers (5 minutes)
+    return NextResponse.json(mesocycle, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
+      },
+    })
   } catch (error) {
     console.error('Error fetching mesocycle:', error)
     return NextResponse.json(

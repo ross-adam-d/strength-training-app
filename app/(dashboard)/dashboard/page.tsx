@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { NextWorkoutCard } from '@/components/NextWorkoutCard'
 
+// Cache dashboard data for 30 seconds
+export const revalidate = 30
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
 
@@ -11,104 +14,86 @@ export default async function DashboardPage() {
     return null
   }
 
-  const [macrocycles, activeBlock] = await Promise.all([
-    prisma.macrocycle.findMany({
-      where: { userId: session.user.id, status: 'active' },
-      orderBy: { startDate: 'desc' },
-      take: 5,
-    }),
-    prisma.macrocycle.findFirst({
-      where: { userId: session.user.id, status: 'active' },
-      orderBy: { startDate: 'desc' },
-      include: {
-        mesocycles: {
-          orderBy: { startDate: 'asc' },
-          include: {
-            microcycles: {
-              orderBy: { weekNumber: 'asc' },
-              include: {
-                workouts: {
-                  orderBy: { dayOfWeek: 'asc' },
-                  include: {
-                    workoutLogs: { select: { id: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-  ])
+  // Optimized: Only fetch active macrocycle metadata first
+  const activeBlock = await prisma.macrocycle.findFirst({
+    where: { userId: session.user.id, status: 'active' },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+    },
+  })
 
-  // Determine next workout due from the active block
+  // Optimized: Single query to find next uncompleted workout
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const now = new Date()
   const todayDow = now.getDay()
-  let nextWorkout: { id: string; name: string; dayOfWeek: number | null } | null = null
+  let nextWorkout: { id: string; name: string; dayOfWeek: number | null; microcycle?: any } | null = null
   let nextWorkoutLabel = ''
 
-  try {
-    if (activeBlock?.mesocycles) {
-      // Find the first uncompleted workout in the current or future weeks
-      for (const meso of activeBlock.mesocycles) {
-        if (!meso?.microcycles) continue
+  if (activeBlock) {
+    try {
+      // Find first uncompleted workout in a single query
+      const uncompletedWorkout = await prisma.workout.findFirst({
+        where: {
+          microcycle: {
+            mesocycle: {
+              macrocycleId: activeBlock.id,
+            },
+            endDate: {
+              gte: now, // Only current or future weeks
+            },
+          },
+          workoutLogs: {
+            none: {}, // No workout logs = uncompleted
+          },
+        },
+        orderBy: [
+          { microcycle: { weekNumber: 'asc' } },
+          { dayOfWeek: 'asc' },
+        ],
+        select: {
+          id: true,
+          name: true,
+          dayOfWeek: true,
+          microcycle: {
+            select: {
+              weekNumber: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
+        },
+      })
 
-        for (const micro of meso.microcycles) {
-          try {
-            // Check current and future weeks
-            const endDate = new Date(micro.endDate)
-            if (now >= endDate) continue
+      if (uncompletedWorkout) {
+        nextWorkout = uncompletedWorkout
+        const microStartDate = new Date(uncompletedWorkout.microcycle.startDate)
+        const microEndDate = new Date(uncompletedWorkout.microcycle.endDate)
 
-            // Sort workouts by day of week
-            const workouts = micro.workouts || []
-            const sortedWorkouts = [...workouts].sort((a, b) => {
-              const dayA = a.dayOfWeek ?? 999
-              const dayB = b.dayOfWeek ?? 999
-              return dayA - dayB
-            })
-
-            // Find first uncompleted workout
-            for (const workout of sortedWorkouts) {
-              const isCompleted = workout.workoutLogs && workout.workoutLogs.length > 0
-              if (!isCompleted) {
-                nextWorkout = workout
-
-                // Determine label based on day
-                const startDate = new Date(micro.startDate)
-                if (now >= startDate && now < endDate) {
-                  // Current week
-                  if (workout.dayOfWeek === todayDow) {
-                    nextWorkoutLabel = 'Today'
-                  } else if (workout.dayOfWeek !== null) {
-                    nextWorkoutLabel = DAY_NAMES[workout.dayOfWeek]
-                  } else {
-                    nextWorkoutLabel = 'This Week'
-                  }
-                } else {
-                  // Future week
-                  nextWorkoutLabel = `Week ${micro.weekNumber}`
-                }
-                break
-              }
-            }
-
-            if (nextWorkout) break
-          } catch (err) {
-            // Skip this microcycle if there's an error
-            console.error('Error processing microcycle:', err)
-            continue
+        // Determine label
+        if (now >= microStartDate && now < microEndDate) {
+          // Current week
+          if (uncompletedWorkout.dayOfWeek === todayDow) {
+            nextWorkoutLabel = 'Today'
+          } else if (uncompletedWorkout.dayOfWeek !== null) {
+            nextWorkoutLabel = DAY_NAMES[uncompletedWorkout.dayOfWeek]
+          } else {
+            nextWorkoutLabel = 'This Week'
           }
+        } else {
+          // Future week
+          nextWorkoutLabel = `Week ${uncompletedWorkout.microcycle.weekNumber}`
         }
-        if (nextWorkout) break
       }
+    } catch (err) {
+      console.error('Error finding next workout:', err)
     }
-  } catch (err) {
-    console.error('Error determining next workout:', err)
-    // Silently fail - just won't show next workout
   }
 
-  // Determine current phase (mesocycle) from active block
+  // Optimized: Single query to find current phase
   let currentPhase: {
     id: string
     name: string
@@ -123,30 +108,62 @@ export default async function DashboardPage() {
   } | null = null
 
   if (activeBlock) {
-    for (const meso of activeBlock.mesocycles) {
-      // Check if this mesocycle contains the current week
-      for (let i = 0; i < meso.microcycles.length; i++) {
-        const micro = meso.microcycles[i]
-        if (now >= micro.startDate && now < micro.endDate) {
-          currentPhase = {
-            id: meso.id,
-            name: meso.name,
-            focus: meso.focus,
-            status: meso.status || 'active',
-            startDate: meso.startDate,
-            endDate: meso.endDate,
-            weekNumber: i + 1,
-            totalWeeks: meso.microcycles.length,
-            macrocycleId: activeBlock.id,
-            macrocycleName: activeBlock.name,
-          }
-          break
+    try {
+      // Find mesocycle containing current week
+      const currentMesocycle = await prisma.mesocycle.findFirst({
+        where: {
+          macrocycleId: activeBlock.id,
+          microcycles: {
+            some: {
+              startDate: { lte: now },
+              endDate: { gt: now },
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          focus: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          microcycles: {
+            select: {
+              id: true,
+              weekNumber: true,
+              startDate: true,
+              endDate: true,
+            },
+            orderBy: { weekNumber: 'asc' },
+          },
+        },
+      })
+
+      if (currentMesocycle) {
+        // Find which week we're in
+        const currentWeekIndex = currentMesocycle.microcycles.findIndex(
+          (micro) => now >= micro.startDate && now < micro.endDate
+        )
+
+        currentPhase = {
+          id: currentMesocycle.id,
+          name: currentMesocycle.name,
+          focus: currentMesocycle.focus,
+          status: currentMesocycle.status || 'active',
+          startDate: currentMesocycle.startDate,
+          endDate: currentMesocycle.endDate,
+          weekNumber: currentWeekIndex + 1,
+          totalWeeks: currentMesocycle.microcycles.length,
+          macrocycleId: activeBlock.id,
+          macrocycleName: activeBlock.name,
         }
       }
-      if (currentPhase) break
+    } catch (err) {
+      console.error('Error finding current phase:', err)
     }
   }
 
+  // Optimized: Only fetch what we need for display
   const recentWorkoutLogs = await prisma.workoutLog.findMany({
     where: {
       userId: session.user.id,
@@ -155,12 +172,20 @@ export default async function DashboardPage() {
       completedAt: 'desc',
     },
     take: 5,
-    include: {
-      workout: true,
-      exerciseLogs: {
-        include: {
-          exercise: true,
+    select: {
+      id: true,
+      completedAt: true,
+      duration: true,
+      workout: {
+        select: {
+          name: true,
         },
+      },
+      exerciseLogs: {
+        select: {
+          exerciseId: true, // Only need ID for counting unique exercises
+        },
+        distinct: ['exerciseId'],
       },
     },
   })
@@ -284,7 +309,7 @@ export default async function DashboardPage() {
                     {new Date(log.completedAt).toLocaleDateString()}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {new Set(log.exerciseLogs.map((el) => el.exercise.id)).size} exercises • {log.duration || '—'} min
+                    {log.exerciseLogs.length} exercises • {log.duration || '—'} min
                   </p>
                 </Link>
               ))}

@@ -113,8 +113,33 @@ export default function MesocycleDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">Loading...</div>
+      <div className="animate-pulse p-4">
+        {/* Header Skeleton */}
+        <div className="mb-6 space-y-2">
+          <div className="h-4 bg-gray-100 rounded w-32"></div>
+          <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
+        </div>
+
+        {/* Week Navigation Skeleton */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-10 w-10 bg-gray-200 rounded"></div>
+          <div className="h-6 bg-gray-200 rounded w-32"></div>
+          <div className="h-10 w-10 bg-gray-200 rounded"></div>
+        </div>
+
+        {/* Workouts Skeleton */}
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-4">
+              <div className="h-6 bg-gray-200 rounded w-48 mb-3"></div>
+              <div className="space-y-2">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-12 bg-gray-50 rounded"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
