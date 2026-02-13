@@ -16,6 +16,7 @@ const updateSchema = z.object({
   supersetWithPrevious: z.boolean().optional(),
   applyToRestOfPhase: z.boolean().optional(),
   mesocycleId: z.string().optional(),
+  swapExercise: z.boolean().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {
@@ -50,7 +51,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { applyToRestOfPhase, mesocycleId, ...updateData } = updateSchema.parse(body)
+    const { applyToRestOfPhase, mesocycleId, swapExercise, ...updateData } = updateSchema.parse(body)
 
     // Update the current exercise
     const updated = await prisma.workoutExercise.update({
@@ -160,11 +161,75 @@ export async function PATCH(
       console.log('✅ Superset propagation complete -', updateResults.length, 'exercises updated')
       console.log('Updated exercise IDs:', updateResults.map(r => r.id))
     } else {
-      console.log('⏭️  Skipping phase propagation:', {
+      console.log('⏭️  Skipping superset propagation:', {
         applyToRestOfPhase,
         hasSupersetUpdate: updateData.supersetWithPrevious !== undefined,
         hasMesocycleId: !!mesocycleId
       })
+    }
+
+    // Handle exercise swap with scope
+    if (applyToRestOfPhase && swapExercise && updateData.exerciseId && mesocycleId) {
+      console.log('🔄 Applying exercise swap to rest of phase...')
+      const currentWorkout = updated.workout
+      const currentMicrocycle = currentWorkout.microcycle
+      const currentOrderIndex = updated.orderIndex
+
+      console.log('Swapping to exerciseId:', updateData.exerciseId, 'at orderIndex:', currentOrderIndex)
+
+      // Find all future microcycles in the same mesocycle
+      const futureMicrocycles = await prisma.microcycle.findMany({
+        where: {
+          mesocycleId,
+          weekNumber: { gt: currentMicrocycle.weekNumber },
+        },
+        include: {
+          workouts: {
+            include: {
+              workoutExercises: {
+                orderBy: { orderIndex: 'asc' },
+              },
+            },
+          },
+        },
+      })
+
+      console.log(`Found ${futureMicrocycles.length} future microcycles for exercise swap`)
+
+      // Update exercises at the same orderIndex in matching workouts
+      const swapPromises: Promise<any>[] = []
+
+      for (const microcycle of futureMicrocycles) {
+        // Find workouts with the same day or name (to match recurring workouts)
+        const matchingWorkouts = microcycle.workouts.filter(
+          (w) =>
+            (w.dayOfWeek !== null && w.dayOfWeek === currentWorkout.dayOfWeek) ||
+            w.name === currentWorkout.name
+        )
+
+        console.log(`Week ${microcycle.weekNumber}: Found ${matchingWorkouts.length} matching workouts`)
+
+        for (const workout of matchingWorkouts) {
+          // Find the exercise at the same orderIndex
+          const exerciseToSwap = workout.workoutExercises.find(
+            (we) => we.orderIndex === currentOrderIndex
+          )
+
+          if (exerciseToSwap) {
+            console.log(`  - Swapping exercise in Week ${microcycle.weekNumber} "${workout.name}"`)
+            swapPromises.push(
+              prisma.workoutExercise.update({
+                where: { id: exerciseToSwap.id },
+                data: { exerciseId: updateData.exerciseId },
+              })
+            )
+          }
+        }
+      }
+
+      console.log(`🔄 Executing ${swapPromises.length} exercise swaps...`)
+      await Promise.all(swapPromises)
+      console.log('✅ Exercise swap propagation complete')
     }
 
     return NextResponse.json(updated)

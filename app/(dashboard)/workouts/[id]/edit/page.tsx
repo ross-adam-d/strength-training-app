@@ -113,9 +113,10 @@ interface SortableExerciseProps {
   supersetGroup: number | null  // SS1, SS2, etc. or null if not in superset
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onSwap: (id: string) => void
 }
 
-function SortableExercise({ exercise, supersetGroup, onEdit, onDelete }: SortableExerciseProps) {
+function SortableExercise({ exercise, supersetGroup, onEdit, onDelete, onSwap }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: exercise.id,
   })
@@ -190,6 +191,9 @@ function SortableExercise({ exercise, supersetGroup, onEdit, onDelete }: Sortabl
             <Button size="sm" variant="secondary" onClick={() => onEdit(exercise.id)} className="flex-1">
               Edit
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => onSwap(exercise.id)} className="flex-1">
+              Swap
+            </Button>
             <Button size="sm" variant="danger" onClick={() => onDelete(exercise.id)} className="flex-1">
               Delete
             </Button>
@@ -239,6 +243,12 @@ export default function EditWorkoutPage() {
   const [showExerciseScopeModal, setShowExerciseScopeModal] = useState(false)
   const [originalSupersetValue, setOriginalSupersetValue] = useState(false)
   const [pendingExerciseSave, setPendingExerciseSave] = useState<any>(null)
+
+  // Exercise swap state
+  const [showSwapModal, setShowSwapModal] = useState(false)
+  const [exerciseToSwap, setExerciseToSwap] = useState<string | null>(null)
+  const [selectedNewExercise, setSelectedNewExercise] = useState('')
+  const [showSwapScopeModal, setShowSwapScopeModal] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -400,6 +410,59 @@ export default function EditWorkoutPage() {
     } catch (error) {
       console.error('Error deleting exercise:', error)
     }
+  }
+
+  function handleSwapExercise(workoutExerciseId: string) {
+    setExerciseToSwap(workoutExerciseId)
+    setSelectedNewExercise('')
+    setShowSwapModal(true)
+  }
+
+  async function confirmSwap(applyToRestOfPhase: boolean) {
+    if (!exerciseToSwap || !selectedNewExercise) return
+
+    try {
+      const payload: any = {
+        exerciseId: selectedNewExercise,
+      }
+
+      if (applyToRestOfPhase && workout) {
+        payload.applyToRestOfPhase = true
+        payload.mesocycleId = workout.microcycle.mesocycle.id
+        payload.swapExercise = true  // Flag to indicate this is a swap operation
+      }
+
+      const response = await fetch(`/api/workout-exercises/${exerciseToSwap}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (response.ok) {
+        // Refresh workout data
+        const workoutRes = await fetch(`/api/workouts/${params.id}`)
+        if (workoutRes.ok) {
+          const data = await workoutRes.json()
+          setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
+        }
+        setShowSwapModal(false)
+        setShowSwapScopeModal(false)
+        setExerciseToSwap(null)
+        setSelectedNewExercise('')
+      }
+    } catch (error) {
+      console.error('Error swapping exercise:', error)
+    }
+  }
+
+  function proceedWithSwap() {
+    if (!selectedNewExercise) {
+      alert('Please select an exercise')
+      return
+    }
+    // Close picker modal and show scope modal
+    setShowSwapModal(false)
+    setShowSwapScopeModal(true)
   }
 
   function resetExerciseForm() {
@@ -572,6 +635,7 @@ export default function EditWorkoutPage() {
                       supersetGroup={supersetGroups.get(exercise.id) ?? null}
                       onEdit={handleEditExercise}
                       onDelete={(id) => setExerciseToDelete(id)}
+                      onSwap={handleSwapExercise}
                     />
                   ))
                 })()}
@@ -779,6 +843,81 @@ export default function EditWorkoutPage() {
               setPendingExerciseSave(null)
             }} className="w-full">
               Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Exercise Swap Modal - Exercise Picker */}
+      {showSwapModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowSwapModal(false)
+            setExerciseToSwap(null)
+            setSelectedNewExercise('')
+          }}
+          title="Swap Exercise"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select New Exercise
+              </label>
+              <Select
+                options={allExercises.map((ex) => ({
+                  value: ex.id,
+                  label: ex.name,
+                }))}
+                value={selectedNewExercise}
+                onChange={(e) => setSelectedNewExercise(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={proceedWithSwap} className="flex-1">
+                Next
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowSwapModal(false)
+                  setExerciseToSwap(null)
+                  setSelectedNewExercise('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Exercise Swap Scope Modal */}
+      {showSwapScopeModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowSwapScopeModal(false)
+            setShowSwapModal(true) // Go back to exercise picker
+          }}
+          title="Apply Exercise Swap"
+        >
+          <p className="text-gray-700 mb-4">
+            Do you want to swap this exercise in <strong>all remaining weeks</strong> of this phase?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => confirmSwap(true)} className="w-full">
+              Yes - Apply to All Remaining
+            </Button>
+            <Button variant="secondary" onClick={() => confirmSwap(false)} className="w-full">
+              No - This Week Only
+            </Button>
+            <Button variant="ghost" onClick={() => {
+              setShowSwapScopeModal(false)
+              setShowSwapModal(true) // Go back to exercise picker
+            }} className="w-full">
+              Back
             </Button>
           </div>
         </Modal>
