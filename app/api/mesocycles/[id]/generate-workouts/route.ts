@@ -76,6 +76,9 @@ export async function POST(
       workoutTypeNames[i % workoutTypeNames.length]
     )
 
+    // Count occurrences of each workout type to add A, B, C suffixes
+    const workoutTypeCounts = new Map<string, number>()
+
     // Fetch all exercises to resolve names to IDs
     const exercises = await prisma.exercise.findMany({
       where: {
@@ -93,13 +96,24 @@ export async function POST(
 
     // Create workouts for each week
     for (const microcycle of mesocycle.microcycles) {
+      // Reset counts for each week
+      workoutTypeCounts.clear()
+
       for (let i = 0; i < daysOfWeek.length; i++) {
         const dayOfWeek = daysOfWeek[i]
         const workoutTypeName = rotation[i]
 
+        // Get current count for this workout type and increment
+        const currentCount = (workoutTypeCounts.get(workoutTypeName) || 0) + 1
+        workoutTypeCounts.set(workoutTypeName, currentCount)
+
+        // Add letter suffix (A, B, C, etc.) using character codes
+        const suffix = String.fromCharCode(64 + currentCount) // 65 = 'A', 66 = 'B', etc.
+        const workoutName = `${workoutTypeName} ${suffix}`
+
         // Create workout
         const workoutData: any = {
-          name: workoutTypeName,
+          name: workoutName,
           dayOfWeek,
           microcycleId: microcycle.id,
           orderIndex: i,
