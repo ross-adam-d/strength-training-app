@@ -254,8 +254,8 @@ export default function EditWorkoutPage() {
           const data = await workoutRes.json()
           setWorkout(data)
           setWorkoutName(data.name)
-          setDayOfWeek(data.dayOfWeek)
-          setEstimatedDuration(data.estimatedDuration)
+          setDayOfWeek(data.dayOfWeek ?? null)
+          setEstimatedDuration(data.estimatedDuration ?? null)
           setWarmupNotes(data.warmupNotes || '')
           setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
         }
@@ -571,7 +571,7 @@ export default function EditWorkoutPage() {
                     label: day,
                   })),
                 ]}
-                value={dayOfWeek !== null ? dayOfWeek.toString() : ''}
+                value={dayOfWeek != null ? dayOfWeek.toString() : ''}
                 onChange={(e) => {
                   const value = e.target.value
                   setDayOfWeek(value === '' ? null : parseInt(value))
