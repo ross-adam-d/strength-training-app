@@ -8,11 +8,11 @@ const createSchema = z.object({
   workoutId: z.string(),
   exerciseId: z.string(),
   targetSets: z.number().int().positive(),
-  targetReps: z.string().optional(),
-  tempo: z.string().optional(),
-  targetRir: z.number().int().optional(),
-  notes: z.string().optional(),
-  restPeriod: z.number().int().optional(),
+  targetReps: z.string().nullable().optional(),
+  tempo: z.string().nullable().optional(),
+  targetRir: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  restPeriod: z.number().int().nullable().optional(),
 })
 
 export async function POST(request: Request) {
