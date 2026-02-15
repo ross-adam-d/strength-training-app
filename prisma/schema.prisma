@@ -55,6 +55,7 @@ model Exercise {
   imageUrl          String?
   isPublic          Boolean  @default(true)
   isUnilateral      Boolean  @default(false) // true for single-side exercises (e.g., single-leg press, single-arm row)
+  isTimed           Boolean  @default(false) // true for timed exercises (e.g., planks, wall sits)
 
   createdById       String?
   createdBy         User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)

@@ -40,6 +40,66 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { isUnilateral, isTimed, name, description, muscleGroups, equipment } = body
+
+    // Find the exercise
+    const exercise = await prisma.exercise.findUnique({ where: { id } })
+    if (!exercise) {
+      return NextResponse.json({ error: 'Exercise not found' }, { status: 404 })
+    }
+
+    // For public exercises: only allow updating isUnilateral and isTimed flags
+    if (exercise.isPublic) {
+      const updated = await prisma.exercise.update({
+        where: { id },
+        data: {
+          isUnilateral: isUnilateral !== undefined ? isUnilateral : exercise.isUnilateral,
+          isTimed: isTimed !== undefined ? isTimed : exercise.isTimed,
+        },
+      })
+      return NextResponse.json(updated)
+    }
+
+    // For custom exercises: verify ownership and allow full editing
+    if (exercise.createdById !== session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    const updated = await prisma.exercise.update({
+      where: { id },
+      data: {
+        name: name || exercise.name,
+        description: description !== undefined ? description : exercise.description,
+        muscleGroups: muscleGroups || exercise.muscleGroups,
+        equipment: equipment || exercise.equipment,
+        isUnilateral: isUnilateral !== undefined ? isUnilateral : exercise.isUnilateral,
+        isTimed: isTimed !== undefined ? isTimed : exercise.isTimed,
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Error updating exercise:', error)
+    return NextResponse.json(
+      { error: 'Failed to update exercise' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -15,6 +15,7 @@ interface Exercise {
   equipment: string[]
   isPublic: boolean
   isUnilateral: boolean
+  isTimed: boolean
   createdById?: string
 }
 
@@ -73,11 +74,15 @@ export default function ExercisesPage() {
   const [muscleFilter, setMuscleFilter] = useState('')
   const [equipmentFilter, setEquipmentFilter] = useState('')
 
-  // Form state for creating exercises
+  // Form state for creating/editing exercises
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([])
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
   const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUnilateral, setIsUnilateral] = useState(false)
+  const [isTimed, setIsTimed] = useState(false)
 
   useEffect(() => {
     fetchExercises()
@@ -145,6 +150,66 @@ export default function ExercisesPage() {
     setSelectedEquipment([])
     setFormError('')
     setIsSubmitting(false)
+    setIsUnilateral(false)
+    setIsTimed(false)
+    setEditingExercise(null)
+  }
+
+  function handleOpenEdit(exercise: Exercise) {
+    setEditingExercise(exercise)
+    setSelectedMuscleGroups(exercise.muscleGroups)
+    setSelectedEquipment(exercise.equipment)
+    setIsUnilateral(exercise.isUnilateral)
+    setIsTimed(exercise.isTimed)
+    setFormError('')
+    setIsEditModalOpen(true)
+  }
+
+  async function handleEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!editingExercise) return
+
+    setFormError('')
+    setIsSubmitting(true)
+
+    try {
+      const formData = new FormData(event.currentTarget)
+
+      // For public exercises: only send isUnilateral and isTimed
+      const data = editingExercise.isPublic
+        ? {
+            isUnilateral,
+            isTimed,
+          }
+        : {
+            name: formData.get('name') as string,
+            description: formData.get('description') as string,
+            muscleGroups: selectedMuscleGroups,
+            equipment: selectedEquipment,
+            isUnilateral,
+            isTimed,
+          }
+
+      const response = await fetch(`/api/exercises/${editingExercise.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        setIsEditModalOpen(false)
+        resetForm()
+        fetchExercises()
+      } else {
+        const errorData = await response.json()
+        setFormError(errorData.error || 'Failed to update exercise')
+      }
+    } catch (error) {
+      console.error('Error updating exercise:', error)
+      setFormError('An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
@@ -172,7 +237,8 @@ export default function ExercisesPage() {
       videoUrl: formData.get('videoUrl') as string,
       imageUrl: formData.get('imageUrl') as string,
       isPublic: formData.get('isPublic') === 'on',
-      isUnilateral: formData.get('isUnilateral') === 'on',
+      isUnilateral,
+      isTimed,
     }
 
     setIsSubmitting(true)
@@ -248,12 +314,24 @@ export default function ExercisesPage() {
           <Card key={exercise.id} className="hover:shadow-lg transition">
             <CardBody>
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold">{exercise.name}</h3>
-                {!exercise.isPublic && (
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                    Custom
-                  </span>
-                )}
+                <h3 className="text-lg font-semibold flex-1">{exercise.name}</h3>
+                <div className="flex gap-1">
+                  {!exercise.isPublic && (
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                      Custom
+                    </span>
+                  )}
+                  {exercise.isUnilateral && (
+                    <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                      Unilateral
+                    </span>
+                  )}
+                  {exercise.isTimed && (
+                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded">
+                      Timed
+                    </span>
+                  )}
+                </div>
               </div>
 
               {exercise.description && (
@@ -262,7 +340,7 @@ export default function ExercisesPage() {
                 </p>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2 mb-3">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Muscle Groups</p>
                   <div className="flex flex-wrap gap-1">
@@ -291,6 +369,15 @@ export default function ExercisesPage() {
                   </div>
                 </div>
               </div>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleOpenEdit(exercise)}
+                className="w-full"
+              >
+                Edit
+              </Button>
             </CardBody>
           </Card>
         ))}
@@ -417,9 +504,27 @@ export default function ExercisesPage() {
               </label>
             </div>
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="isUnilateral" name="isUnilateral" className="rounded" />
+              <input
+                type="checkbox"
+                id="isUnilateral"
+                checked={isUnilateral}
+                onChange={(e) => setIsUnilateral(e.target.checked)}
+                className="rounded"
+              />
               <label htmlFor="isUnilateral" className="text-sm text-gray-700">
                 Unilateral exercise (single-side, e.g., single-leg press, single-arm row)
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isTimed"
+                checked={isTimed}
+                onChange={(e) => setIsTimed(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="isTimed" className="text-sm text-gray-700">
+                Timed exercise (e.g., planks, wall sits, dead hangs)
               </label>
             </div>
           </div>
@@ -438,6 +543,201 @@ export default function ExercisesPage() {
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Creating...' : 'Create'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          resetForm()
+        }}
+        title={editingExercise?.isPublic ? "Edit Exercise Flags" : "Edit Exercise"}
+        size="lg"
+      >
+        <form onSubmit={handleEdit} className="space-y-4">
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{formError}</p>
+            </div>
+          )}
+
+          {editingExercise?.isPublic ? (
+            // Public exercises: Only show flag checkboxes
+            <>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Editing public exercise:</strong> {editingExercise.name}
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  You can only modify the Unilateral and Timed flags for public exercises.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-isUnilateral"
+                    checked={isUnilateral}
+                    onChange={(e) => setIsUnilateral(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-isUnilateral" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Unilateral Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Single-side exercise (e.g., single-leg press, single-arm row)
+                    </div>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-isTimed"
+                    checked={isTimed}
+                    onChange={(e) => setIsTimed(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-isTimed" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Timed Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Exercise measured in time instead of reps (e.g., planks, wall sits, dead hangs)
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Custom exercises: Show full form
+            <>
+              <Input
+                label="Exercise Name"
+                name="name"
+                required
+                placeholder="e.g., Barbell Bench Press"
+                defaultValue={editingExercise?.name}
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Describe the exercise..."
+                  defaultValue={editingExercise?.description || ''}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Muscle Groups <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+                  {MUSCLE_GROUP_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedMuscleGroups.includes(option.value)}
+                        onChange={() => toggleMuscleGroup(option.value)}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedMuscleGroups.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selected: {selectedMuscleGroups.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Equipment <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+                  {EQUIPMENT_CREATE_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedEquipment.includes(option.value)}
+                        onChange={() => toggleEquipment(option.value)}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedEquipment.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selected: {selectedEquipment.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3 border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-custom-isUnilateral"
+                    checked={isUnilateral}
+                    onChange={(e) => setIsUnilateral(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-custom-isUnilateral" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Unilateral Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Single-side exercise (e.g., single-leg press, single-arm row)
+                    </div>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-custom-isTimed"
+                    checked={isTimed}
+                    onChange={(e) => setIsTimed(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-custom-isTimed" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Timed Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Exercise measured in time instead of reps (e.g., planks, wall sits, dead hangs)
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsEditModalOpen(false)
+                resetForm()
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>
