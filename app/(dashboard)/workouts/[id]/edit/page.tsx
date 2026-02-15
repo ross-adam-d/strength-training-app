@@ -335,6 +335,8 @@ export default function EditWorkoutPage() {
   async function performExerciseSave(applyToRestOfPhase: boolean) {
     if (!editingExercise && !addingExercise) return
 
+    setSaving(true)
+
     const endpoint = editingExercise
       ? `/api/workout-exercises/${editingExercise}`
       : '/api/workout-exercises'
@@ -369,21 +371,33 @@ export default function EditWorkoutPage() {
         body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
-        // Refresh workout data
-        const workoutRes = await fetch(`/api/workouts/${params.id}`)
-        if (workoutRes.ok) {
-          const data = await workoutRes.json()
-          setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
-        }
-        setEditingExercise(null)
-        setAddingExercise(false)
-        setShowExerciseScopeModal(false)
-        setPendingExerciseSave(null)
-        resetExerciseForm()
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        alert(errorData.error || 'Failed to save exercise')
+        setSaving(false)
+        return
       }
+
+      // Refresh workout data
+      const workoutRes = await fetch(`/api/workouts/${params.id}`)
+      if (!workoutRes.ok) {
+        alert('Failed to refresh workout data')
+        setSaving(false)
+        return
+      }
+
+      const data = await workoutRes.json()
+      setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
+      setEditingExercise(null)
+      setAddingExercise(false)
+      setShowExerciseScopeModal(false)
+      setPendingExerciseSave(null)
+      resetExerciseForm()
+      setSaving(false)
     } catch (error) {
       console.error('Error saving exercise:', error)
+      alert('Network error. Please try again.')
+      setSaving(false)
     }
   }
 
@@ -743,8 +757,8 @@ export default function EditWorkoutPage() {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveExercise} className="flex-1">
-                {editingExercise ? 'Update' : 'Add'}
+              <Button onClick={handleSaveExercise} disabled={saving} className="flex-1">
+                {saving ? 'Saving...' : (editingExercise ? 'Update' : 'Add')}
               </Button>
               <Button
                 variant="secondary"
@@ -753,6 +767,7 @@ export default function EditWorkoutPage() {
                   setEditingExercise(null)
                   resetExerciseForm()
                 }}
+                disabled={saving}
                 className="flex-1"
               >
                 Cancel
