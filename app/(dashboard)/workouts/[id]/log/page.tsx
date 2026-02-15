@@ -567,10 +567,22 @@ export default function WorkoutLogPage() {
       return
     }
 
-    // Check for incomplete sets
-    const invalidLogs = nonSkipped.filter(
-      (log) => log.reps === '' || log.weight === ''
-    )
+    // Check for incomplete sets (handle unilateral vs regular exercises)
+    const invalidLogs = nonSkipped.filter((log) => {
+      // Check if exercise is unilateral
+      const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+      const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+
+      if (isUnilateral) {
+        // For unilateral: check repsLeft, repsRight, and weight
+        return log.repsLeft === '' || log.repsLeft === undefined ||
+               log.repsRight === '' || log.repsRight === undefined ||
+               log.weight === ''
+      } else {
+        // For regular: check reps and weight
+        return log.reps === '' || log.weight === ''
+      }
+    })
 
     if (invalidLogs.length > 0) {
       // Show modal instead of alert
