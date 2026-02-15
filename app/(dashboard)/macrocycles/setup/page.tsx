@@ -49,7 +49,6 @@ export default function SetupPage() {
 
       mesocycles.push({
         name: `Phase ${phaseNum}`,
-        focus: null,
         startDate: format(phaseStart, 'yyyy-MM-dd'),
         endDate: format(phaseEnd, 'yyyy-MM-dd'),
         microcycles
@@ -154,18 +153,23 @@ export default function SetupPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duration (weeks)
+                Duration: <span className="text-primary-600 font-bold">{totalWeeks} weeks</span>
               </label>
               <input
-                type="number"
+                type="range"
                 value={totalWeeks}
-                onChange={(e) => setTotalWeeks(parseInt(e.target.value) || 12)}
+                onChange={(e) => setTotalWeeks(parseInt(e.target.value))}
                 min={4}
                 max={52}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                step={1}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Between 4 and 52 weeks. Phases will be created automatically (4 weeks each).
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>4 weeks</span>
+                <span>52 weeks</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Phases will be created automatically (4 weeks each).
               </p>
             </div>
 
