@@ -105,6 +105,7 @@ model Mesocycle {
   focus             String?  // hypertrophy, strength, power, deload, etc.
   goal              String?  // Training goal: Hypertrophy, Strength, Power, Maintenance, or custom
   trainingDaysPerWeek Int?   // Number of training days per week (e.g., 3, 4, 5, 6)
+  trainingSplit     String?  // Training split: Full Body, Upper/Lower, Push/Pull/Legs, Bro Split, Custom
   warmupNotes       String?  // Warm-up routine/notes for the entire phase
   status            String   @default("planned") // planned, active, completed
 

@@ -12,6 +12,7 @@ const updateMesocycleSchema = z.object({
   focus: z.string().optional(),
   goal: z.string().optional(),
   trainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
+  trainingSplit: z.string().optional(),
   warmupNotes: z.string().optional(),
 })
 

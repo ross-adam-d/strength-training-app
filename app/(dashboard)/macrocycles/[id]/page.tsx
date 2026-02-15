@@ -14,6 +14,7 @@ interface Mesocycle {
   focus: string | null
   goal: string | null
   trainingDaysPerWeek: number | null
+  trainingSplit: string | null
   status?: string
   startDate: string
   endDate: string
@@ -41,6 +42,15 @@ const GOAL_OPTIONS = [
   { value: 'Power', label: 'Power' },
   { value: 'Maintenance', label: 'Maintenance' },
   { value: 'Deload', label: 'Deload' },
+]
+
+const TRAINING_SPLIT_OPTIONS = [
+  { value: '', label: 'Select split...' },
+  { value: 'Full Body', label: 'Full Body' },
+  { value: 'Upper/Lower', label: 'Upper/Lower' },
+  { value: 'Push/Pull/Legs', label: 'Push/Pull/Legs' },
+  { value: 'Bro Split', label: 'Bro Split (Chest/Back/Legs/Shoulders/Arms)' },
+  { value: 'Custom', label: 'Custom' },
 ]
 
 export default function MacrocycleDetailPage() {
@@ -187,6 +197,22 @@ export default function MacrocycleDetailPage() {
       }
     } catch (error) {
       console.error('Error updating training days:', error)
+    }
+  }
+
+  async function handleUpdateTrainingSplit(mesocycleId: string, split: string) {
+    try {
+      const response = await fetch(`/api/mesocycles/${mesocycleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trainingSplit: split }),
+      })
+
+      if (response.ok) {
+        await fetchMacrocycle()
+      }
+    } catch (error) {
+      console.error('Error updating training split:', error)
     }
   }
 
@@ -432,7 +458,7 @@ export default function MacrocycleDetailPage() {
 
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Goal
@@ -461,6 +487,16 @@ export default function MacrocycleDetailPage() {
                             onChange={(e) => handleUpdateTrainingDays(phase.id, parseInt(e.target.value))}
                           />
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Training Split
+                          </label>
+                          <Select
+                            options={TRAINING_SPLIT_OPTIONS}
+                            value={phase.trainingSplit || ''}
+                            onChange={(e) => handleUpdateTrainingSplit(phase.id, e.target.value)}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-4">
@@ -470,7 +506,12 @@ export default function MacrocycleDetailPage() {
                           )}
                           {phase.trainingDaysPerWeek && (
                             <span className="ml-4">
-                              Training {phase.trainingDaysPerWeek} days/week
+                              {phase.trainingDaysPerWeek} days/week
+                            </span>
+                          )}
+                          {phase.trainingSplit && (
+                            <span className="ml-4">
+                              Split: {phase.trainingSplit}
                             </span>
                           )}
                         </p>
