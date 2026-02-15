@@ -109,26 +109,28 @@ export async function POST(
         if (mode === 'default') {
           const workoutType = getWorkoutType(workoutTypeName)
 
-          if (workoutType) {
-            const exerciseSlots = workoutType.slots.map((slot, slotIdx) => {
-              const exerciseId = exerciseMap.get(slot.exerciseName)
-              if (!exerciseId) {
-                throw new Error(`Exercise not found: "${slot.exerciseName}"`)
-              }
+          if (!workoutType) {
+            throw new Error(`Workout type template not found: "${workoutTypeName}". Available splits: Full Body, Upper/Lower, Push/Pull/Legs, Bro Split.`)
+          }
 
-              return {
-                exerciseId,
-                orderIndex: slotIdx,
-                targetSets: slot.buildSets,
-                targetReps: slot.buildReps,
-                notes: slot.label,
-                restPeriod: slot.restPeriod,
-              }
-            })
-
-            workoutData.workoutExercises = {
-              create: exerciseSlots,
+          const exerciseSlots = workoutType.slots.map((slot, slotIdx) => {
+            const exerciseId = exerciseMap.get(slot.exerciseName)
+            if (!exerciseId) {
+              throw new Error(`Exercise not found in database: "${slot.exerciseName}". Please make sure all exercises exist in the exercise library.`)
             }
+
+            return {
+              exerciseId,
+              orderIndex: slotIdx,
+              targetSets: slot.buildSets,
+              targetReps: slot.buildReps,
+              notes: slot.label,
+              restPeriod: slot.restPeriod,
+            }
+          })
+
+          workoutData.workoutExercises = {
+            create: exerciseSlots,
           }
         }
 
@@ -141,8 +143,9 @@ export async function POST(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error generating workouts:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate workouts'
     return NextResponse.json(
-      { error: 'Failed to generate workouts' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
