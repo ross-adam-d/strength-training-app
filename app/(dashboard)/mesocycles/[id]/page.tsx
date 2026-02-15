@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface Workout {
   id: string
@@ -47,9 +48,35 @@ export default function MesocycleDetailPage() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [inProgressWorkouts, setInProgressWorkouts] = useState<Set<string>>(new Set())
+  const [generatingWorkouts, setGeneratingWorkouts] = useState(false)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
+
+  async function generateWorkouts(mode: 'default' | 'manual') {
+    setGeneratingWorkouts(true)
+    try {
+      const response = await fetch(`/api/mesocycles/${params.id}/generate-workouts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Failed to generate workouts')
+        return
+      }
+
+      // Refresh the page data
+      window.location.reload()
+    } catch (error) {
+      console.error('Error generating workouts:', error)
+      alert('Failed to generate workouts')
+    } finally {
+      setGeneratingWorkouts(false)
+    }
+  }
 
   useEffect(() => {
     async function fetchMesocycle() {
@@ -148,6 +175,66 @@ export default function MesocycleDetailPage() {
     return (
       <div className="p-4">
         <p className="text-gray-600">Phase not found</p>
+      </div>
+    )
+  }
+
+  // Check if phase has any workouts at all
+  const hasAnyWorkouts = mesocycle.microcycles.some(week => week.workouts.length > 0)
+
+  // If no workouts exist, show workout generation options
+  if (!hasAnyWorkouts) {
+    return (
+      <div className="min-h-screen pb-20">
+        <div className="mb-4 px-4 pt-4">
+          <Link
+            href={`/macrocycles/${mesocycle.macrocycle.id}`}
+            className="text-primary-600 hover:text-primary-700 text-sm font-medium inline-block"
+          >
+            ← {mesocycle.macrocycle.name}
+          </Link>
+          <h1 className="text-xl font-bold text-gray-900 mt-2">{mesocycle.name}</h1>
+        </div>
+
+        <div className="px-4">
+          <Card>
+            <CardBody>
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">No Workouts Yet</h2>
+                <p className="text-gray-600 mb-8">
+                  This phase has no workouts. Choose how you&apos;d like to set them up:
+                </p>
+
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <Button
+                    onClick={() => generateWorkouts('default')}
+                    disabled={generatingWorkouts}
+                    className="w-full py-4 text-lg"
+                    size="lg"
+                  >
+                    {generatingWorkouts ? 'Creating...' : '🎯 Create Default Workout Structure'}
+                  </Button>
+                  <p className="text-sm text-gray-600 -mt-2 mb-4">
+                    Auto-populate workouts with exercises based on your training split
+                  </p>
+
+                  <Button
+                    onClick={() => generateWorkouts('manual')}
+                    disabled={generatingWorkouts}
+                    variant="secondary"
+                    className="w-full py-4 text-lg"
+                    size="lg"
+                  >
+                    {generatingWorkouts ? 'Creating...' : '✏️ Manually Create Workouts'}
+                  </Button>
+                  <p className="text-sm text-gray-600 -mt-2">
+                    Create empty workout slots and add exercises yourself
+                  </p>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     )
   }
