@@ -8,7 +8,7 @@ const createSchema = z.object({
   workoutId: z.string(),
   exerciseId: z.string(),
   targetSets: z.number().int().positive(),
-  targetReps: z.string(),
+  targetReps: z.string().optional(),
   tempo: z.string().optional(),
   targetRir: z.number().int().optional(),
   notes: z.string().optional(),
