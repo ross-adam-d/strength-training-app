@@ -41,6 +41,8 @@ export async function GET(
         name: true,
         focus: true,
         goal: true,
+        trainingDaysPerWeek: true,
+        trainingSplit: true,
         startDate: true,
         endDate: true,
         warmupNotes: true,

@@ -51,6 +51,7 @@ export async function GET(
             endDate: true,
             goal: true,
             trainingDaysPerWeek: true,
+            trainingSplit: true,
             microcycles: {
               select: {
                 id: true,
