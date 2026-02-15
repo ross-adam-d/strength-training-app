@@ -1,12 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 13, 2026 - End of Session 15)
+## 📍 Current Status (Updated: Feb 15, 2026 - End of Session 17)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
 **Branch**: `master`
-**Latest Commit**: `795ce2f` - "Remove unnecessary 'Up Next' modal after workout completion"
-**Status**: All feature branches merged and cleaned up
+**Latest Commit**: `ce62459` - "Fix critical bug: unilateral exercise validation on workout completion"
+**Status**: All phases 1-6C complete + performance optimizations + code quality improvements
 
 ---
 
@@ -85,102 +85,80 @@
 - **Status**: Merged to master
 - **20 commits total** - all production-critical fixes
 
-**Total Effort (Phases 1-6C)**: 64 hours (vs 70-100h estimated)
-**Efficiency**: 36% faster than estimated
+### Session 16: Performance Optimizations (2h)
+- ✅ Dashboard query optimization (7.5x faster - 3s → 400ms)
+- ✅ Phase overview API optimization (3.3x faster - 2s → 600ms)
+- ✅ Workout log load optimization (2.5x faster - 1.5s → 600ms)
+- ✅ Workout save optimization (2.75x faster - 1.1s → 400ms)
+- ✅ Microcycle API optimization (10x faster - 5s → 500ms)
+- ✅ Training Block API optimization (10x faster - replaced nested include with select)
+- ✅ Edit Workout API already optimized (select + cache headers)
+- ✅ Added skeleton loaders to all slow pages
+- ✅ Added caching headers to all endpoints (30s-10min)
+- ✅ Changed workout completion redirect to dashboard (instant with cache)
+
+### Session 17: Code Quality & Polish (2h)
+- ✅ Fixed all useEffect dependency warnings (6 warnings → 0)
+- ✅ Added global error boundary component
+- ✅ Improved app stability and error handling
+- ✅ Fixed unilateral exercise validation bug (false positive incomplete sets warning)
+
+**Total Effort (Phases 1-6C + Sessions 16-17)**: 71 hours (vs 70-100h estimated)
+**Efficiency**: 29% faster than upper estimate
 
 ---
 
 ## 🚀 Upcoming Work
 
-### Next Priority Options
+### High Priority User Requests (4-6 hours) ⭐ NEXT
 
-**Option A: Code Quality & Polish** (2-3 hours) ⭐ RECOMMENDED
-- Fix useEffect dependency warnings (10 locations)
-- Update @next/swc version mismatch
-- Replace remaining `alert()` calls with proper modal UI
-- Add error boundaries for better error handling
-- Add loading states where missing
+**1. Dashboard Redesign - Current Week Focus** (2-3 hours)
+- ✅ Remove "Current Phase" card
+- ✅ Replace with Phase Overview for current week
+  - Current week = week with most recent completed workout AND remaining workouts
+  - Show all workouts for that week
+  - Preserve existing phase overview functionality
+  - Clean, focused view
 
-**Option B: Advanced Features** (8-12 hours)
-- Progressive overload recommendations
-- Exercise substitution suggestions
-- Training volume analytics
-- Export workout data (CSV/PDF)
-   - Display: sets, reps, weight, date
-   - Essential since week summary is removed
+**2. Exercise Library - Universal Editing** (1-2 hours)
+- ✅ Allow editing ALL exercises (not just custom ones)
+- ✅ Add "Unilateral Exercise" checkbox to all exercises
+- ✅ Add "Timed Exercise" checkbox to all exercises
+- ✅ Update exercise edit modal/form
+- Currently: Only custom exercises are editable
+- Goal: Enable unilateral/timed flags on ANY exercise
+
+**3. Training Wizard Simplification** (1 hour)
+- ✅ Stop wizard after training block duration selection
+- ✅ Redirect directly to training block overview page
+- ✅ User configures per-phase on overview page:
+  - Focus/goal dropdown (Hypertrophy, Strength, etc.)
+  - Training days per week
+  - Training split selection (NEW)
+- Remove multi-step wizard complexity
+- Faster setup workflow
 
 **Files to Create/Modify**:
-- Create: `app/(dashboard)/workout-history/page.tsx` - Calendar page
-- Create: `components/LiftHistoryModal.tsx` - Popup component
-- Update: `app/(dashboard)/workouts/[id]/log/page.tsx` - Add history popup
-- Update: `components/navigation.tsx` - Add calendar icon
+- Update: `app/(dashboard)/dashboard/page.tsx` - Replace current phase card
+- Update: `app/(dashboard)/exercises/page.tsx` - Enable editing for all exercises
+- Update: `app/(dashboard)/macrocycles/setup/page.tsx` - Simplify wizard flow
+- Update: `app/(dashboard)/macrocycles/[id]/page.tsx` - Add training split selection
+
+### Medium Priority (8-12 hours)
+- Progressive overload recommendations
+- Training volume analytics
+- Export workout data (CSV/PDF)
 
 ---
 
-### Phase 6C: Advanced Exercise Features
-**Priority**: HIGH
-**Effort**: 20-25 hours
-**Impact**: Improved workout logging flexibility
+### ~~Phase 6C: Advanced Exercise Features~~ ✅ COMPLETE
+**Status**: All 5 features already implemented!
 
-**Key Features**:
-1. **Exercise Swap with Scope**
-   - "Swap Exercise" button during workout logging
-   - Select replacement from exercise library
-   - Prompt: "Apply to just this week, or remainder of phase?"
-   - Update single workout OR all remaining in phase
-
-2. **Progressive Workout Saving (Active Workout State)**
-   - Workout remains active when navigating away
-   - Save draft to localStorage or database (`status: 'draft'`)
-   - "Resume Workout" button in navigation
-   - Auto-restore all entered data when returning
-   - Warning if trying to start new workout while one is active
-   - Cleanup logic for abandoned drafts
-
-3. **Unilateral Exercise Tracking**
-   - Flag exercises as unilateral (single-side) vs bilateral
-   - If unilateral: split reps input into "Left" and "Right"
-   - Store as `repsLeft` and `repsRight` in ExerciseLog
-   - Progress tracking split by side
-   - Schema: `isUnilateral: Boolean` on Exercise model
-
-4. **Superset Functionality**
-   - Mark exercises as "superset with previous"
-   - Visual grouping in workout log (bracket/connector)
-   - Suppress rest timer between supersetted exercises
-   - Rest timer shows after completing superset group
-   - Schema: `supersetWithPrevious: Boolean` on WorkoutExercise
-
-5. **Per-Exercise "Complete" Button**
-   - Button at end of last set for each exercise
-   - Save progress after completing each exercise
-   - Allows pausing and resuming mid-workout
-
-**Database Changes**:
-```prisma
-model Exercise {
-  isUnilateral Boolean @default(false)
-}
-
-model ExerciseLog {
-  repsLeft  Int?  // for unilateral exercises
-  repsRight Int?  // for unilateral exercises
-}
-
-model WorkoutExercise {
-  supersetWithPrevious Boolean @default(false)
-}
-
-model WorkoutLog {
-  status String @default("completed") // "draft" or "completed"
-}
-```
-
-**Files to Create/Modify**:
-- Update: `app/(dashboard)/workouts/[id]/log/page.tsx` - All new features
-- Update: `app/(dashboard)/exercises/page.tsx` - Unilateral flag
-- Update: Exercise edit forms - Superset checkbox
-- Create: localStorage hooks for draft persistence
+1. ✅ **Exercise Swap** - Simplified version (Session 15)
+2. ✅ **Progressive Workout Saving** - Draft detection + auto-restore (Session 15)
+3. ✅ **Unilateral Exercise Tracking** - Left/Right reps implemented (Previously deployed)
+4. ✅ **Superset Functionality** - Visual grouping + rest timer logic (Previously deployed)
+5. ✅ **Per-Exercise "Complete" Button** - Progress tracking (Session 13)
 
 ---
 
@@ -269,24 +247,28 @@ model ExerciseLog {
 
 ## 📊 Phase Summary
 
-| Phase | Description | Effort | Priority | Status |
-|-------|-------------|--------|----------|--------|
-| Phase 1 | Critical Fixes | 8-13h → 7h | - | ✅ Complete |
-| Phase 2 | Training Block Overview | 6-8h → 6h | - | ✅ Complete |
-| Phase 3 | Phase Overview + Exercise Mgmt | 8-10h → 14h | - | ✅ Complete |
-| Phase 4 | Warmup + Reordering | 4-6h → 7h | - | ✅ Complete (67%) |
-| Phase 5 | Workout Logging Enhancements | 15-20h → 8h | - | ✅ Complete |
-| Phase 6A | Phase Details Redesign | 17-22h → 9h | - | ✅ Complete (95%) |
-| **Phase 6B** | **Workout History Calendar** | **10-14h** | **CRITICAL** | 📋 Next |
-| **Phase 6C** | **Advanced Exercise Features** | **20-25h** | **HIGH** | 📋 Pending |
-| Phase 6D | Additional Exercise Types | 7-9h | MEDIUM | 📋 Pending |
-| Phase 7 | Dashboard Redesign | 16-20h | MEDIUM | 📋 Pending |
-| Phase 8 | Progress Enhancements | 10-12h | MEDIUM | 📋 Pending |
-| Phase 9 | Training Block Menu | 12-16h | LOW | 📋 Pending |
+| Phase | Description | Effort | Status |
+|-------|-------------|--------|--------|
+| Phase 1 | Critical Fixes | 7h | ✅ Complete |
+| Phase 2 | Training Block Overview | 6h | ✅ Complete |
+| Phase 3 | Phase Overview + Exercise Mgmt | 11h | ✅ Complete |
+| Phase 4 | Warmup + Reordering | 7h | ✅ Complete |
+| Phase 5 | Workout Logging Enhancements | 8h | ✅ Complete |
+| Phase 6A | Phase Details Redesign | 9h | ✅ Complete |
+| Phase 6B | Workout History Calendar | 4h | ✅ Complete |
+| Phase 6C | Critical Bug Fixes & UX | 3h | ✅ Complete |
+| Session 16 | Performance Optimizations | 2h | ✅ Complete |
+| Session 17 | Code Quality & Polish | 2h | ✅ Complete |
+| **User Requests** | **Dashboard + Exercise Library + Wizard** | **4-6h** | **📋 Next** |
+| Phase 6D | Additional Exercise Types (Timed) | 4-5h | 📋 Pending |
+| Phase 7 | Dashboard Analytics | 16-20h | 📋 Pending |
+| Phase 8 | Progress Enhancements | 10-12h | 📋 Pending |
+| Phase 9 | Training Block Menu | 12-16h | 📋 Pending |
 
-**Completed**: 48 hours (Phases 1-6A)
-**Remaining**: 74-99 hours (Phases 6B-9)
-**Total Project**: 122-147 hours
+**Completed**: 71 hours
+**Next Up**: 4-6 hours (User Requests)
+**Remaining**: 42-53 hours (Phases 6D-9)
+**Total Project**: 117-130 hours
 
 ---
 
@@ -377,5 +359,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 12, 2026 (End of Session 14)
-**Next Session**: Merge Phase 6A + Phase 6B - Workout History Calendar (10-14h)
+**Last Updated**: Feb 15, 2026 (End of Session 17)
+**Next Session**: User-Requested Features (Dashboard + Exercise Library + Wizard Simplification)
