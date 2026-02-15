@@ -13,6 +13,7 @@ const exerciseSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal('')),
   isPublic: z.boolean().default(false),
   isUnilateral: z.boolean().default(false),
+  isTimed: z.boolean().default(false),
 })
 
 export async function GET(request: Request) {
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
         equipment: true,
         isPublic: true,
         isUnilateral: true,
+        isTimed: true,
         createdById: true,
       },
     })
