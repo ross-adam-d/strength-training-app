@@ -769,10 +769,10 @@ export default function WorkoutLogPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <Link
-          href={`/microcycles/${workout.microcycle.id}`}
+          href="/dashboard"
           className="text-primary-600 hover:text-primary-700 text-sm"
         >
-          ← Back to {workout.microcycle.name}
+          ← Back to Dashboard
         </Link>
       </div>
 
