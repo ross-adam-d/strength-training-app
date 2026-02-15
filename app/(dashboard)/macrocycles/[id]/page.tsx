@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -55,7 +55,7 @@ export default function MacrocycleDetailPage() {
   const [editedEndDate, setEditedEndDate] = useState('')
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set())
 
-  async function fetchMacrocycle() {
+  const fetchMacrocycle = useCallback(async () => {
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`)
       if (response.ok) {
@@ -72,11 +72,11 @@ export default function MacrocycleDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
   useEffect(() => {
     fetchMacrocycle()
-  }, [])
+  }, [fetchMacrocycle])
 
   async function handleDelete() {
     if (!confirm('Are you sure you want to delete this training block? This will delete all associated data.')) {

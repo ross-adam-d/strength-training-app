@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -174,80 +174,18 @@ export default function WorkoutLogPage() {
   const draftKey = `workout-draft-${params.id}`
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    fetchWorkout()
-    fetchExercises()
-  }, [])
-
-  async function fetchExercises() {
+  const loadDraft = useCallback(() => {
     try {
-      const response = await fetch('/api/exercises')
-      if (response.ok) {
-        const data = await response.json()
-        setAllExercises(data)
-      }
+      const saved = localStorage.getItem(draftKey)
+      if (!saved) return null
+      return JSON.parse(saved)
     } catch (error) {
-      console.error('Error fetching exercises:', error)
+      console.error('Error loading draft:', error)
+      return null
     }
-  }
+  }, [draftKey])
 
-  // Rest timer tick effect — keyed on activeTimerKey only
-  useEffect(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current)
-      timerIntervalRef.current = null
-    }
-
-    if (activeTimerKey === null) return
-
-    timerIntervalRef.current = setInterval(() => {
-      setTimerSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerIntervalRef.current!)
-          timerIntervalRef.current = null
-          playBeep()
-          setTimerFlashing(true)
-          setTimeout(() => {
-            setTimerFlashing(false)
-            setActiveTimerKey(null)
-            setTimerSecondsLeft(0)
-          }, 2000)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current)
-        timerIntervalRef.current = null
-      }
-    }
-  }, [activeTimerKey])
-
-  // Auto-save draft with debouncing
-  useEffect(() => {
-    if (!workout || loading || hasDraft) return
-
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-    }
-
-    // Set new timeout to save after 2 seconds of inactivity
-    saveTimeoutRef.current = setTimeout(() => {
-      saveDraft()
-    }, 2000)
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-    }
-  }, [exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, workout, loading, hasDraft])
-
-  async function fetchWorkout() {
+  const fetchWorkout = useCallback(async () => {
     try {
       const response = await fetch(`/api/workouts/${params.id}`)
       if (response.ok) {
@@ -312,9 +250,21 @@ export default function WorkoutLogPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, loadDraft])
 
-  function saveDraft() {
+  const fetchExercises = useCallback(async () => {
+    try {
+      const response = await fetch('/api/exercises')
+      if (response.ok) {
+        const data = await response.json()
+        setAllExercises(data)
+      }
+    } catch (error) {
+      console.error('Error fetching exercises:', error)
+    }
+  }, [])
+
+  const saveDraft = useCallback(() => {
     if (!workout) return
 
     const draft = {
@@ -330,18 +280,68 @@ export default function WorkoutLogPage() {
 
     localStorage.setItem(draftKey, JSON.stringify(draft))
     setLastSavedAt(new Date())
-  }
+  }, [workout, exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, startTime, draftKey])
 
-  function loadDraft() {
-    try {
-      const saved = localStorage.getItem(draftKey)
-      if (!saved) return null
-      return JSON.parse(saved)
-    } catch (error) {
-      console.error('Error loading draft:', error)
-      return null
+  useEffect(() => {
+    fetchWorkout()
+    fetchExercises()
+  }, [fetchWorkout, fetchExercises])
+
+  // Rest timer tick effect — keyed on activeTimerKey only
+  useEffect(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
     }
-  }
+
+    if (activeTimerKey === null) return
+
+    timerIntervalRef.current = setInterval(() => {
+      setTimerSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerIntervalRef.current!)
+          timerIntervalRef.current = null
+          playBeep()
+          setTimerFlashing(true)
+          setTimeout(() => {
+            setTimerFlashing(false)
+            setActiveTimerKey(null)
+            setTimerSecondsLeft(0)
+          }, 2000)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+    }
+  }, [activeTimerKey])
+
+  // Auto-save draft with debouncing
+  useEffect(() => {
+    if (!workout || loading || hasDraft) return
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Set new timeout to save after 2 seconds of inactivity
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft()
+    }, 2000)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, workout, loading, hasDraft, saveDraft])
 
   function resumeDraft() {
     const draft = loadDraft()

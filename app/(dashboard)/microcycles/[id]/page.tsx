@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -141,12 +141,7 @@ export default function MicrocycleDetailPage() {
     }
   }
 
-  useEffect(() => {
-    fetchMicrocycle()
-    fetchExercises()
-  }, [])
-
-  async function fetchMicrocycle() {
+  const fetchMicrocycle = useCallback(async () => {
     try {
       const response = await fetch(`/api/microcycles/${params.id}`)
       if (response.ok) {
@@ -158,9 +153,9 @@ export default function MicrocycleDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
-  async function fetchExercises() {
+  const fetchExercises = useCallback(async () => {
     try {
       const response = await fetch('/api/exercises')
       if (response.ok) {
@@ -170,7 +165,12 @@ export default function MicrocycleDetailPage() {
     } catch (error) {
       console.error('Error fetching exercises:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchMicrocycle()
+    fetchExercises()
+  }, [fetchMicrocycle, fetchExercises])
 
   async function handleDelete() {
     if (!confirm('Are you sure you want to delete this week?')) {

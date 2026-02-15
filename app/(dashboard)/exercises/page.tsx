@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
@@ -83,23 +83,7 @@ export default function ExercisesPage() {
     fetchExercises()
   }, [])
 
-  useEffect(() => {
-    filterExercises()
-  }, [exercises, searchTerm, muscleFilter, equipmentFilter])
-
-  async function fetchExercises() {
-    try {
-      const response = await fetch('/api/exercises')
-      const data = await response.json()
-      setExercises(data)
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function filterExercises() {
+  const filterExercises = useCallback(() => {
     let filtered = [...exercises]
 
     // Search filter
@@ -120,6 +104,22 @@ export default function ExercisesPage() {
     }
 
     setFilteredExercises(filtered)
+  }, [exercises, searchTerm, muscleFilter, equipmentFilter])
+
+  useEffect(() => {
+    filterExercises()
+  }, [filterExercises])
+
+  async function fetchExercises() {
+    try {
+      const response = await fetch('/api/exercises')
+      const data = await response.json()
+      setExercises(data)
+    } catch (error) {
+      console.error('Error fetching exercises:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   function toggleMuscleGroup(value: string) {

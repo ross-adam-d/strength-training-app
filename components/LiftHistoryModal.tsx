@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface ExerciseLog {
   id: string
@@ -30,11 +30,7 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
   const [sessions, setSessions] = useState<WorkoutSession[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchExerciseHistory()
-  }, [exerciseId])
-
-  const fetchExerciseHistory = async () => {
+  const fetchExerciseHistory = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/exercises/${exerciseId}/logs`)
@@ -67,7 +63,11 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
     } finally {
       setLoading(false)
     }
-  }
+  }, [exerciseId])
+
+  useEffect(() => {
+    fetchExerciseHistory()
+  }, [fetchExerciseHistory])
 
   // Close modal when clicking outside
   const handleBackdropClick = (e: React.MouseEvent) => {
