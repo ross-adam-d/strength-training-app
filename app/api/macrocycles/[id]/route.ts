@@ -25,52 +25,39 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Optimized: Use select instead of include, only fetch needed fields
     const macrocycle = await prisma.macrocycle.findFirst({
       where: {
         id,
         userId: session.user.id,
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        description: true,
+        goals: true,
         mesocycles: {
           orderBy: {
             startDate: 'asc',
           },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            goal: true,
+            trainingDaysPerWeek: true,
             microcycles: {
+              select: {
+                id: true,
+                weekNumber: true,
+              },
               orderBy: {
                 weekNumber: 'asc',
-              },
-              include: {
-                workouts: {
-                  orderBy: {
-                    dayOfWeek: 'asc',
-                  },
-                  include: {
-                    workoutExercises: {
-                      orderBy: {
-                        orderIndex: 'asc',
-                      },
-                      include: {
-                        exercise: {
-                          select: {
-                            id: true,
-                            name: true,
-                          },
-                        },
-                      },
-                    },
-                    workoutLogs: {
-                      select: {
-                        id: true,
-                        completedAt: true,
-                      },
-                      orderBy: {
-                        completedAt: 'desc',
-                      },
-                      take: 1,
-                    },
-                  },
-                },
               },
             },
           },
@@ -85,7 +72,12 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(macrocycle)
+    // Add cache headers (5 minutes - training blocks don't change frequently)
+    return NextResponse.json(macrocycle, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
+      },
+    })
   } catch (error) {
     console.error('Error fetching macrocycle:', error)
     return NextResponse.json(
