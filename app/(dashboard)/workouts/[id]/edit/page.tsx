@@ -223,11 +223,11 @@ export default function EditWorkoutPage() {
   // Exercise form state
   const [exerciseForm, setExerciseForm] = useState({
     exerciseId: '',
-    targetSets: 3,
+    targetSets: '3',
     targetReps: '8-12',
-    targetRir: 2,
+    targetRir: '2',
     tempo: '',
-    restPeriod: 90,
+    restPeriod: '90',
     supersetWithPrevious: false,
     notes: '',
   })
@@ -308,11 +308,11 @@ export default function EditWorkoutPage() {
 
     setExerciseForm({
       exerciseId: ex.exercise.id,
-      targetSets: ex.targetSets,
+      targetSets: String(ex.targetSets),
       targetReps: ex.targetReps || '',
-      targetRir: ex.targetRir ?? 2,
+      targetRir: ex.targetRir !== null ? String(ex.targetRir) : '2',
       tempo: ex.tempo || '',
-      restPeriod: ex.restPeriod ?? 90,
+      restPeriod: ex.restPeriod !== null ? String(ex.restPeriod) : '90',
       supersetWithPrevious: ex.supersetWithPrevious,
       notes: ex.notes || '',
     })
@@ -328,7 +328,8 @@ export default function EditWorkoutPage() {
       errors.exerciseId = 'Please select an exercise'
     }
 
-    if (!exerciseForm.targetSets || exerciseForm.targetSets <= 0) {
+    const targetSets = parseInt(exerciseForm.targetSets)
+    if (!exerciseForm.targetSets || isNaN(targetSets) || targetSets <= 0) {
       errors.targetSets = 'Target sets must be at least 1'
     }
 
@@ -376,11 +377,11 @@ export default function EditWorkoutPage() {
 
     const payload: any = {
       exerciseId: exerciseForm.exerciseId,
-      targetSets: exerciseForm.targetSets,
+      targetSets: parseInt(exerciseForm.targetSets),
       targetReps: exerciseForm.targetReps || null,
-      targetRir: exerciseForm.targetRir || null,
+      targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
       tempo: exerciseForm.tempo || null,
-      restPeriod: exerciseForm.restPeriod || null,
+      restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
       supersetWithPrevious: exerciseForm.supersetWithPrevious,
       notes: exerciseForm.notes || null,
     }
@@ -462,11 +463,11 @@ export default function EditWorkoutPage() {
   function resetExerciseForm() {
     setExerciseForm({
       exerciseId: '',
-      targetSets: 3,
+      targetSets: '3',
       targetReps: '8-12',
-      targetRir: 2,
+      targetRir: '2',
       tempo: '',
-      restPeriod: 90,
+      restPeriod: '90',
       supersetWithPrevious: false,
       notes: '',
     })
@@ -748,10 +749,10 @@ export default function EditWorkoutPage() {
                   min="1"
                   value={exerciseForm.targetSets}
                   onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value)
-                    setExerciseForm({ ...exerciseForm, targetSets: value })
+                    setExerciseForm({ ...exerciseForm, targetSets: e.target.value })
                     // Clear error on change
-                    if (validationErrors.targetSets && value > 0) {
+                    const numValue = parseInt(e.target.value)
+                    if (validationErrors.targetSets && !isNaN(numValue) && numValue > 0) {
                       setValidationErrors({ ...validationErrors, targetSets: '' })
                     }
                   }}
@@ -781,7 +782,7 @@ export default function EditWorkoutPage() {
                   type="number"
                   min="0"
                   value={exerciseForm.targetRir}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetRir: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetRir: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
@@ -792,7 +793,7 @@ export default function EditWorkoutPage() {
                   type="number"
                   min="0"
                   value={exerciseForm.restPeriod}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, restPeriod: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, restPeriod: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>

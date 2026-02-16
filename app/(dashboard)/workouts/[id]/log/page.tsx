@@ -176,11 +176,11 @@ export default function WorkoutLogPage() {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
   const [addExerciseForm, setAddExerciseForm] = useState({
     exerciseId: '',
-    targetSets: 3,
+    targetSets: '3',
     targetReps: '8-12',
-    targetRir: 2,
+    targetRir: '2',
     tempo: '',
-    restPeriod: 90,
+    restPeriod: '90',
     supersetWithPrevious: false,
     notes: '',
   })
@@ -433,7 +433,8 @@ export default function WorkoutLogPage() {
       errors.exerciseId = 'Please select an exercise'
     }
 
-    if (!addExerciseForm.targetSets || addExerciseForm.targetSets <= 0) {
+    const targetSets = parseInt(addExerciseForm.targetSets)
+    if (!addExerciseForm.targetSets || isNaN(targetSets) || targetSets <= 0) {
       errors.targetSets = 'Target sets must be at least 1'
     }
 
@@ -450,11 +451,11 @@ export default function WorkoutLogPage() {
       const payload = {
         workoutId: params.id,
         exerciseId: addExerciseForm.exerciseId,
-        targetSets: addExerciseForm.targetSets,
+        targetSets: parseInt(addExerciseForm.targetSets),
         targetReps: addExerciseForm.targetReps || null,
-        targetRir: addExerciseForm.targetRir || null,
+        targetRir: addExerciseForm.targetRir ? parseInt(addExerciseForm.targetRir) : null,
         tempo: addExerciseForm.tempo || null,
-        restPeriod: addExerciseForm.restPeriod || null,
+        restPeriod: addExerciseForm.restPeriod ? parseInt(addExerciseForm.restPeriod) : null,
         supersetWithPrevious: addExerciseForm.supersetWithPrevious,
         notes: addExerciseForm.notes || null,
         orderIndex: workout?.workoutExercises.length || 0,
@@ -484,6 +485,23 @@ export default function WorkoutLogPage() {
         return
       }
 
+      // Get the newly created exercise data
+      const newWorkoutExercise = await response.json()
+
+      // Create empty sets for the new exercise
+      const newSets = Array.from({ length: parseInt(addExerciseForm.targetSets) }, (_, i) => ({
+        exerciseId: addExerciseForm.exerciseId,
+        setNumber: i + 1,
+        reps: '',
+        weight: '',
+        rir: undefined,
+        notes: '',
+        skipped: false,
+      }))
+
+      // Add new sets to existing exerciseLogs
+      setExerciseLogs([...exerciseLogs, ...newSets])
+
       // Refresh workout data to show the new exercise
       await fetchWorkout()
 
@@ -491,11 +509,11 @@ export default function WorkoutLogPage() {
       setShowAddExerciseModal(false)
       setAddExerciseForm({
         exerciseId: '',
-        targetSets: 3,
+        targetSets: '3',
         targetReps: '8-12',
-        targetRir: 2,
+        targetRir: '2',
         tempo: '',
-        restPeriod: 90,
+        restPeriod: '90',
         supersetWithPrevious: false,
         notes: '',
       })
@@ -1495,11 +1513,11 @@ export default function WorkoutLogPage() {
             setShowAddExerciseModal(false)
             setAddExerciseForm({
               exerciseId: '',
-              targetSets: 3,
+              targetSets: '3',
               targetReps: '8-12',
-              targetRir: 2,
+              targetRir: '2',
               tempo: '',
-              restPeriod: 90,
+              restPeriod: '90',
               supersetWithPrevious: false,
               notes: '',
             })
@@ -1547,10 +1565,10 @@ export default function WorkoutLogPage() {
                   min="1"
                   value={addExerciseForm.targetSets}
                   onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value)
-                    setAddExerciseForm({ ...addExerciseForm, targetSets: value })
+                    setAddExerciseForm({ ...addExerciseForm, targetSets: e.target.value })
                     // Clear error on change
-                    if (addExerciseValidationErrors.targetSets && value > 0) {
+                    const numValue = parseInt(e.target.value)
+                    if (addExerciseValidationErrors.targetSets && !isNaN(numValue) && numValue > 0) {
                       setAddExerciseValidationErrors({ ...addExerciseValidationErrors, targetSets: '' })
                     }
                   }}
@@ -1580,7 +1598,7 @@ export default function WorkoutLogPage() {
                   type="number"
                   min="0"
                   value={addExerciseForm.targetRir}
-                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, targetRir: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, targetRir: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
@@ -1591,7 +1609,7 @@ export default function WorkoutLogPage() {
                   type="number"
                   min="0"
                   value={addExerciseForm.restPeriod}
-                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, restPeriod: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, restPeriod: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
@@ -1641,11 +1659,11 @@ export default function WorkoutLogPage() {
                   setShowAddExerciseModal(false)
                   setAddExerciseForm({
                     exerciseId: '',
-                    targetSets: 3,
+                    targetSets: '3',
                     targetReps: '8-12',
-                    targetRir: 2,
+                    targetRir: '2',
                     tempo: '',
-                    restPeriod: 90,
+                    restPeriod: '90',
                     supersetWithPrevious: false,
                     notes: '',
                   })
