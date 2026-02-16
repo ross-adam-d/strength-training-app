@@ -171,6 +171,20 @@ export default function WorkoutLogPage() {
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [hasDraft, setHasDraft] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+
+  // Add exercise modal state
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
+  const [addExerciseForm, setAddExerciseForm] = useState({
+    exerciseId: '',
+    targetSets: 3,
+    targetReps: '8-12',
+    targetRir: 2,
+    tempo: '',
+    restPeriod: 90,
+    supersetWithPrevious: false,
+    notes: '',
+  })
+  const [addExerciseValidationErrors, setAddExerciseValidationErrors] = useState<Record<string, string>>({})
   const draftKey = `workout-draft-${params.id}`
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -409,6 +423,87 @@ export default function WorkoutLogPage() {
       return
     }
     await confirmSwap()
+  }
+
+  function validateAddExerciseForm(): boolean {
+    const errors: Record<string, string> = {}
+
+    // Validate required fields
+    if (!addExerciseForm.exerciseId) {
+      errors.exerciseId = 'Please select an exercise'
+    }
+
+    if (!addExerciseForm.targetSets || addExerciseForm.targetSets <= 0) {
+      errors.targetSets = 'Target sets must be at least 1'
+    }
+
+    setAddExerciseValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  async function handleAddExercise() {
+    if (!validateAddExerciseForm()) {
+      return
+    }
+
+    try {
+      const payload = {
+        workoutId: params.id,
+        exerciseId: addExerciseForm.exerciseId,
+        targetSets: addExerciseForm.targetSets,
+        targetReps: addExerciseForm.targetReps || null,
+        targetRir: addExerciseForm.targetRir || null,
+        tempo: addExerciseForm.tempo || null,
+        restPeriod: addExerciseForm.restPeriod || null,
+        supersetWithPrevious: addExerciseForm.supersetWithPrevious,
+        notes: addExerciseForm.notes || null,
+        orderIndex: workout?.workoutExercises.length || 0,
+      }
+
+      const response = await fetch('/api/workout-exercises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        // Show validation details if available
+        if (errorData.details) {
+          const fieldErrors: Record<string, string> = {}
+          errorData.details.forEach((err: any) => {
+            if (err.path && err.path.length > 0) {
+              fieldErrors[err.path[0]] = err.message
+            }
+          })
+          setAddExerciseValidationErrors(fieldErrors)
+          alert(`Validation error: ${errorData.details.map((e: any) => e.message).join(', ')}`)
+        } else {
+          alert(errorData.error || 'Failed to add exercise')
+        }
+        return
+      }
+
+      // Refresh workout data to show the new exercise
+      await fetchWorkout()
+
+      // Close modal and reset form
+      setShowAddExerciseModal(false)
+      setAddExerciseForm({
+        exerciseId: '',
+        targetSets: 3,
+        targetReps: '8-12',
+        targetRir: 2,
+        tempo: '',
+        restPeriod: 90,
+        supersetWithPrevious: false,
+        notes: '',
+      })
+      setAddExerciseValidationErrors({})
+    } catch (error) {
+      console.error('Error adding exercise:', error)
+      alert('Network error. Please try again.')
+    }
   }
 
   function startFresh() {
@@ -1146,6 +1241,18 @@ export default function WorkoutLogPage() {
         })
       })()}
 
+      {/* Add Exercise Button */}
+      <div className="mb-4">
+        <Button
+          onClick={() => setShowAddExerciseModal(true)}
+          variant="secondary"
+          size="md"
+          className="w-full"
+        >
+          + Add Exercise
+        </Button>
+      </div>
+
       <Card className="mb-6">
         <CardHeader>
           <h3 className="font-semibold">Workout Summary</h3>
@@ -1370,6 +1477,179 @@ export default function WorkoutLogPage() {
                   setShowSwapModal(false)
                   setExerciseToSwap(null)
                   setSelectedNewExercise('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add Exercise Modal */}
+      {showAddExerciseModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowAddExerciseModal(false)
+            setAddExerciseForm({
+              exerciseId: '',
+              targetSets: 3,
+              targetReps: '8-12',
+              targetRir: 2,
+              tempo: '',
+              restPeriod: 90,
+              supersetWithPrevious: false,
+              notes: '',
+            })
+            setAddExerciseValidationErrors({})
+          }}
+          title="Add Exercise"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Exercise {addExerciseValidationErrors.exerciseId && <span className="text-red-600 text-xs ml-1">*</span>}
+              </label>
+              <select
+                value={addExerciseForm.exerciseId}
+                onChange={(e) => {
+                  setAddExerciseForm({ ...addExerciseForm, exerciseId: e.target.value })
+                  // Clear error on change
+                  if (addExerciseValidationErrors.exerciseId) {
+                    setAddExerciseValidationErrors({ ...addExerciseValidationErrors, exerciseId: '' })
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  addExerciseValidationErrors.exerciseId ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">-- Select Exercise --</option>
+                {allExercises.map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name}
+                  </option>
+                ))}
+              </select>
+              {addExerciseValidationErrors.exerciseId && (
+                <p className="text-red-600 text-xs mt-1">{addExerciseValidationErrors.exerciseId}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Sets {addExerciseValidationErrors.targetSets && <span className="text-red-600 text-xs ml-1">*</span>}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={addExerciseForm.targetSets}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value)
+                    setAddExerciseForm({ ...addExerciseForm, targetSets: value })
+                    // Clear error on change
+                    if (addExerciseValidationErrors.targetSets && value > 0) {
+                      setAddExerciseValidationErrors({ ...addExerciseValidationErrors, targetSets: '' })
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    addExerciseValidationErrors.targetSets ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {addExerciseValidationErrors.targetSets && (
+                  <p className="text-red-600 text-xs mt-1">{addExerciseValidationErrors.targetSets}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Reps</label>
+                <input
+                  type="text"
+                  value={addExerciseForm.targetReps}
+                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, targetReps: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="8-12"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target RIR</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={addExerciseForm.targetRir}
+                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, targetRir: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rest Period (s)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={addExerciseForm.restPeriod}
+                  onChange={(e) => setAddExerciseForm({ ...addExerciseForm, restPeriod: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="addExerciseSuperset"
+                checked={addExerciseForm.supersetWithPrevious}
+                onChange={(e) => setAddExerciseForm({ ...addExerciseForm, supersetWithPrevious: e.target.checked })}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <label htmlFor="addExerciseSuperset" className="text-sm text-gray-700">
+                Superset with previous exercise
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tempo (optional)</label>
+              <input
+                type="text"
+                value={addExerciseForm.tempo}
+                onChange={(e) => setAddExerciseForm({ ...addExerciseForm, tempo: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="3-0-1-0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <textarea
+                value={addExerciseForm.notes}
+                onChange={(e) => setAddExerciseForm({ ...addExerciseForm, notes: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleAddExercise} className="flex-1">
+                Add Exercise
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowAddExerciseModal(false)
+                  setAddExerciseForm({
+                    exerciseId: '',
+                    targetSets: 3,
+                    targetReps: '8-12',
+                    targetRir: 2,
+                    tempo: '',
+                    restPeriod: 90,
+                    supersetWithPrevious: false,
+                    notes: '',
+                  })
+                  setAddExerciseValidationErrors({})
                 }}
                 className="flex-1"
               >
