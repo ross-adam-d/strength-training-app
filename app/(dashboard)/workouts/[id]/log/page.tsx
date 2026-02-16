@@ -488,7 +488,10 @@ export default function WorkoutLogPage() {
       // Get the newly created exercise data
       const newWorkoutExercise = await response.json()
 
-      // Create empty sets for the new exercise
+      // Refresh workout data FIRST to get the new exercise with all its settings
+      await fetchWorkout()
+
+      // Then create empty sets for the new exercise (after workout state is updated)
       const newSets = Array.from({ length: parseInt(addExerciseForm.targetSets) }, (_, i) => ({
         exerciseId: addExerciseForm.exerciseId,
         setNumber: i + 1,
@@ -500,10 +503,7 @@ export default function WorkoutLogPage() {
       }))
 
       // Add new sets to existing exerciseLogs
-      setExerciseLogs([...exerciseLogs, ...newSets])
-
-      // Refresh workout data to show the new exercise
-      await fetchWorkout()
+      setExerciseLogs((prevLogs) => [...prevLogs, ...newSets])
 
       // Close modal and reset form
       setShowAddExerciseModal(false)
