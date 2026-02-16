@@ -5,9 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const createSchema = z.object({
-  workoutId: z.string(),
-  exerciseId: z.string(),
-  targetSets: z.number().int().positive(),
+  workoutId: z.string().min(1, 'Workout ID is required'),
+  exerciseId: z.string().min(1, 'Exercise must be selected'),
+  targetSets: z.number().int().positive('Target sets must be at least 1'),
   targetReps: z.string().nullable().optional(),
   tempo: z.string().nullable().optional(),
   targetRir: z.number().int().nullable().optional(),

@@ -232,6 +232,9 @@ export default function EditWorkoutPage() {
     notes: '',
   })
 
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
   // Apply to rest of phase modal (workout-level)
   const [showScopeModal, setShowScopeModal] = useState(false)
 
@@ -317,8 +320,29 @@ export default function EditWorkoutPage() {
     setEditingExercise(exerciseId)
   }
 
+  function validateExerciseForm(): boolean {
+    const errors: Record<string, string> = {}
+
+    // Validate required fields
+    if (!exerciseForm.exerciseId) {
+      errors.exerciseId = 'Please select an exercise'
+    }
+
+    if (!exerciseForm.targetSets || exerciseForm.targetSets <= 0) {
+      errors.targetSets = 'Target sets must be at least 1'
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   async function handleSaveExercise() {
     if (!editingExercise && !addingExercise) return
+
+    // Validate form before saving
+    if (!validateExerciseForm()) {
+      return
+    }
 
     // Check if we're editing and the superset value changed
     if (editingExercise && exerciseForm.supersetWithPrevious !== originalSupersetValue) {
@@ -334,6 +358,13 @@ export default function EditWorkoutPage() {
 
   async function performExerciseSave(applyToRestOfPhase: boolean) {
     if (!editingExercise && !addingExercise) return
+
+    // Re-validate before saving (in case called from modal)
+    if (!validateExerciseForm()) {
+      setShowExerciseScopeModal(false)
+      setPendingExerciseSave(null)
+      return
+    }
 
     setSaving(true)
 
@@ -373,7 +404,19 @@ export default function EditWorkoutPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        alert(errorData.error || 'Failed to save exercise')
+        // Show validation details if available
+        if (errorData.details) {
+          const fieldErrors: Record<string, string> = {}
+          errorData.details.forEach((err: any) => {
+            if (err.path && err.path.length > 0) {
+              fieldErrors[err.path[0]] = err.message
+            }
+          })
+          setValidationErrors(fieldErrors)
+          alert(`Validation error: ${errorData.details.map((e: any) => e.message).join(', ')}`)
+        } else {
+          alert(errorData.error || 'Failed to save exercise')
+        }
         setSaving(false)
         return
       }
@@ -427,6 +470,7 @@ export default function EditWorkoutPage() {
       supersetWithPrevious: false,
       notes: '',
     })
+    setValidationErrors({})
   }
 
   async function handleSave(applyToRest: boolean) {
@@ -668,26 +712,56 @@ export default function EditWorkoutPage() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Exercise</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Exercise {validationErrors.exerciseId && <span className="text-red-600 text-xs ml-1">*</span>}
+              </label>
               <Select
-                options={allExercises.map((ex) => ({
-                  value: ex.id,
-                  label: ex.name,
-                }))}
+                options={[
+                  { value: '', label: '-- Select Exercise --' },
+                  ...allExercises.map((ex) => ({
+                    value: ex.id,
+                    label: ex.name,
+                  })),
+                ]}
                 value={exerciseForm.exerciseId}
-                onChange={(e) => setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })}
+                onChange={(e) => {
+                  setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })
+                  // Clear error on change
+                  if (validationErrors.exerciseId) {
+                    setValidationErrors({ ...validationErrors, exerciseId: '' })
+                  }
+                }}
+                className={validationErrors.exerciseId ? 'border-red-500' : ''}
               />
+              {validationErrors.exerciseId && (
+                <p className="text-red-600 text-xs mt-1">{validationErrors.exerciseId}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target Sets</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Sets {validationErrors.targetSets && <span className="text-red-600 text-xs ml-1">*</span>}
+                </label>
                 <input
                   type="number"
+                  min="1"
                   value={exerciseForm.targetSets}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetSets: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value)
+                    setExerciseForm({ ...exerciseForm, targetSets: value })
+                    // Clear error on change
+                    if (validationErrors.targetSets && value > 0) {
+                      setValidationErrors({ ...validationErrors, targetSets: '' })
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    validationErrors.targetSets ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
+                {validationErrors.targetSets && (
+                  <p className="text-red-600 text-xs mt-1">{validationErrors.targetSets}</p>
+                )}
               </div>
 
               <div>
@@ -705,8 +779,9 @@ export default function EditWorkoutPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Target RIR</label>
                 <input
                   type="number"
+                  min="0"
                   value={exerciseForm.targetRir}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetRir: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetRir: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
@@ -715,8 +790,9 @@ export default function EditWorkoutPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rest Period (s)</label>
                 <input
                   type="number"
+                  min="0"
                   value={exerciseForm.restPeriod}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, restPeriod: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, restPeriod: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
