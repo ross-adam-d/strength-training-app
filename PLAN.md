@@ -1,12 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 15, 2026 - End of Session 17)
+## 📍 Current Status (Updated: Feb 16, 2026 - End of Session 18)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
 **Branch**: `master`
-**Latest Commit**: `ce62459` - "Fix critical bug: unilateral exercise validation on workout completion"
-**Status**: All phases 1-6C complete + performance optimizations + code quality improvements
+**Latest Commit**: `2dedf59` - "Fix timing issue: refresh workout data before creating sets"
+**Status**: All phases 1-6C complete + live workout exercise management + critical UX fixes
 
 ---
 
@@ -103,48 +103,29 @@
 - ✅ Improved app stability and error handling
 - ✅ Fixed unilateral exercise validation bug (false positive incomplete sets warning)
 
-**Total Effort (Phases 1-6C + Sessions 16-17)**: 71 hours (vs 70-100h estimated)
-**Efficiency**: 29% faster than upper estimate
+### Session 18: Live Workout Exercise Management (3h - Feb 16, 2026)
+- ✅ Fixed critical add exercise validation bug (empty exerciseId, targetSets = 0)
+- ✅ Added client-side validation with error messages (edit + log pages)
+- ✅ Implemented "Add Exercise" feature during live workout
+  - Full modal form with all exercise configuration
+  - Same validation as edit workout page
+  - Auto-creates empty sets for immediate logging
+- ✅ Fixed leading zero bug in number inputs (affects all number fields)
+  - Changed form state from numbers to strings
+  - Parse only on submission, not on change
+  - Users can now clear fields without "0" appearing
+- ✅ Fixed timing issue: rest timer now works for added exercises
+  - Reversed order: fetch workout data BEFORE creating sets
+  - Ensures exercise settings available immediately
+
+**Total Effort (Phases 1-6C + Sessions 16-18)**: 74 hours (vs 70-100h estimated)
+**Efficiency**: 26% faster than upper estimate
 
 ---
 
 ## 🚀 Upcoming Work
 
-### High Priority User Requests (4-6 hours) ⭐ NEXT
-
-**1. Dashboard Redesign - Current Week Focus** (2-3 hours)
-- ✅ Remove "Current Phase" card
-- ✅ Replace with Phase Overview for current week
-  - Current week = week with most recent completed workout AND remaining workouts
-  - Show all workouts for that week
-  - Preserve existing phase overview functionality
-  - Clean, focused view
-
-**2. Exercise Library - Universal Editing** (1-2 hours)
-- ✅ Allow editing ALL exercises (not just custom ones)
-- ✅ Add "Unilateral Exercise" checkbox to all exercises
-- ✅ Add "Timed Exercise" checkbox to all exercises
-- ✅ Update exercise edit modal/form
-- Currently: Only custom exercises are editable
-- Goal: Enable unilateral/timed flags on ANY exercise
-
-**3. Training Wizard Simplification** (1 hour)
-- ✅ Stop wizard after training block duration selection
-- ✅ Redirect directly to training block overview page
-- ✅ User configures per-phase on overview page:
-  - Focus/goal dropdown (Hypertrophy, Strength, etc.)
-  - Training days per week
-  - Training split selection (NEW)
-- Remove multi-step wizard complexity
-- Faster setup workflow
-
-**Files to Create/Modify**:
-- Update: `app/(dashboard)/dashboard/page.tsx` - Replace current phase card
-- Update: `app/(dashboard)/exercises/page.tsx` - Enable editing for all exercises
-- Update: `app/(dashboard)/macrocycles/setup/page.tsx` - Simplify wizard flow
-- Update: `app/(dashboard)/macrocycles/[id]/page.tsx` - Add training split selection
-
-### Medium Priority (8-12 hours)
+### Medium Priority Features (8-12 hours) ⭐ NEXT
 - Progressive overload recommendations
 - Training volume analytics
 - Export workout data (CSV/PDF)
@@ -260,15 +241,16 @@ model ExerciseLog {
 | Session 16 | Performance Optimizations | 2h | ✅ Complete |
 | Session 17 | Code Quality & Polish | 2h | ✅ Complete |
 | **User Requests** | **Dashboard + Exercise Library + Wizard** | **4-6h** | **📋 Next** |
+| Session 18 | Live Workout Exercise Management | 3h | ✅ Complete |
 | Phase 6D | Additional Exercise Types (Timed) | 4-5h | 📋 Pending |
 | Phase 7 | Dashboard Analytics | 16-20h | 📋 Pending |
 | Phase 8 | Progress Enhancements | 10-12h | 📋 Pending |
 | Phase 9 | Training Block Menu | 12-16h | 📋 Pending |
 
-**Completed**: 71 hours
-**Next Up**: 4-6 hours (User Requests)
+**Completed**: 74 hours
+**Next Up**: 4-5 hours (Phase 6D - Timed Exercises)
 **Remaining**: 42-53 hours (Phases 6D-9)
-**Total Project**: 117-130 hours
+**Total Project**: 116-127 hours
 
 ---
 
@@ -359,5 +341,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 15, 2026 (End of Session 17)
-**Next Session**: User-Requested Features (Dashboard + Exercise Library + Wizard Simplification)
+**Last Updated**: Feb 16, 2026 (End of Session 18)
+**Next Session**: Phase 6D - Additional Exercise Types (Timed exercises, bodyweight defaults)
