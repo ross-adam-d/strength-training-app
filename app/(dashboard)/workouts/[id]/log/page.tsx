@@ -1259,40 +1259,42 @@ export default function WorkoutLogPage() {
                         />
                       </div>
                       <div className="ml-[2.5rem] space-y-2">
-                        {/* Better spacing and larger buttons for mobile */}
-                        <div className={`flex items-center gap-2 flex-wrap ${completedExercises.has(we.exercise.id) ? 'opacity-60' : ''}`}>
-                          {we.exercise.isTimed && (
-                            <>
-                              <Button
-                                variant={isTimedFlashing ? 'danger' : isTimedTimerActive ? 'primary' : 'secondary'}
-                                size="sm"
-                                className="min-h-[36px]"
-                                onClick={() => startTimedTimer(log.exerciseId, log.setNumber)}
-                                disabled={completedExercises.has(we.exercise.id)}
-                              >
-                                {isTimedFlashing ? '✓ Done!' : isTimedTimerActive ? `⏱ ${formatTimer(timedTimerSeconds)}` : '▶ Start Timer'}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="min-h-[36px] text-gray-600 hover:bg-gray-100"
-                                onClick={() => adjustDuration(log.exerciseId, log.setNumber, -5)}
-                                disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
-                              >
-                                -5s
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="min-h-[36px] text-gray-600 hover:bg-gray-100"
-                                onClick={() => adjustDuration(log.exerciseId, log.setNumber, 5)}
-                                disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
-                              >
-                                +5s
-                              </Button>
-                            </>
-                          )}
-                          {showRestTimer && !we.exercise.isTimed && (
+                        {/* Row 1: Timed exercise timer controls (only for timed exercises) */}
+                        {we.exercise.isTimed && (
+                          <div className={`flex items-center gap-2 ${completedExercises.has(we.exercise.id) ? 'opacity-60' : ''}`}>
+                            <Button
+                              variant={isTimedFlashing ? 'danger' : isTimedTimerActive ? 'primary' : 'secondary'}
+                              size="sm"
+                              className="min-h-[36px]"
+                              onClick={() => startTimedTimer(log.exerciseId, log.setNumber)}
+                              disabled={completedExercises.has(we.exercise.id)}
+                            >
+                              {isTimedFlashing ? '✓ Done!' : isTimedTimerActive ? `⏱ ${formatTimer(timedTimerSeconds)}` : '▶ Start Timer'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="min-h-[36px] text-gray-600 hover:bg-gray-100"
+                              onClick={() => adjustDuration(log.exerciseId, log.setNumber, -5)}
+                              disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
+                            >
+                              -5s
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="min-h-[36px] text-gray-600 hover:bg-gray-100"
+                              onClick={() => adjustDuration(log.exerciseId, log.setNumber, 5)}
+                              disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
+                            >
+                              +5s
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Row 2: Rest timer, Skip, Remove (always visible, fixed layout) */}
+                        <div className={`flex items-center gap-2 ${completedExercises.has(we.exercise.id) ? 'opacity-60' : ''}`}>
+                          {showRestTimer && (
                             <Button
                               variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}
                               size="sm"
