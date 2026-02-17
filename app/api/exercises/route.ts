@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     const muscleGroup = searchParams.get('muscleGroup')
     const equipment = searchParams.get('equipment')
     const search = searchParams.get('search')
+    const logged = searchParams.get('logged') === 'true'
 
     const where: any = {
       OR: [
@@ -55,6 +56,15 @@ export async function GET(request: Request) {
       where.name = {
         contains: search,
         mode: 'insensitive',
+      }
+    }
+
+    // Only return exercises the current user has actually logged
+    if (logged && session?.user?.id) {
+      where.exerciseLogs = {
+        some: {
+          workoutLog: { userId: session.user.id },
+        },
       }
     }
 

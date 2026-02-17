@@ -15,11 +15,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const since = searchParams.get('since') // ISO date string
+
     const logs = await prisma.exerciseLog.findMany({
       where: {
         exerciseId: id,
+        skipped: false,
         workoutLog: {
           userId: session.user.id,
+          ...(since ? { completedAt: { gte: new Date(since) } } : {}),
         },
       },
       orderBy: {
