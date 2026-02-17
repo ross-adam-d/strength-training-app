@@ -267,6 +267,16 @@ async function main() {
   }
 
   console.log(`Seeded ${exercises.length} exercises`)
+
+  // Set ADMIN role on developer account
+  const devEmail = process.env.ADMIN_EMAIL
+  if (devEmail) {
+    await prisma.user.updateMany({
+      where: { email: devEmail },
+      data: { role: 'ADMIN' },
+    })
+    console.log(`Set ADMIN role on ${devEmail}`)
+  }
 }
 
 main()

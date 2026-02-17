@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 
-export function Navigation({ email }: { email: string }) {
+export function Navigation({ email, role }: { email: string; role?: string }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -16,6 +16,7 @@ export function Navigation({ email }: { email: string }) {
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
     { href: '/workout/start', label: 'Log Manual Workout' },
+    ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
   return (
@@ -24,7 +25,7 @@ export function Navigation({ email }: { email: string }) {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link href="/dashboard" className="text-xl font-bold text-primary-600">
-              Strength Tracker
+              ProBlock
             </Link>
             <div className="hidden md:flex space-x-4">
               {links.map((link) => (

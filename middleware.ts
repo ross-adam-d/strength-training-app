@@ -1,0 +1,113 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+
+const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE'])
+
+function canAccess(token: {
+  role?: string
+  subscriptionStatus?: string | null
+  trialEndsAt?: string | null
+  manualAccessGrantedUntil?: string | null
+}): { canWrite: boolean; isExpired: boolean } {
+  if (token.role === 'ADMIN') {
+    return { canWrite: true, isExpired: false }
+  }
+
+  const now = new Date()
+
+  // Manual admin override
+  if (token.manualAccessGrantedUntil) {
+    const until = new Date(token.manualAccessGrantedUntil)
+    if (until > now) {
+      return { canWrite: true, isExpired: false }
+    }
+  }
+
+  const status = token.subscriptionStatus
+
+  if (status === 'ACTIVE') {
+    return { canWrite: true, isExpired: false }
+  }
+
+  if (status === 'TRIALING' && token.trialEndsAt) {
+    const trialEnd = new Date(token.trialEndsAt)
+    if (trialEnd > now) {
+      return { canWrite: true, isExpired: false }
+    }
+    // Trial ended
+    return { canWrite: false, isExpired: true }
+  }
+
+  if (!status) {
+    // No subscription at all
+    return { canWrite: false, isExpired: true }
+  }
+
+  // READ_ONLY, CANCELLED, PAST_DUE
+  return { canWrite: false, isExpired: true }
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const method = request.method
+
+  // Skip Next.js internals and static assets
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon') ||
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/subscribe') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/privacy')
+  ) {
+    return NextResponse.next()
+  }
+
+  const token = await getToken({ req: request })
+
+  // Not authenticated — let the page/layout handle redirect
+  if (!token) {
+    return NextResponse.next()
+  }
+
+  // Only enforce on protected API routes (not /api/auth/*)
+  const isProtectedApiRoute =
+    pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')
+
+  // Only enforce on dashboard page routes
+  const isDashboardPage = !pathname.startsWith('/api/') && !pathname.startsWith('/admin')
+
+  if (!isProtectedApiRoute && !isDashboardPage) {
+    return NextResponse.next()
+  }
+
+  const { canWrite, isExpired } = canAccess(token)
+
+  // Fully expired user on a page → redirect to subscribe
+  if (isExpired && isDashboardPage) {
+    const subscribeUrl = new URL('/subscribe', request.url)
+    // Avoid redirect loop
+    if (pathname !== '/subscribe') {
+      return NextResponse.redirect(subscribeUrl)
+    }
+  }
+
+  // Read-only user attempting a write API call → 403
+  if (!canWrite && isProtectedApiRoute && WRITE_METHODS.has(method)) {
+    return NextResponse.json(
+      { error: 'Your trial has ended. Please contact us to continue.' },
+      { status: 403 }
+    )
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}

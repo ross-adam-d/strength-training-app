@@ -10,12 +10,26 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  READ_ONLY
+  CANCELLED
+}
+
 // User authentication and profile
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   password      String
   name          String?
+  role          UserRole  @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -23,8 +37,26 @@ model User {
   macrocycles   Macrocycle[]
   exercises     Exercise[]
   workoutLogs   WorkoutLog[]
+  subscription  Subscription?
 
   @@map("users")
+}
+
+model Subscription {
+  id                       String             @id @default(cuid())
+  userId                   String             @unique
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                   SubscriptionStatus @default(TRIALING)
+  trialEndsAt              DateTime
+  gracePeriodEndsAt        DateTime?
+  manualAccessGrantedUntil DateTime?
+  stripeCustomerId         String?
+  stripeSubscriptionId     String?
+  cancelledAt              DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@map("subscriptions")
 }
 
 model Profile {
