@@ -1,12 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 16, 2026 - End of Session 18)
+## 📍 Current Status (Updated: Feb 18, 2026 - End of Session 22)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
 **Branch**: `master`
-**Latest Commit**: `2dedf59` - "Fix timing issue: refresh workout data before creating sets"
-**Status**: All phases 1-6C complete + live workout exercise management + critical UX fixes
+**Latest Commit**: `f616b1a` - "Fix subscription enforcement for stale JWTs and promote both admin accounts"
+**Status**: Beta launched — access management live, admin dashboard operational
 
 ---
 
@@ -121,14 +121,45 @@
 **Total Effort (Phases 1-6C + Sessions 16-18)**: 74 hours (vs 70-100h estimated)
 **Efficiency**: 26% faster than upper estimate
 
+### Sessions 19-21: Performance, Dashboard, Block Page (Sessions 19-21, Feb 16-17, 2026)
+- ✅ Training Block page tidy (header, phase labels, locking, rebuild modal)
+- ✅ Phase locking fix (locked only if `startDate <= today AND status active|completed`)
+- ✅ Progress page revamp (time filter, block comparison charts)
+- ✅ Navigation performance (prop-based email, no client auth fetch)
+- ✅ Dashboard parallel queries + removed broken `revalidate`
+- ✅ Workout generation parallelised (17s → 1-2s via `Promise.all`)
+- ✅ Vercel region set to `sin1` (Singapore → Supabase Mumbai ~60ms)
+- ✅ Login: `window.location.assign` hard nav (no router cache issues)
+
+### Session 22: Beta Access Management (Feb 18, 2026)
+- ✅ **Landing page** — ProBlock branding, hero, features, pricing preview (coming soon)
+- ✅ **Subscription schema** — `Subscription` model, `UserRole` + `SubscriptionStatus` enums
+- ✅ **Register API** — creates 28-day TRIALING subscription on signup
+- ✅ **JWT subscription data** — role, subscriptionStatus, trialEndsAt in token (edge-compatible)
+- ✅ **Middleware** — blocks write APIs (403) for expired users, redirects pages to `/subscribe`
+- ✅ **SubscriptionBanner** — amber warning shown ≤7 days before expiry
+- ✅ **`/subscribe` page** — clean lockout page for expired users
+- ✅ **Admin dashboard** (`/admin`) — role-guarded, sidebar nav
+- ✅ **Admin user list** — status badges, trial dates, joined date
+- ✅ **Admin user detail** — subscription controls (status, trial extension, manual override)
+- ✅ **Admin API routes** — list users, user detail, patch subscription
+- ✅ **Navigation** — ProBlock brand, admin link for ADMIN role
+
+**Total Effort (all sessions)**: ~87 hours
+
 ---
 
 ## 🚀 Upcoming Work
 
-### Medium Priority Features (8-12 hours) ⭐ NEXT
-- Progressive overload recommendations
-- Training volume analytics
-- Export workout data (CSV/PDF)
+### Beta Operations (immediate)
+- Monitor beta users via admin dashboard
+- Extend trials / grant access manually as needed
+- Collect feedback for post-beta feature prioritisation
+
+### Post-Beta Features (8-12 hours) ⭐ NEXT
+- Progressive overload tracking + exercise analytics charts
+- Data export (CSV/PDF)
+- Stripe integration + email lifecycle (separate plan)
 
 ---
 

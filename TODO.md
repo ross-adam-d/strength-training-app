@@ -40,15 +40,17 @@
 
 ## 🎯 Current Priorities
 
-### New Features (Optional)
-**Effort**: 8-12 hours
-**Priority**: Lower (app is fully functional)
+### Beta Operations (immediate)
+- [x] Beta access management deployed ✅
+- [x] Admin dashboard live at `/admin` ✅
+- [x] All existing users given 28-day trials ✅
+- [ ] Monitor beta users, extend trials as needed via admin dashboard
 
-**Ideas**:
-- Progressive overload tracking
-- Exercise analytics and charts
-- Workout templates library
-- Export data (CSV/PDF)
+### Post-Beta Features (next dev cycle)
+**Priority**: High post-beta
+- Progressive overload tracking + exercise analytics charts
+- Data export (CSV/PDF)
+- Stripe integration + email lifecycle (see separate beta plan doc)
 
 ---
 
@@ -56,11 +58,15 @@
 
 ### Pre-existing Warnings (Non-blocking)
 - ⚠️ `@next/swc` version mismatch (15.5.7 vs 15.5.11)
-- ⚠️ useEffect dependency warnings (10 locations)
 
 ### Deferred Features
 - Week navigation parameter in URL (acceptable workaround: swipe to week)
 - Mobile drag & drop for workouts (desktop works, arrows available)
+- Stripe + email lifecycle (post-beta)
+
+### Beta Access Notes
+- Subscription data baked into JWT at login — admin changes (trial extension, manual override) take effect on user's next login
+- Both `ross.adam.d@gmail.com` and `Ross.adam.d@gmail.com` are ADMIN in DB
 
 ---
 
@@ -69,14 +75,13 @@
 ### Regular Monitoring
 - [ ] Monitor Vercel deployment logs
 - [ ] Check Supabase database metrics
-- [ ] Review error tracking (if implemented)
 
 ### Documentation
 - [x] Update PLAN.md ✅
 - [x] Update TODO.md ✅
-- [x] Update SESSION_SUMMARY.md ✅
+- [x] Update sessions.md in Claude memory ✅
 - [x] Update MEMORY.md in Claude directory ✅
 
 ---
 
-**Last Updated**: Feb 15, 2026 (Session 17 - Code Quality Complete)
+**Last Updated**: Feb 18, 2026 (Session 22 - Beta Access Management)
