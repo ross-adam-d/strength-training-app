@@ -102,24 +102,22 @@ export async function POST(
     })
     const exerciseMap = new Map(exercises.map((e) => [e.name, e.id]))
 
-    // Create workouts for each week
+    // Build all workout create operations (synchronously) then fire in parallel
+    const workoutCreates: Parameters<typeof prisma.workout.create>[0]['data'][] = []
+
     for (const microcycle of mesocycle.microcycles) {
-      // Reset counts for each week
       workoutTypeCounts.clear()
 
       for (let i = 0; i < daysOfWeek.length; i++) {
         const dayOfWeek = daysOfWeek[i]
         const workoutTypeName = rotation[i]
 
-        // Get current count for this workout type and increment
         const currentCount = (workoutTypeCounts.get(workoutTypeName) || 0) + 1
         workoutTypeCounts.set(workoutTypeName, currentCount)
 
-        // Add letter suffix (A, B, C, etc.) using character codes
-        const suffix = String.fromCharCode(64 + currentCount) // 65 = 'A', 66 = 'B', etc.
+        const suffix = String.fromCharCode(64 + currentCount)
         const workoutName = `${workoutTypeName} ${suffix}`
 
-        // Create workout
         const workoutData: any = {
           name: workoutName,
           dayOfWeek,
@@ -127,7 +125,6 @@ export async function POST(
           orderIndex: i,
         }
 
-        // If mode is 'default', add exercises
         if (mode === 'default') {
           const workoutType = getWorkoutType(workoutTypeName)
 
@@ -151,16 +148,15 @@ export async function POST(
             }
           })
 
-          workoutData.workoutExercises = {
-            create: exerciseSlots,
-          }
+          workoutData.workoutExercises = { create: exerciseSlots }
         }
 
-        await prisma.workout.create({
-          data: workoutData,
-        })
+        workoutCreates.push(workoutData)
       }
     }
+
+    // Fire all creates in parallel — reduces N*M sequential round-trips to one parallel batch
+    await Promise.all(workoutCreates.map((data) => prisma.workout.create({ data })))
 
     return NextResponse.json({ success: true })
   } catch (error) {
