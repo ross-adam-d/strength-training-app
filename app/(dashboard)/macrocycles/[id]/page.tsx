@@ -64,6 +64,8 @@ export default function MacrocycleDetailPage() {
   const [editedStartDate, setEditedStartDate] = useState('')
   const [editedEndDate, setEditedEndDate] = useState('')
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set())
+  const [dirtyStructure, setDirtyStructure] = useState<Set<string>>(new Set())
+  const [updatingStructure, setUpdatingStructure] = useState<string | null>(null)
 
   const fetchMacrocycle = useCallback(async () => {
     try {
@@ -192,6 +194,7 @@ export default function MacrocycleDetailPage() {
       })
 
       if (response.ok) {
+        setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
         await fetchMacrocycle()
       }
     } catch (error) {
@@ -208,10 +211,51 @@ export default function MacrocycleDetailPage() {
       })
 
       if (response.ok) {
+        setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
         await fetchMacrocycle()
       }
     } catch (error) {
       console.error('Error updating training split:', error)
+    }
+  }
+
+  async function handleUpdateStructure(phase: Mesocycle) {
+    if (!phase.trainingDaysPerWeek || !phase.trainingSplit) {
+      alert('Please set both training days and training split before updating the structure.')
+      return
+    }
+
+    const confirmed = confirm(
+      `Rebuild workout structure for Phase ${macrocycle!.mesocycles.indexOf(phase) + 1}?\n\n` +
+      `${phase.trainingDaysPerWeek} days/week · ${phase.trainingSplit}\n\n` +
+      `All existing workouts and exercise assignments for this phase will be replaced.`
+    )
+    if (!confirmed) return
+
+    setUpdatingStructure(phase.id)
+    try {
+      const res = await fetch(`/api/mesocycles/${phase.id}/generate-workouts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'manual', regenerate: true }),
+      })
+
+      if (res.ok) {
+        setDirtyStructure((prev) => {
+          const next = new Set(prev)
+          next.delete(phase.id)
+          return next
+        })
+        await fetchMacrocycle()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to update structure')
+      }
+    } catch (error) {
+      console.error('Error updating structure:', error)
+      alert('Failed to update structure')
+    } finally {
+      setUpdatingStructure(null)
     }
   }
 
@@ -444,6 +488,11 @@ export default function MacrocycleDetailPage() {
                           Phase has started — configuration is locked.
                         </p>
                       )}
+                      {!isLocked && dirtyStructure.has(phase.id) && (
+                        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                          Days/split updated. Click &quot;Update Workouts&quot; below to apply the new structure.
+                        </p>
+                      )}
                       <div className="grid md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -499,9 +548,23 @@ export default function MacrocycleDetailPage() {
                         </div>
                       </div>
 
+                      {!isLocked && phase.trainingDaysPerWeek && phase.trainingSplit && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStructure(phase)}
+                          disabled={updatingStructure === phase.id}
+                          className={`block w-full text-center text-sm font-medium rounded-lg py-2 transition border ${
+                            dirtyStructure.has(phase.id)
+                              ? 'text-white bg-blue-600 hover:bg-blue-700 border-blue-700'
+                              : 'text-gray-600 bg-gray-50 hover:bg-gray-100 border-gray-200'
+                          } disabled:opacity-50`}
+                        >
+                          {updatingStructure === phase.id ? 'Updating...' : dirtyStructure.has(phase.id) ? '↻ Update Workouts' : '↻ Rebuild Workouts'}
+                        </button>
+                      )}
                       <Link
                         href={`/mesocycles/${phase.id}`}
-                        className="block w-full text-center text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg py-2 mt-2 transition"
+                        className="block w-full text-center text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg py-2 transition"
                       >
                         View Phase Details →
                       </Link>

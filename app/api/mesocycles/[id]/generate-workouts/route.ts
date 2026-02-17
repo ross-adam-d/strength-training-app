@@ -30,7 +30,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { mode } = body // 'default' or 'manual'
+    const { mode, regenerate } = body // mode: 'default' or 'manual'; regenerate: bool
 
     // Fetch mesocycle with ownership verification
     const mesocycle = await prisma.mesocycle.findFirst({
@@ -65,6 +65,14 @@ export async function POST(
         { error: 'Please set training days and split for this phase first' },
         { status: 400 }
       )
+    }
+
+    // If regenerating, delete all existing workouts across all microcycles first
+    if (regenerate) {
+      const microcycleIds = mesocycle.microcycles.map((m) => m.id)
+      await prisma.workout.deleteMany({
+        where: { microcycleId: { in: microcycleIds } },
+      })
     }
 
     // Get workout types based on split
