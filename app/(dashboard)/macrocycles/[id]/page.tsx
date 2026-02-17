@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
@@ -68,6 +68,10 @@ export default function MacrocycleDetailPage() {
   const [updatingStructure, setUpdatingStructure] = useState<string | null>(null)
   const [rebuildModal, setRebuildModal] = useState<Mesocycle | null>(null)
 
+  // Refs for batching phase config saves
+  const pendingPhaseUpdates = useRef<Map<string, Record<string, unknown>>>(new Map())
+  const phaseUpdateTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
   const fetchMacrocycle = useCallback(async () => {
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`)
@@ -109,115 +113,132 @@ export default function MacrocycleDetailPage() {
     }
   }
 
+  // Optimistically update a single phase's fields in local state
+  function optimisticPhaseUpdate(mesocycleId: string, fields: Partial<Mesocycle>) {
+    setMacrocycle((prev) =>
+      prev
+        ? { ...prev, mesocycles: prev.mesocycles.map((m) => (m.id === mesocycleId ? { ...m, ...fields } : m)) }
+        : null
+    )
+  }
+
+  // Debounce-batch phase config saves: accumulate changes for 600ms then send one PATCH
+  function schedulePhaseSave(mesocycleId: string, fields: Record<string, unknown>) {
+    const current = pendingPhaseUpdates.current.get(mesocycleId) || {}
+    pendingPhaseUpdates.current.set(mesocycleId, { ...current, ...fields })
+
+    const existing = phaseUpdateTimers.current.get(mesocycleId)
+    if (existing) clearTimeout(existing)
+
+    const timer = setTimeout(async () => {
+      const updates = pendingPhaseUpdates.current.get(mesocycleId)
+      pendingPhaseUpdates.current.delete(mesocycleId)
+      phaseUpdateTimers.current.delete(mesocycleId)
+      if (!updates) return
+
+      try {
+        const res = await fetch(`/api/mesocycles/${mesocycleId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        })
+        if (!res.ok) await fetchMacrocycle() // rollback on error
+      } catch {
+        await fetchMacrocycle()
+      }
+    }, 600)
+
+    phaseUpdateTimers.current.set(mesocycleId, timer)
+  }
+
   async function handleSaveName() {
     if (!editedName.trim()) return
-
+    const prev = macrocycle!.name
+    // Optimistic: update UI immediately, close editor
+    setMacrocycle((m) => (m ? { ...m, name: editedName } : null))
+    setEditingName(false)
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editedName }),
       })
-
-      if (response.ok) {
-        await fetchMacrocycle()
-        setEditingName(false)
+      if (!response.ok) {
+        // Rollback
+        setMacrocycle((m) => (m ? { ...m, name: prev } : null))
+        setEditedName(prev)
+        setEditingName(true)
       }
-    } catch (error) {
-      console.error('Error updating name:', error)
+    } catch {
+      setMacrocycle((m) => (m ? { ...m, name: prev } : null))
+      setEditedName(prev)
+      setEditingName(true)
     }
   }
 
   async function handleSaveDates() {
+    const prevStart = macrocycle!.startDate
+    const prevEnd = macrocycle!.endDate
+    // Optimistic: close editor, show new dates
+    setMacrocycle((m) =>
+      m ? { ...m, startDate: editedStartDate + 'T00:00:00.000Z', endDate: editedEndDate + 'T00:00:00.000Z' } : null
+    )
+    setEditingDates(false)
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate: editedStartDate,
-          endDate: editedEndDate,
-        }),
+        body: JSON.stringify({ startDate: editedStartDate, endDate: editedEndDate }),
       })
-
-      if (response.ok) {
-        await fetchMacrocycle()
-        setEditingDates(false)
+      if (!response.ok) {
+        setMacrocycle((m) => (m ? { ...m, startDate: prevStart, endDate: prevEnd } : null))
+        setEditedStartDate(prevStart.split('T')[0])
+        setEditedEndDate(prevEnd.split('T')[0])
+        setEditingDates(true)
       }
-    } catch (error) {
-      console.error('Error updating dates:', error)
+    } catch {
+      setMacrocycle((m) => (m ? { ...m, startDate: prevStart, endDate: prevEnd } : null))
+      setEditedStartDate(prevStart.split('T')[0])
+      setEditedEndDate(prevEnd.split('T')[0])
+      setEditingDates(true)
     }
   }
 
   async function handleStatusChange(newStatus: 'planned' | 'active' | 'paused' | 'completed') {
+    const prevStatus = macrocycle!.status
+    setMacrocycle((m) => (m ? { ...m, status: newStatus } : null))
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
-
-      if (response.ok) {
-        await fetchMacrocycle()
-      } else {
+      if (!response.ok) {
+        setMacrocycle((m) => (m ? { ...m, status: prevStatus } : null))
         const data = await response.json()
         alert(data.error || 'Failed to update status')
-        await fetchMacrocycle()
       }
-    } catch (error) {
-      console.error('Error updating status:', error)
+    } catch {
+      setMacrocycle((m) => (m ? { ...m, status: prevStatus } : null))
       alert('Failed to update status')
-      await fetchMacrocycle()
     }
   }
 
-  async function handleUpdatePhaseGoal(mesocycleId: string, goal: string) {
-    try {
-      const response = await fetch(`/api/mesocycles/${mesocycleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal }),
-      })
-
-      if (response.ok) {
-        await fetchMacrocycle()
-      }
-    } catch (error) {
-      console.error('Error updating phase goal:', error)
-    }
+  function handleUpdatePhaseGoal(mesocycleId: string, goal: string) {
+    optimisticPhaseUpdate(mesocycleId, { goal })
+    schedulePhaseSave(mesocycleId, { goal })
   }
 
-  async function handleUpdateTrainingDays(mesocycleId: string, days: number) {
-    try {
-      const response = await fetch(`/api/mesocycles/${mesocycleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trainingDaysPerWeek: days }),
-      })
-
-      if (response.ok) {
-        setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
-        await fetchMacrocycle()
-      }
-    } catch (error) {
-      console.error('Error updating training days:', error)
-    }
+  function handleUpdateTrainingDays(mesocycleId: string, days: number) {
+    optimisticPhaseUpdate(mesocycleId, { trainingDaysPerWeek: days })
+    setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
+    schedulePhaseSave(mesocycleId, { trainingDaysPerWeek: days })
   }
 
-  async function handleUpdateTrainingSplit(mesocycleId: string, split: string) {
-    try {
-      const response = await fetch(`/api/mesocycles/${mesocycleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trainingSplit: split }),
-      })
-
-      if (response.ok) {
-        setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
-        await fetchMacrocycle()
-      }
-    } catch (error) {
-      console.error('Error updating training split:', error)
-    }
+  function handleUpdateTrainingSplit(mesocycleId: string, split: string) {
+    optimisticPhaseUpdate(mesocycleId, { trainingSplit: split })
+    setDirtyStructure((prev) => new Set([...prev, mesocycleId]))
+    schedulePhaseSave(mesocycleId, { trainingSplit: split })
   }
 
   function handleUpdateStructure(phase: Mesocycle) {

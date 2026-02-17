@@ -407,16 +407,48 @@ export default function EditWorkoutPage() {
         return
       }
 
-      // Refresh workout data
-      const workoutRes = await fetch(`/api/workouts/${params.id}`)
-      if (!workoutRes.ok) {
-        alert('Failed to refresh workout data')
-        setSaving(false)
-        return
-      }
+      const savedData = await response.json()
+      const exerciseDetail = allExercises.find((e) => e.id === exerciseForm.exerciseId)
 
-      const data = await workoutRes.json()
-      setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
+      if (editingExercise) {
+        // Optimistic: update the exercise in local state from form values
+        setExercises((prev) =>
+          prev.map((ex) =>
+            ex.id === editingExercise
+              ? {
+                  ...ex,
+                  exercise: exerciseDetail ? { id: exerciseDetail.id, name: exerciseDetail.name } : ex.exercise,
+                  targetSets: parseInt(exerciseForm.targetSets),
+                  targetReps: exerciseForm.targetReps || null,
+                  targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
+                  tempo: exerciseForm.tempo || null,
+                  restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
+                  supersetWithPrevious: exerciseForm.supersetWithPrevious,
+                  notes: exerciseForm.notes || null,
+                }
+              : ex
+          )
+        )
+      } else {
+        // Add the new exercise using the ID returned by the API
+        setExercises((prev) => [
+          ...prev,
+          {
+            id: savedData.id,
+            orderIndex: prev.length,
+            targetSets: parseInt(exerciseForm.targetSets),
+            targetReps: exerciseForm.targetReps || null,
+            targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
+            tempo: exerciseForm.tempo || null,
+            restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
+            supersetWithPrevious: exerciseForm.supersetWithPrevious,
+            notes: exerciseForm.notes || null,
+            exercise: exerciseDetail
+              ? { id: exerciseDetail.id, name: exerciseDetail.name }
+              : { id: exerciseForm.exerciseId, name: '' },
+          },
+        ])
+      }
       setEditingExercise(null)
       setAddingExercise(false)
       resetExerciseForm()
