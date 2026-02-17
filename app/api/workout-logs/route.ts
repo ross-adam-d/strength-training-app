@@ -17,6 +17,7 @@ const workoutLogSchema = z.object({
     repsLeft: z.number().int().min(0).optional(),
     repsRight: z.number().int().min(0).optional(),
     weight: z.number().min(0),
+    duration: z.number().int().min(0).optional(),
     exerciseRpe: z.number().optional(),
     rir: z.number().int().min(0).optional(),
     skipped: z.boolean().optional(),

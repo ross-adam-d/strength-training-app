@@ -24,6 +24,8 @@ interface WorkoutExercise {
     name: string
     description?: string
     isUnilateral: boolean
+    isTimed: boolean
+    isBodyweight: boolean
   }
 }
 
@@ -57,6 +59,7 @@ interface ExerciseLog {
   repsLeft?: number | string  // For unilateral exercises
   repsRight?: number | string // For unilateral exercises
   weight: number | string
+  duration?: number | string  // For timed exercises (in seconds)
   rir?: number | string
   notes?: string
   skipped: boolean
@@ -680,17 +683,21 @@ export default function WorkoutLogPage() {
       return
     }
 
-    // Check for incomplete sets (handle unilateral vs regular exercises)
+    // Check for incomplete sets (handle unilateral vs timed vs regular exercises)
     const invalidLogs = nonSkipped.filter((log) => {
-      // Check if exercise is unilateral
+      // Check if exercise is unilateral or timed
       const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
       const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+      const isTimed = workoutExercise?.exercise.isTimed || false
 
       if (isUnilateral) {
         // For unilateral: check repsLeft, repsRight, and weight
         return log.repsLeft === '' || log.repsLeft === undefined ||
                log.repsRight === '' || log.repsRight === undefined ||
                log.weight === ''
+      } else if (isTimed) {
+        // For timed: check duration and weight
+        return log.duration === '' || log.duration === undefined || log.weight === ''
       } else {
         // For regular: check reps and weight
         return log.reps === '' || log.weight === ''
@@ -713,8 +720,17 @@ export default function WorkoutLogPage() {
     setExerciseLogs((prev) =>
       prev.map((log) => {
         if (log.skipped) return log
-        if (log.reps === '' || log.weight === '') {
-          return { ...log, skipped: true, reps: '', weight: '', rir: undefined, notes: '' }
+
+        // Check if incomplete (handle timed exercises)
+        const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+        const isTimed = workoutExercise?.exercise.isTimed || false
+
+        const isIncomplete = isTimed
+          ? (log.duration === '' || log.duration === undefined || log.weight === '')
+          : (log.reps === '' || log.weight === '')
+
+        if (isIncomplete) {
+          return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
         }
         return log
       })
@@ -749,9 +765,10 @@ export default function WorkoutLogPage() {
       overallRpe,
       exerciseLogs: exerciseLogs.map((log) => {
         if (log.skipped) {
-          // Check if exercise is unilateral
+          // Check if exercise is unilateral or timed
           const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
           const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+          const isTimed = workoutExercise?.exercise.isTimed || false
 
           return {
             exerciseId: log.exerciseId,
@@ -760,6 +777,7 @@ export default function WorkoutLogPage() {
             repsLeft: isUnilateral ? 0 : undefined,
             repsRight: isUnilateral ? 0 : undefined,
             weight: 0,
+            duration: isTimed ? 0 : undefined,
             skipped: true,
             rir: undefined,
             notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
@@ -779,9 +797,10 @@ export default function WorkoutLogPage() {
           throw new Error('Invalid numeric value in exercise log')
         }
 
-        // Handle unilateral vs regular exercises
+        // Handle unilateral vs timed vs regular exercises
         const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
         const isUnilateral = workoutExercise?.exercise.isUnilateral || false
+        const isTimed = workoutExercise?.exercise.isTimed || false
 
         if (isUnilateral) {
           // For unilateral exercises, send repsLeft and repsRight
@@ -801,6 +820,27 @@ export default function WorkoutLogPage() {
             reps: 0, // Required field, but not used for unilateral
             repsLeft: repsLeftValue,
             repsRight: repsRightValue,
+            weight: weightValue,
+            rir: rirValue,
+            skipped: false,
+            notes: log.setNumber === 1 ? (exerciseNotes[log.exerciseId] || undefined) : undefined,
+            exerciseRpe: log.setNumber === 1 ? (exerciseRpes[log.exerciseId] || undefined) : undefined,
+          }
+        } else if (isTimed) {
+          // For timed exercises, send duration
+          const durationStr = String(log.duration ?? '').trim()
+          const durationValue = durationStr === '' ? 0 : parseInt(durationStr, 10)
+
+          if (isNaN(durationValue)) {
+            console.error('Invalid duration:', { duration: log.duration, durationValue })
+            throw new Error('Invalid duration value in exercise log')
+          }
+
+          return {
+            exerciseId: log.exerciseId,
+            setNumber: log.setNumber,
+            reps: 0, // Required field but not used for timed exercises
+            duration: durationValue,
             weight: weightValue,
             rir: rirValue,
             skipped: false,
@@ -1028,12 +1068,14 @@ export default function WorkoutLogPage() {
             <CardBody>
               <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 pb-2 border-b mb-3`}>
                 <div />
-                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Weight (kg)</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">{we.exercise.isBodyweight ? 'Weight' : 'Weight (kg)'}</div>
                 {we.exercise.isUnilateral ? (
                   <>
                     <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Left</div>
                     <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Right</div>
                   </>
+                ) : we.exercise.isTimed ? (
+                  <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Duration (sec)</div>
                 ) : (
                   <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
                 )}
@@ -1081,8 +1123,8 @@ export default function WorkoutLogPage() {
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9.]*"
-                          placeholder="0"
-                          value={log.weight}
+                          placeholder={we.exercise.isBodyweight ? "BW" : "0"}
+                          value={we.exercise.isBodyweight && log.weight === '0' ? '' : log.weight}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
                           className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
@@ -1110,6 +1152,17 @@ export default function WorkoutLogPage() {
                               className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                             />
                           </>
+                        ) : we.exercise.isTimed ? (
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="0"
+                            value={log.duration ?? ''}
+                            onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'duration', e.target.value)}
+                            onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
+                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                          />
                         ) : (
                           <input
                             type="text"
