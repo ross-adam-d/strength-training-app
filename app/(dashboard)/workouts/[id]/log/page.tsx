@@ -170,9 +170,10 @@ export default function WorkoutLogPage() {
   const [timerFlashing, setTimerFlashing] = useState(false)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Timed exercise timer state (counts UP for duration tracking)
+  // Timed exercise timer state (counts DOWN from target duration)
   const [activeTimedTimerKey, setActiveTimedTimerKey] = useState<string | null>(null)
   const [timedTimerSeconds, setTimedTimerSeconds] = useState(0)
+  const [timedTimerFlashing, setTimedTimerFlashing] = useState(false)
   const timedTimerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Draft state
@@ -344,7 +345,7 @@ export default function WorkoutLogPage() {
     }
   }, [activeTimerKey])
 
-  // Timed exercise timer tick effect (counts UP for duration tracking)
+  // Timed exercise timer tick effect (counts DOWN from target duration)
   useEffect(() => {
     if (timedTimerIntervalRef.current) {
       clearInterval(timedTimerIntervalRef.current)
@@ -354,7 +355,21 @@ export default function WorkoutLogPage() {
     if (activeTimedTimerKey === null) return
 
     timedTimerIntervalRef.current = setInterval(() => {
-      setTimedTimerSeconds((prev) => prev + 1)
+      setTimedTimerSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timedTimerIntervalRef.current!)
+          timedTimerIntervalRef.current = null
+          playBeep()
+          setTimedTimerFlashing(true)
+          setTimeout(() => {
+            setTimedTimerFlashing(false)
+            setActiveTimedTimerKey(null)
+            setTimedTimerSeconds(0)
+          }, 2000)
+          return 0
+        }
+        return prev - 1
+      })
     }, 1000)
 
     return () => {
@@ -585,17 +600,22 @@ export default function WorkoutLogPage() {
   function startTimedTimer(exerciseId: string, setNumber: number) {
     const key = `${exerciseId}-${setNumber}`
     if (activeTimedTimerKey === key) {
-      // Stop timer and save duration to the log
-      const currentDuration = timedTimerSeconds
-      updateLog(exerciseId, setNumber, 'duration', currentDuration.toString())
+      // Stop timer early (before completion)
       setActiveTimedTimerKey(null)
       setTimedTimerSeconds(0)
+      setTimedTimerFlashing(false)
       return
     }
-    // Start timer from current duration value or 0
+    // Start countdown from target duration
     const log = exerciseLogs.find(l => l.exerciseId === exerciseId && l.setNumber === setNumber)
-    const currentDuration = log?.duration ? parseInt(String(log.duration)) : 0
-    setTimedTimerSeconds(isNaN(currentDuration) ? 0 : currentDuration)
+    const targetDuration = log?.duration ? parseInt(String(log.duration)) : 0
+
+    if (targetDuration <= 0) {
+      // No target set, do nothing
+      return
+    }
+
+    setTimedTimerSeconds(targetDuration)
     setActiveTimedTimerKey(key)
   }
 
@@ -1137,6 +1157,8 @@ export default function WorkoutLogPage() {
                   const timerKey = `${log.exerciseId}-${log.setNumber}`
                   const isTimerActive = activeTimerKey === timerKey
                   const isFlashing = isTimerActive && timerFlashing
+                  const isTimedTimerActive = activeTimedTimerKey === timerKey
+                  const isTimedFlashing = isTimedTimerActive && timedTimerFlashing
 
                   if (log.skipped) {
                     return (
@@ -1242,18 +1264,20 @@ export default function WorkoutLogPage() {
                           {we.exercise.isTimed && (
                             <>
                               <Button
-                                variant={activeTimedTimerKey === timerKey ? 'primary' : 'secondary'}
+                                variant={isTimedFlashing ? 'danger' : isTimedTimerActive ? 'primary' : 'secondary'}
                                 size="sm"
                                 className="min-h-[36px]"
                                 onClick={() => startTimedTimer(log.exerciseId, log.setNumber)}
+                                disabled={completedExercises.has(we.exercise.id)}
                               >
-                                {activeTimedTimerKey === timerKey ? `⏱ ${formatTimer(timedTimerSeconds)}` : '▶ Start Timer'}
+                                {isTimedFlashing ? '✓ Done!' : isTimedTimerActive ? `⏱ ${formatTimer(timedTimerSeconds)}` : '▶ Start Timer'}
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="min-h-[36px] text-gray-600 hover:bg-gray-100"
                                 onClick={() => adjustDuration(log.exerciseId, log.setNumber, -5)}
+                                disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
                               >
                                 -5s
                               </Button>
@@ -1262,6 +1286,7 @@ export default function WorkoutLogPage() {
                                 size="sm"
                                 className="min-h-[36px] text-gray-600 hover:bg-gray-100"
                                 onClick={() => adjustDuration(log.exerciseId, log.setNumber, 5)}
+                                disabled={isTimedTimerActive || completedExercises.has(we.exercise.id)}
                               >
                                 +5s
                               </Button>
