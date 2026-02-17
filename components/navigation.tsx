@@ -1,24 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-
-interface CurrentMicrocycle {
-  id: string
-  name: string
-  weekNumber: number
-  mesocycle: {
-    name: string
-  }
-}
 
 export function Navigation() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [currentPhase, setCurrentPhase] = useState<CurrentMicrocycle | null>(null)
 
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -28,18 +18,6 @@ export function Navigation() {
     { href: '/progress', label: 'Progress' },
     { href: '/workout/start', label: 'Log Manual Workout' },
   ]
-
-  useEffect(() => {
-    if (session?.user) {
-      fetch('/api/microcycles/current')
-        .then((res) => {
-          if (res.ok) return res.json()
-          return null
-        })
-        .then((data) => setCurrentPhase(data))
-        .catch(() => setCurrentPhase(null))
-    }
-  }, [session])
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -108,28 +86,6 @@ export function Navigation() {
                 {link.label}
               </Link>
             ))}
-            {currentPhase && (
-              <>
-                <div className="pt-2 mt-2 border-t" />
-                <Link
-                  href={`/microcycles/${currentPhase.id}`}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-sm font-medium transition ${
-                    pathname === `/microcycles/${currentPhase.id}`
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>Current Phase</span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Week {currentPhase.weekNumber}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{currentPhase.mesocycle.name}</div>
-                </Link>
-              </>
-            )}
             <div className="pt-3 mt-3 border-t flex items-center justify-between">
               <span className="text-sm text-gray-500">{session?.user?.email}</span>
               <button

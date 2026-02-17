@@ -321,12 +321,6 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                 <h4 className="font-semibold text-gray-900">
                   Week {selectedWeek.weekNumber} - {selectedWeek.name}
                 </h4>
-                <Link
-                  href={`/microcycles/${selectedWeek.id}`}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  View Full Week →
-                </Link>
               </div>
               <div className="grid md:grid-cols-2 gap-3">
                 {selectedWeek.workouts.map((workout) => {

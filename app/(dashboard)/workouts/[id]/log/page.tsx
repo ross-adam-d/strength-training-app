@@ -1495,7 +1495,7 @@ export default function WorkoutLogPage() {
       <div className="flex justify-end gap-3 mb-8">
         <Button
           variant="secondary"
-          onClick={() => router.push(`/microcycles/${workout.microcycle.id}`)}
+          onClick={() => router.push('/dashboard')}
         >
           Cancel
         </Button>
