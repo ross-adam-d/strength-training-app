@@ -2,11 +2,9 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -29,8 +27,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password')
       } else {
-        router.push('/dashboard')
-        router.refresh()
+        window.location.assign('/dashboard')
       }
     } catch (error) {
       setError('An error occurred. Please try again.')
