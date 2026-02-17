@@ -26,6 +26,7 @@ export function Navigation() {
     { href: '/workout-history', label: 'History' },
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
+    { href: '/workout/start', label: 'Log Manual Workout' },
   ]
 
   useEffect(() => {

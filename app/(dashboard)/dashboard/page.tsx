@@ -2,321 +2,313 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { NextWorkoutCard } from '@/components/NextWorkoutCard'
 
 // Cache dashboard data for 30 seconds
 export const revalidate = 30
 
+const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function formatVolume(kg: number): string {
+  if (kg >= 1000) return `${(kg / 1000).toFixed(1)}t`
+  return `${Math.round(kg).toLocaleString()}kg`
+}
+
+function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4 text-center">
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-sm font-medium text-gray-700 mt-1">{label}</p>
+      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+    </div>
+  )
+}
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return null
 
-  if (!session?.user?.id) {
-    return null
-  }
+  const now = new Date()
 
-  // Optimized: Only fetch active macrocycle metadata first
+  // Check if user has any training blocks at all
+  const blockCount = await prisma.macrocycle.count({
+    where: { userId: session.user.id },
+  })
+
+  // Find active block
   const activeBlock = await prisma.macrocycle.findFirst({
     where: { userId: session.user.id, status: 'active' },
     orderBy: { startDate: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      startDate: true,
-      endDate: true,
-    },
+    select: { id: true, name: true },
   })
 
-  // Optimized: Single query to find next uncompleted workout
-  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const now = new Date()
-  const todayDow = now.getDay()
-  let nextWorkout: { id: string; name: string; dayOfWeek: number | null; microcycle?: any } | null = null
-  let nextWorkoutLabel = ''
-
-  if (activeBlock) {
-    try {
-      // Find first uncompleted workout in a single query
-      const uncompletedWorkout = await prisma.workout.findFirst({
-        where: {
-          microcycle: {
-            mesocycle: {
-              macrocycleId: activeBlock.id,
-            },
-            endDate: {
-              gte: now, // Only current or future weeks
-            },
-          },
-          workoutLogs: {
-            none: {}, // No workout logs = uncompleted
-          },
-        },
-        orderBy: [
-          { microcycle: { weekNumber: 'asc' } },
-          { dayOfWeek: 'asc' },
-        ],
-        select: {
-          id: true,
-          name: true,
-          dayOfWeek: true,
-          microcycle: {
-            select: {
-              weekNumber: true,
-              startDate: true,
-              endDate: true,
-            },
-          },
-        },
-      })
-
-      if (uncompletedWorkout) {
-        nextWorkout = uncompletedWorkout
-        const microStartDate = new Date(uncompletedWorkout.microcycle.startDate)
-        const microEndDate = new Date(uncompletedWorkout.microcycle.endDate)
-
-        // Determine label
-        if (now >= microStartDate && now < microEndDate) {
-          // Current week
-          if (uncompletedWorkout.dayOfWeek === todayDow) {
-            nextWorkoutLabel = 'Today'
-          } else if (uncompletedWorkout.dayOfWeek !== null) {
-            nextWorkoutLabel = DAY_NAMES[uncompletedWorkout.dayOfWeek]
-          } else {
-            nextWorkoutLabel = 'This Week'
-          }
-        } else {
-          // Future week
-          nextWorkoutLabel = `Week ${uncompletedWorkout.microcycle.weekNumber}`
-        }
-      }
-    } catch (err) {
-      console.error('Error finding next workout:', err)
-    }
-  }
-
-  // Optimized: Single query to find current phase
-  let currentPhase: {
+  // Find current microcycle with workouts and phase info
+  let currentMicro: {
     id: string
-    name: string
-    focus: string | null
-    status: string
-    startDate: Date
-    endDate: Date
     weekNumber: number
-    totalWeeks: number
-    macrocycleId: string
-    macrocycleName: string
+    mesocycle: {
+      id: string
+      name: string
+      focus: string | null
+      microcycles: { id: string }[]
+    }
+    workouts: {
+      id: string
+      name: string
+      dayOfWeek: number | null
+      estimatedDuration: number | null
+      workoutLogs: { id: string }[]
+    }[]
   } | null = null
 
   if (activeBlock) {
-    try {
-      // Find mesocycle containing current week
-      const currentMesocycle = await prisma.mesocycle.findFirst({
-        where: {
-          macrocycleId: activeBlock.id,
-          microcycles: {
-            some: {
-              startDate: { lte: now },
-              endDate: { gt: now },
+    currentMicro = await prisma.microcycle.findFirst({
+      where: {
+        startDate: { lte: now },
+        endDate: { gt: now },
+        mesocycle: { macrocycleId: activeBlock.id },
+      },
+      select: {
+        id: true,
+        weekNumber: true,
+        mesocycle: {
+          select: {
+            id: true,
+            name: true,
+            focus: true,
+            microcycles: {
+              select: { id: true },
+              orderBy: { weekNumber: 'asc' },
             },
           },
         },
-        select: {
-          id: true,
-          name: true,
-          focus: true,
-          status: true,
-          startDate: true,
-          endDate: true,
-          microcycles: {
-            select: {
-              id: true,
-              weekNumber: true,
-              startDate: true,
-              endDate: true,
+        workouts: {
+          select: {
+            id: true,
+            name: true,
+            dayOfWeek: true,
+            estimatedDuration: true,
+            workoutLogs: {
+              take: 1,
+              orderBy: { completedAt: 'desc' },
+              select: { id: true },
             },
-            orderBy: { weekNumber: 'asc' },
           },
         },
-      })
-
-      if (currentMesocycle) {
-        // Find which week we're in
-        const currentWeekIndex = currentMesocycle.microcycles.findIndex(
-          (micro) => now >= micro.startDate && now < micro.endDate
-        )
-
-        currentPhase = {
-          id: currentMesocycle.id,
-          name: currentMesocycle.name,
-          focus: currentMesocycle.focus,
-          status: currentMesocycle.status || 'active',
-          startDate: currentMesocycle.startDate,
-          endDate: currentMesocycle.endDate,
-          weekNumber: currentWeekIndex + 1,
-          totalWeeks: currentMesocycle.microcycles.length,
-          macrocycleId: activeBlock.id,
-          macrocycleName: activeBlock.name,
-        }
-      }
-    } catch (err) {
-      console.error('Error finding current phase:', err)
-    }
+      },
+    })
   }
 
-  // Optimized: Only fetch what we need for display
+  // Phase stats — scoped to current mesocycle
+  let phaseStats = { sessions: 0, totalMinutes: 0, totalVolumeKg: 0 }
+  if (currentMicro) {
+    const phaseLogs = await prisma.workoutLog.findMany({
+      where: {
+        userId: session.user.id,
+        workout: {
+          microcycle: { mesocycleId: currentMicro.mesocycle.id },
+        },
+      },
+      select: {
+        duration: true,
+        exerciseLogs: {
+          where: { skipped: false },
+          select: { weight: true, reps: true, repsLeft: true, repsRight: true },
+        },
+      },
+    })
+
+    phaseStats.sessions = phaseLogs.length
+    phaseStats.totalMinutes = phaseLogs.reduce((sum, log) => sum + (log.duration || 0), 0)
+    phaseStats.totalVolumeKg = phaseLogs.reduce((sum, log) =>
+      sum + log.exerciseLogs.reduce((exSum, ex) => {
+        const reps = ex.reps || ((ex.repsLeft || 0) + (ex.repsRight || 0))
+        return exSum + ex.weight * reps
+      }, 0)
+    , 0)
+  }
+
+  // Sort workouts: days 0–6 in order, null (unscheduled) last
+  const sortedWorkouts = currentMicro
+    ? [...currentMicro.workouts].sort((a, b) => {
+        if (a.dayOfWeek === null) return 1
+        if (b.dayOfWeek === null) return -1
+        return a.dayOfWeek - b.dayOfWeek
+      })
+    : []
+
+  // Next uncompleted workout (first in sorted order with no log)
+  const nextWorkoutId = sortedWorkouts.find((w) => w.workoutLogs.length === 0)?.id ?? null
+
+  const totalWeeks = currentMicro?.mesocycle.microcycles.length ?? 0
+  const weekNumber = currentMicro?.weekNumber ?? 0
+  const progressPercent = totalWeeks > 0 ? Math.round((weekNumber / totalWeeks) * 100) : 0
+
+  // Recent workout logs
   const recentWorkoutLogs = await prisma.workoutLog.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    orderBy: {
-      completedAt: 'desc',
-    },
+    where: { userId: session.user.id },
+    orderBy: { completedAt: 'desc' },
     take: 5,
     select: {
       id: true,
       completedAt: true,
       duration: true,
-      workout: {
-        select: {
-          name: true,
-        },
-      },
+      workout: { select: { name: true } },
       exerciseLogs: {
-        select: {
-          exerciseId: true, // Only need ID for counting unique exercises
-        },
+        select: { exerciseId: true },
         distinct: ['exerciseId'],
       },
     },
   })
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here&apos;s your training overview.</p>
-      </div>
+    <div className="space-y-6">
 
-      <div className="mb-6 bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-3">Next Workout</h2>
-        <NextWorkoutCard workout={nextWorkout} label={nextWorkoutLabel} hasActiveBlock={!!activeBlock} />
-        <div className="mt-3 pt-3 border-t">
-          <Link href="/workout/start" className="text-sm text-primary-600 hover:text-primary-700">
-            + Log a manual workout
+      {/* No training blocks exist at all */}
+      {blockCount === 0 && (
+        <div className="text-center py-12 bg-white rounded-lg shadow-md">
+          <p className="text-gray-500 mb-4">No training block yet. Create one to get started.</p>
+          <Link
+            href="/macrocycles/setup"
+            className="inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition font-medium"
+          >
+            Create Training Block
           </Link>
         </div>
-      </div>
+      )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold">Current Phase</h2>
+      {/* Stats row — only shown when there's an active phase */}
+      {currentMicro && (
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <StatCard
+            label="Sessions"
+            value={phaseStats.sessions.toString()}
+            sub="this phase"
+          />
+          <StatCard
+            label="Time"
+            value={`${(phaseStats.totalMinutes / 60).toFixed(1)}h`}
+            sub="this phase"
+          />
+          <StatCard
+            label="Volume"
+            value={formatVolume(phaseStats.totalVolumeKg)}
+            sub="this phase"
+          />
+        </div>
+      )}
+
+      {/* Current week */}
+      {currentMicro && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Phase header with progress */}
+          <div className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="font-semibold text-gray-900">{currentMicro.mesocycle.name}</h2>
+                <p className="text-sm text-gray-500">Week {weekNumber} of {totalWeeks}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {currentMicro.mesocycle.focus && (
+                  <span className="px-2.5 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full">
+                    {currentMicro.mesocycle.focus}
+                  </span>
+                )}
+                <span className="text-sm font-medium text-gray-500">{progressPercent}%</span>
+              </div>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-primary-600 h-full rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
           </div>
 
-          {!currentPhase ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No active training phase</p>
-              <Link
-                href="/macrocycles"
-                className="inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition"
-              >
-                Create Your First Training Block
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Phase header */}
-              <div>
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <Link
-                      href={`/macrocycles/${currentPhase.macrocycleId}`}
-                      className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition"
-                    >
-                      {currentPhase.name}
-                    </Link>
-                    <p className="text-sm text-gray-600">{currentPhase.macrocycleName}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {currentPhase.focus && (
-                      <span className="px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-full">
-                        {currentPhase.focus}
+          {/* Workout rows */}
+          <div className="divide-y">
+            {sortedWorkouts.length === 0 && (
+              <p className="px-6 py-6 text-sm text-gray-500 text-center">No workouts scheduled this week.</p>
+            )}
+            {sortedWorkouts.map((workout) => {
+              const isCompleted = workout.workoutLogs.length > 0
+              const isNext = workout.id === nextWorkoutId
+              const logId = workout.workoutLogs[0]?.id
+
+              return (
+                <div
+                  key={workout.id}
+                  className={`flex items-center justify-between px-6 py-4 ${
+                    isNext ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {isCompleted && (
+                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      <span className={`font-medium truncate ${isCompleted ? 'text-gray-500' : 'text-gray-900'}`}>
+                        {workout.name}
                       </span>
-                    )}
-                    <span
-                      className={`px-3 py-1 text-sm rounded-full ${
-                        currentPhase.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : currentPhase.status === 'completed'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
+                    </div>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {workout.dayOfWeek !== null
+                        ? DAY_NAMES_FULL[workout.dayOfWeek]
+                        : 'Unscheduled'}
+                      {workout.estimatedDuration && ` · ${workout.estimatedDuration} min`}
+                    </p>
+                  </div>
+
+                  {isCompleted ? (
+                    <Link
+                      href={`/workout-logs/${logId}`}
+                      className="ml-3 flex-shrink-0 px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition"
+                    >
+                      View
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/workouts/${workout.id}/log`}
+                      className={`ml-3 flex-shrink-0 px-4 py-1.5 text-sm rounded-md font-medium transition ${
+                        isNext
+                          ? 'bg-primary-600 text-white hover:bg-primary-700'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      {currentPhase.status}
-                    </span>
-                  </div>
+                      Start
+                    </Link>
+                  )}
                 </div>
-
-                {/* Week progress */}
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="font-medium">Week {currentPhase.weekNumber} of {currentPhase.totalWeeks}</span>
-                  <span className="text-gray-400">•</span>
-                  <span>
-                    {currentPhase.startDate.toLocaleDateString()} - {currentPhase.endDate.toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="relative">
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-primary-600 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${(currentPhase.weekNumber / currentPhase.totalWeeks) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1 text-right">
-                  {Math.round((currentPhase.weekNumber / currentPhase.totalWeeks) * 100)}% complete
-                </p>
-              </div>
-
-              {/* View current week link */}
-              <div className="pt-3 border-t">
-                <Link
-                  href={`/microcycles/${currentPhase.id}`}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  View Week Details →
-                </Link>
-              </div>
-            </div>
-          )}
+              )
+            })}
+          </div>
         </div>
+      )}
 
+      {/* Recent workouts */}
+      {recentWorkoutLogs.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Recent Workouts</h2>
-
-          {recentWorkoutLogs.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No workouts logged yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentWorkoutLogs.map((log) => (
-                <Link key={log.id} href={`/workout-logs/${log.id}`} className="block p-3 border rounded-md hover:bg-gray-50 transition">
-                  <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
-                  <p className="text-sm text-gray-600">
-                    {new Date(log.completedAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {log.exerciseLogs.length} exercises • {log.duration || '—'} min
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="space-y-3">
+            {recentWorkoutLogs.map((log) => (
+              <Link
+                key={log.id}
+                href={`/workout-logs/${log.id}`}
+                className="block p-3 border rounded-md hover:bg-gray-50 transition"
+              >
+                <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
+                <p className="text-sm text-gray-600">
+                  {new Date(log.completedAt).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {log.exerciseLogs.length} exercises{log.duration ? ` · ${log.duration} min` : ''}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
