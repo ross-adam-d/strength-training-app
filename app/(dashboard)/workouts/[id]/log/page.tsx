@@ -170,6 +170,11 @@ export default function WorkoutLogPage() {
   const [timerFlashing, setTimerFlashing] = useState(false)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Timed exercise timer state (counts UP for duration tracking)
+  const [activeTimedTimerKey, setActiveTimedTimerKey] = useState<string | null>(null)
+  const [timedTimerSeconds, setTimedTimerSeconds] = useState(0)
+  const timedTimerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Draft state
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [hasDraft, setHasDraft] = useState(false)
@@ -338,6 +343,27 @@ export default function WorkoutLogPage() {
       }
     }
   }, [activeTimerKey])
+
+  // Timed exercise timer tick effect (counts UP for duration tracking)
+  useEffect(() => {
+    if (timedTimerIntervalRef.current) {
+      clearInterval(timedTimerIntervalRef.current)
+      timedTimerIntervalRef.current = null
+    }
+
+    if (activeTimedTimerKey === null) return
+
+    timedTimerIntervalRef.current = setInterval(() => {
+      setTimedTimerSeconds((prev) => prev + 1)
+    }, 1000)
+
+    return () => {
+      if (timedTimerIntervalRef.current) {
+        clearInterval(timedTimerIntervalRef.current)
+        timedTimerIntervalRef.current = null
+      }
+    }
+  }, [activeTimedTimerKey])
 
   // Auto-save draft with debouncing
   useEffect(() => {
@@ -554,6 +580,30 @@ export default function WorkoutLogPage() {
     setActiveTimerKey(key)
     setTimerSecondsLeft(restPeriod)
     setTimerFlashing(false)
+  }
+
+  function startTimedTimer(exerciseId: string, setNumber: number) {
+    const key = `${exerciseId}-${setNumber}`
+    if (activeTimedTimerKey === key) {
+      // Stop timer and save duration to the log
+      const currentDuration = timedTimerSeconds
+      updateLog(exerciseId, setNumber, 'duration', currentDuration.toString())
+      setActiveTimedTimerKey(null)
+      setTimedTimerSeconds(0)
+      return
+    }
+    // Start timer from current duration value or 0
+    const log = exerciseLogs.find(l => l.exerciseId === exerciseId && l.setNumber === setNumber)
+    const currentDuration = log?.duration ? parseInt(String(log.duration)) : 0
+    setTimedTimerSeconds(isNaN(currentDuration) ? 0 : currentDuration)
+    setActiveTimedTimerKey(key)
+  }
+
+  function adjustDuration(exerciseId: string, setNumber: number, adjustment: number) {
+    const log = exerciseLogs.find(l => l.exerciseId === exerciseId && l.setNumber === setNumber)
+    const currentDuration = log?.duration ? parseInt(String(log.duration)) : 0
+    const newDuration = Math.max(0, (isNaN(currentDuration) ? 0 : currentDuration) + adjustment)
+    updateLog(exerciseId, setNumber, 'duration', newDuration.toString())
   }
 
   function skipSet(exerciseId: string, setNumber: number) {
@@ -1189,7 +1239,35 @@ export default function WorkoutLogPage() {
                       <div className="ml-[2.5rem] space-y-2">
                         {/* Better spacing and larger buttons for mobile */}
                         <div className={`flex items-center gap-2 flex-wrap ${completedExercises.has(we.exercise.id) ? 'opacity-60' : ''}`}>
-                          {showRestTimer && (
+                          {we.exercise.isTimed && (
+                            <>
+                              <Button
+                                variant={activeTimedTimerKey === timerKey ? 'primary' : 'secondary'}
+                                size="sm"
+                                className="min-h-[36px]"
+                                onClick={() => startTimedTimer(log.exerciseId, log.setNumber)}
+                              >
+                                {activeTimedTimerKey === timerKey ? `⏱ ${formatTimer(timedTimerSeconds)}` : '▶ Start Timer'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="min-h-[36px] text-gray-600 hover:bg-gray-100"
+                                onClick={() => adjustDuration(log.exerciseId, log.setNumber, -5)}
+                              >
+                                -5s
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="min-h-[36px] text-gray-600 hover:bg-gray-100"
+                                onClick={() => adjustDuration(log.exerciseId, log.setNumber, 5)}
+                              >
+                                +5s
+                              </Button>
+                            </>
+                          )}
+                          {showRestTimer && !we.exercise.isTimed && (
                             <Button
                               variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}
                               size="sm"
