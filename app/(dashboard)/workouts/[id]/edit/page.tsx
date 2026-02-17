@@ -235,13 +235,8 @@ export default function EditWorkoutPage() {
   // Validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  // Apply to rest of phase modal (workout-level)
+  // Apply to rest of phase modal (workout-level only)
   const [showScopeModal, setShowScopeModal] = useState(false)
-
-  // Apply to rest of phase modal (exercise-level)
-  const [showExerciseScopeModal, setShowExerciseScopeModal] = useState(false)
-  const [originalSupersetValue, setOriginalSupersetValue] = useState(false)
-  const [pendingExerciseSave, setPendingExerciseSave] = useState<any>(null)
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -316,7 +311,6 @@ export default function EditWorkoutPage() {
       supersetWithPrevious: ex.supersetWithPrevious,
       notes: ex.notes || '',
     })
-    setOriginalSupersetValue(ex.supersetWithPrevious)
     setEditingExercise(exerciseId)
   }
 
@@ -345,25 +339,16 @@ export default function EditWorkoutPage() {
       return
     }
 
-    // Check if we're editing and the superset value changed
-    if (editingExercise && exerciseForm.supersetWithPrevious !== originalSupersetValue) {
-      // Show scope modal
-      setPendingExerciseSave({ applyToRest: false })
-      setShowExerciseScopeModal(true)
-      return
-    }
-
-    // Otherwise save immediately (no superset change)
+    // Always save exercise changes locally (this week only).
+    // Propagation to remaining weeks happens via the workout-level Save button.
     await performExerciseSave(false)
   }
 
   async function performExerciseSave(applyToRestOfPhase: boolean) {
     if (!editingExercise && !addingExercise) return
 
-    // Re-validate before saving (in case called from modal)
+    // Re-validate before saving
     if (!validateExerciseForm()) {
-      setShowExerciseScopeModal(false)
-      setPendingExerciseSave(null)
       return
     }
 
@@ -434,8 +419,6 @@ export default function EditWorkoutPage() {
       setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
       setEditingExercise(null)
       setAddingExercise(false)
-      setShowExerciseScopeModal(false)
-      setPendingExerciseSave(null)
       resetExerciseForm()
       setSaving(false)
     } catch (error) {
@@ -899,35 +882,6 @@ export default function EditWorkoutPage() {
         </Modal>
       )}
 
-      {/* Apply to Rest of Phase Modal (Exercise-level) */}
-      {showExerciseScopeModal && (
-        <Modal
-          isOpen={true}
-          onClose={() => {
-            setShowExerciseScopeModal(false)
-            setPendingExerciseSave(null)
-          }}
-          title="Apply Superset Change"
-        >
-          <p className="text-gray-700 mb-4">
-            You changed the superset setting for this exercise. Do you want this change to apply to <strong>all remaining weeks</strong> in this phase?
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => performExerciseSave(true)} className="w-full">
-              Yes - Apply to All Remaining
-            </Button>
-            <Button variant="secondary" onClick={() => performExerciseSave(false)} className="w-full">
-              No - This Week Only
-            </Button>
-            <Button variant="ghost" onClick={() => {
-              setShowExerciseScopeModal(false)
-              setPendingExerciseSave(null)
-            }} className="w-full">
-              Cancel
-            </Button>
-          </div>
-        </Modal>
-      )}
 
     </div>
   )

@@ -242,9 +242,11 @@ export async function PATCH(
                 orderIndex: ex.orderIndex,
                 targetSets: ex.targetSets,
                 targetReps: ex.targetReps,
+                targetRpe: ex.targetRpe,
                 targetRir: ex.targetRir,
                 tempo: ex.tempo,
                 restPeriod: ex.restPeriod,
+                supersetWithPrevious: ex.supersetWithPrevious,
                 notes: ex.notes,
               },
             })
