@@ -240,17 +240,16 @@ model ExerciseLog {
 | Phase 6C | Critical Bug Fixes & UX | 3h | ✅ Complete |
 | Session 16 | Performance Optimizations | 2h | ✅ Complete |
 | Session 17 | Code Quality & Polish | 2h | ✅ Complete |
-| **User Requests** | **Dashboard + Exercise Library + Wizard** | **4-6h** | **📋 Next** |
+| **User Requests** | **Dashboard + Exercise Library + Wizard** | **4-6h** | **✅ Complete** |
 | Session 18 | Live Workout Exercise Management | 3h | ✅ Complete |
-| Phase 6D | Additional Exercise Types (Timed) | 4-5h | 📋 Pending |
-| Phase 7 | Dashboard Analytics | 16-20h | 📋 Pending |
+| Session 19 | Phase 6D (Timed/BW) + Dashboard Redesign | 5h | ✅ Complete |
 | Phase 8 | Progress Enhancements | 10-12h | 📋 Pending |
 | Phase 9 | Training Block Menu | 12-16h | 📋 Pending |
 
-**Completed**: 74 hours
-**Next Up**: 4-5 hours (Phase 6D - Timed Exercises)
-**Remaining**: 42-53 hours (Phases 6D-9)
-**Total Project**: 116-127 hours
+**Completed**: ~79 hours
+**Next Up**: Progressive overload tracking, exercise analytics, data export
+**Remaining**: ~22-28 hours (Phases 8-9)
+**Total Project**: ~101-107 hours
 
 ---
 
@@ -341,5 +340,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 16, 2026 (End of Session 18)
-**Next Session**: Phase 6D - Additional Exercise Types (Timed exercises, bodyweight defaults)
+**Last Updated**: Feb 17, 2026 (End of Session 19)
+**Next Session**: Progressive overload tracking, exercise analytics, or data export
