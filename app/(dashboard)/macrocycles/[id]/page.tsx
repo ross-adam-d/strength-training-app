@@ -66,6 +66,7 @@ export default function MacrocycleDetailPage() {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set())
   const [dirtyStructure, setDirtyStructure] = useState<Set<string>>(new Set())
   const [updatingStructure, setUpdatingStructure] = useState<string | null>(null)
+  const [rebuildModal, setRebuildModal] = useState<Mesocycle | null>(null)
 
   const fetchMacrocycle = useCallback(async () => {
     try {
@@ -219,25 +220,24 @@ export default function MacrocycleDetailPage() {
     }
   }
 
-  async function handleUpdateStructure(phase: Mesocycle) {
+  function handleUpdateStructure(phase: Mesocycle) {
     if (!phase.trainingDaysPerWeek || !phase.trainingSplit) {
       alert('Please set both training days and training split before updating the structure.')
       return
     }
+    setRebuildModal(phase)
+  }
 
-    const confirmed = confirm(
-      `Rebuild workout structure for Phase ${macrocycle!.mesocycles.indexOf(phase) + 1}?\n\n` +
-      `${phase.trainingDaysPerWeek} days/week · ${phase.trainingSplit}\n\n` +
-      `All existing workouts and exercise assignments for this phase will be replaced.`
-    )
-    if (!confirmed) return
-
+  async function confirmRebuild(mode: 'default' | 'manual') {
+    if (!rebuildModal) return
+    const phase = rebuildModal
+    setRebuildModal(null)
     setUpdatingStructure(phase.id)
     try {
       const res = await fetch(`/api/mesocycles/${phase.id}/generate-workouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'manual', regenerate: true }),
+        body: JSON.stringify({ mode, regenerate: true }),
       })
 
       if (res.ok) {
@@ -576,6 +576,59 @@ export default function MacrocycleDetailPage() {
           })}
         </div>
       )}
+
+      {/* Rebuild workouts modal */}
+      {rebuildModal && (() => {
+        const phaseIndex = macrocycle!.mesocycles.indexOf(rebuildModal) + 1
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="p-5 border-b">
+                <h2 className="text-lg font-bold text-gray-900">Rebuild Phase {phaseIndex} Workouts</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {rebuildModal.trainingDaysPerWeek} days/week · {rebuildModal.trainingSplit}
+                </p>
+              </div>
+
+              <div className="p-5">
+                <p className="text-sm text-gray-600 mb-5">
+                  This will replace the current workout structure. Choose how to set up the new workouts:
+                </p>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => confirmRebuild('default')}
+                    className="w-full text-left p-4 rounded-lg border-2 border-primary-200 bg-primary-50 hover:bg-primary-100 transition"
+                  >
+                    <p className="font-semibold text-primary-800 text-sm">🎯 Create Default Workout Structure</p>
+                    <p className="text-xs text-primary-600 mt-0.5">Auto-populate workouts with exercises based on your training split</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => confirmRebuild('manual')}
+                    className="w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+                  >
+                    <p className="font-semibold text-gray-800 text-sm">✏️ Manually Create Workouts</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Create empty workout slots and add exercises yourself</p>
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-5 pb-5">
+                <button
+                  type="button"
+                  onClick={() => setRebuildModal(null)}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700 py-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
