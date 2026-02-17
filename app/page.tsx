@@ -38,8 +38,8 @@ export default function Home() {
           <div className="inline-block px-3 py-1 bg-primary-100 text-primary-700 text-sm font-medium rounded-full mb-6">
             Free beta — no credit card required
           </div>
-          <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight mb-5 leading-tight">
-            Build smarter,{' '}
+          <h1 className="text-5xl font-extrabold tracking-tight mb-5 leading-tight">
+            <span className="text-primary-900">Build smarter,</span>{' '}
             <span className="text-primary-600">train harder</span>
           </h1>
           <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
