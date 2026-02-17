@@ -393,7 +393,10 @@ export default function MacrocycleDetailPage() {
           {macrocycle.mesocycles.map((phase, index) => {
             const isExpanded = expandedPhases.has(phase.id)
             const weekCount = phase.microcycles.length
-            const isLocked = phase.status === 'active' || phase.status === 'completed'
+            // Only lock phases that have actually started AND have been activated/completed.
+            // Future phases (startDate > today) are always editable regardless of status.
+            const phaseHasStarted = new Date(phase.startDate) <= new Date()
+            const isLocked = phaseHasStarted && (phase.status === 'active' || phase.status === 'completed')
 
             return (
               <Card key={phase.id}>
