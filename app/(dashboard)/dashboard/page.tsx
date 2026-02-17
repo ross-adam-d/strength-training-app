@@ -200,21 +200,14 @@ export default async function DashboardPage() {
       {/* Current week */}
       {currentMicro && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Phase header with progress */}
-          <div className="px-6 py-4 border-b">
+          {/* Phase header with progress — clickable link to phase details */}
+          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b hover:bg-gray-50 transition">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-gray-900">{currentMicro.mesocycle.name}</h2>
                 <p className="text-sm text-gray-500">Week {weekNumber} of {totalWeeks}</p>
               </div>
-              <div className="flex items-center gap-2">
-                {currentMicro.mesocycle.focus && (
-                  <span className="px-2.5 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full">
-                    {currentMicro.mesocycle.focus}
-                  </span>
-                )}
-                <span className="text-sm font-medium text-gray-500">{progressPercent}%</span>
-              </div>
+              <span className="text-sm font-medium text-gray-500">{progressPercent}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
@@ -222,7 +215,7 @@ export default async function DashboardPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-          </div>
+          </Link>
 
           {/* Workout rows */}
           <div className="divide-y">
@@ -238,7 +231,7 @@ export default async function DashboardPage() {
                 <div
                   key={workout.id}
                   className={`flex items-center justify-between px-6 py-4 ${
-                    isNext ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''
+                    isNext ? 'ring-2 ring-inset ring-primary-500' : ''
                   }`}
                 >
                   <div className="flex-1 min-w-0">
