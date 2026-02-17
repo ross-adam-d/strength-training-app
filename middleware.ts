@@ -40,8 +40,9 @@ function canAccess(token: {
   }
 
   if (!status) {
-    // No subscription at all
-    return { canWrite: false, isExpired: true }
+    // No subscription data in JWT — stale token (logged in before subscription feature).
+    // Fail open: let them through, the SubscriptionBanner will show accurate state via DB read.
+    return { canWrite: true, isExpired: false }
   }
 
   // READ_ONLY, CANCELLED, PAST_DUE
