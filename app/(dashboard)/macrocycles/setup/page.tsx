@@ -12,24 +12,29 @@ export default function SetupPage() {
   const router = useRouter()
   const [totalWeeks, setTotalWeeks] = useState(12)
   const [blockName, setBlockName] = useState('')
+  const [activeWeeks, setActiveWeeks] = useState(3)
+  const [recoveryWeeks, setRecoveryWeeks] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [startDate] = useState(() => new Date())
   const [showActiveBlockWarning, setShowActiveBlockWarning] = useState(false)
   const [existingActiveBlockId, setExistingActiveBlockId] = useState<string | null>(null)
 
+  const phaseLength = activeWeeks + recoveryWeeks
+  const estimatedPhases = Math.ceil(totalWeeks / phaseLength)
+
   // Generate simplified plan structure (empty phases/weeks, no workouts)
   function generateSimplifiedPlan() {
     const endDate = addWeeks(startDate, totalWeeks)
     const name = blockName.trim() || `${totalWeeks}-Week Training Block`
 
-    // Create one phase per 4 weeks (or remaining weeks)
+    // Create phases using configured phase length (active + recovery weeks)
     const mesocycles = []
     let currentWeek = 0
     let phaseNum = 1
 
     while (currentWeek < totalWeeks) {
-      const phaseWeeks = Math.min(4, totalWeeks - currentWeek)
+      const phaseWeeks = Math.min(phaseLength, totalWeeks - currentWeek)
       const phaseStart = addWeeks(startDate, currentWeek)
       const phaseEnd = addWeeks(phaseStart, phaseWeeks)
 
@@ -71,6 +76,10 @@ export default function SetupPage() {
     e?.preventDefault()
     if (totalWeeks < 4 || totalWeeks > 52) {
       setError('Duration must be between 4 and 52 weeks')
+      return
+    }
+    if (phaseLength < 1 || phaseLength > 12) {
+      setError('Phase length must be between 1 and 12 weeks')
       return
     }
 
@@ -153,7 +162,7 @@ export default function SetupPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duration: <span className="text-primary-600 font-bold">{totalWeeks} weeks</span>
+                Total Duration: <span className="text-primary-600 font-bold">{totalWeeks} weeks</span>
               </label>
               <input
                 type="range"
@@ -168,9 +177,68 @@ export default function SetupPage() {
                 <span>4 weeks</span>
                 <span>52 weeks</span>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Phases will be created automatically (4 weeks each).
-              </p>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-gray-900">Phase Structure</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Active Training Weeks: <span className="text-primary-600 font-bold">{activeWeeks} {activeWeeks === 1 ? 'week' : 'weeks'}</span>
+                </label>
+                <input
+                  type="range"
+                  value={activeWeeks}
+                  onChange={(e) => setActiveWeeks(parseInt(e.target.value))}
+                  min={1}
+                  max={8}
+                  step={1}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>1 week</span>
+                  <span>8 weeks</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Weeks of progressive training before recovery
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Recovery/Deload Weeks: <span className="text-primary-600 font-bold">{recoveryWeeks} {recoveryWeeks === 1 ? 'week' : 'weeks'}</span>
+                </label>
+                <input
+                  type="range"
+                  value={recoveryWeeks}
+                  onChange={(e) => setRecoveryWeeks(parseInt(e.target.value))}
+                  min={0}
+                  max={3}
+                  step={1}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0 weeks</span>
+                  <span>3 weeks</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Lighter weeks for recovery between phases
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-gray-300">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Phase Length:</span>
+                  <span className="text-lg font-bold text-primary-600">{phaseLength} weeks</span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm text-gray-600">Estimated Phases:</span>
+                  <span className="text-sm font-semibold text-gray-900">{estimatedPhases} phases</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  ({activeWeeks} active + {recoveryWeeks} recovery = {phaseLength} weeks per phase)
+                </p>
+              </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
