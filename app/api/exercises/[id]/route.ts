@@ -53,7 +53,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { isUnilateral, isTimed, name, description, muscleGroups, equipment } = body
+    const { isUnilateral, isTimed, isBodyweight, name, description, muscleGroups, equipment } = body
 
     // Find the exercise
     const exercise = await prisma.exercise.findUnique({ where: { id } })
@@ -61,13 +61,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Exercise not found' }, { status: 404 })
     }
 
-    // For public exercises: only allow updating isUnilateral and isTimed flags
+    // For public exercises: only allow updating isUnilateral, isTimed, and isBodyweight flags
     if (exercise.isPublic) {
       const updated = await prisma.exercise.update({
         where: { id },
         data: {
           isUnilateral: isUnilateral !== undefined ? isUnilateral : exercise.isUnilateral,
           isTimed: isTimed !== undefined ? isTimed : exercise.isTimed,
+          isBodyweight: isBodyweight !== undefined ? isBodyweight : exercise.isBodyweight,
         },
       })
       return NextResponse.json(updated)
@@ -87,6 +88,7 @@ export async function PATCH(
         equipment: equipment || exercise.equipment,
         isUnilateral: isUnilateral !== undefined ? isUnilateral : exercise.isUnilateral,
         isTimed: isTimed !== undefined ? isTimed : exercise.isTimed,
+        isBodyweight: isBodyweight !== undefined ? isBodyweight : exercise.isBodyweight,
       },
     })
 

@@ -16,6 +16,7 @@ interface Exercise {
   isPublic: boolean
   isUnilateral: boolean
   isTimed: boolean
+  isBodyweight: boolean
   createdById?: string
 }
 
@@ -83,6 +84,7 @@ export default function ExercisesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUnilateral, setIsUnilateral] = useState(false)
   const [isTimed, setIsTimed] = useState(false)
+  const [isBodyweight, setIsBodyweight] = useState(false)
 
   useEffect(() => {
     fetchExercises()
@@ -152,6 +154,7 @@ export default function ExercisesPage() {
     setIsSubmitting(false)
     setIsUnilateral(false)
     setIsTimed(false)
+    setIsBodyweight(false)
     setEditingExercise(null)
   }
 
@@ -161,6 +164,7 @@ export default function ExercisesPage() {
     setSelectedEquipment(exercise.equipment)
     setIsUnilateral(exercise.isUnilateral)
     setIsTimed(exercise.isTimed)
+    setIsBodyweight(exercise.isBodyweight)
     setFormError('')
     setIsEditModalOpen(true)
   }
@@ -175,11 +179,12 @@ export default function ExercisesPage() {
     try {
       const formData = new FormData(event.currentTarget)
 
-      // For public exercises: only send isUnilateral and isTimed
+      // For public exercises: only send isUnilateral, isTimed, and isBodyweight
       const data = editingExercise.isPublic
         ? {
             isUnilateral,
             isTimed,
+            isBodyweight,
           }
         : {
             name: formData.get('name') as string,
@@ -188,6 +193,7 @@ export default function ExercisesPage() {
             equipment: selectedEquipment,
             isUnilateral,
             isTimed,
+            isBodyweight,
           }
 
       const response = await fetch(`/api/exercises/${editingExercise.id}`, {
@@ -239,6 +245,7 @@ export default function ExercisesPage() {
       isPublic: formData.get('isPublic') === 'on',
       isUnilateral,
       isTimed,
+      isBodyweight,
     }
 
     setIsSubmitting(true)
@@ -527,6 +534,18 @@ export default function ExercisesPage() {
                 Timed exercise (e.g., planks, wall sits, dead hangs)
               </label>
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isBodyweight"
+                checked={isBodyweight}
+                onChange={(e) => setIsBodyweight(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="isBodyweight" className="text-sm text-gray-700">
+                Bodyweight exercise (e.g., push-ups, pull-ups, dips)
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -572,7 +591,7 @@ export default function ExercisesPage() {
                   <strong>Editing public exercise:</strong> {editingExercise.name}
                 </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  You can only modify the Unilateral and Timed flags for public exercises.
+                  You can only modify the Unilateral, Timed, and Bodyweight flags for public exercises.
                 </p>
               </div>
 
@@ -605,6 +624,22 @@ export default function ExercisesPage() {
                     <div className="font-medium">Timed Exercise</div>
                     <div className="text-xs text-gray-500">
                       Exercise measured in time instead of reps (e.g., planks, wall sits, dead hangs)
+                    </div>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-isBodyweight"
+                    checked={isBodyweight}
+                    onChange={(e) => setIsBodyweight(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-isBodyweight" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Bodyweight Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Exercise uses bodyweight (e.g., push-ups, pull-ups, dips)
                     </div>
                   </label>
                 </div>
@@ -717,6 +752,22 @@ export default function ExercisesPage() {
                     <div className="font-medium">Timed Exercise</div>
                     <div className="text-xs text-gray-500">
                       Exercise measured in time instead of reps (e.g., planks, wall sits, dead hangs)
+                    </div>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="edit-custom-isBodyweight"
+                    checked={isBodyweight}
+                    onChange={(e) => setIsBodyweight(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="edit-custom-isBodyweight" className="text-sm text-gray-700 flex-1">
+                    <div className="font-medium">Bodyweight Exercise</div>
+                    <div className="text-xs text-gray-500">
+                      Exercise uses bodyweight (e.g., push-ups, pull-ups, dips)
                     </div>
                   </label>
                 </div>

@@ -14,6 +14,7 @@ const exerciseSchema = z.object({
   isPublic: z.boolean().default(false),
   isUnilateral: z.boolean().default(false),
   isTimed: z.boolean().default(false),
+  isBodyweight: z.boolean().default(false),
 })
 
 export async function GET(request: Request) {
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
         isPublic: true,
         isUnilateral: true,
         isTimed: true,
+        isBodyweight: true,
         createdById: true,
       },
     })
