@@ -74,6 +74,8 @@ export async function GET(
                 name: true,
                 description: true,
                 isUnilateral: true,
+                isTimed: true,
+                isBodyweight: true,
               },
             },
           },
