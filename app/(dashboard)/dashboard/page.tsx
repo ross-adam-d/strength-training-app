@@ -29,19 +29,34 @@ export default async function DashboardPage() {
 
   const now = new Date()
 
-  // Check if user has any training blocks at all
-  const blockCount = await prisma.macrocycle.count({
-    where: { userId: session.user.id },
-  })
+  // Stage 1: independent queries in parallel
+  const [blockCount, activeBlock, recentWorkoutLogs] = await Promise.all([
+    prisma.macrocycle.count({
+      where: { userId: session.user.id },
+    }),
+    prisma.macrocycle.findFirst({
+      where: { userId: session.user.id, status: 'active' },
+      orderBy: { startDate: 'desc' },
+      select: { id: true, name: true },
+    }),
+    prisma.workoutLog.findMany({
+      where: { userId: session.user.id },
+      orderBy: { completedAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        completedAt: true,
+        duration: true,
+        workout: { select: { name: true } },
+        exerciseLogs: {
+          select: { exerciseId: true },
+          distinct: ['exerciseId'],
+        },
+      },
+    }),
+  ])
 
-  // Find active block
-  const activeBlock = await prisma.macrocycle.findFirst({
-    where: { userId: session.user.id, status: 'active' },
-    orderBy: { startDate: 'desc' },
-    select: { id: true, name: true },
-  })
-
-  // Find current microcycle with workouts and phase info
+  // Stage 2: depends on activeBlock — find current microcycle with workouts and phase info
   let currentMicro: {
     id: string
     weekNumber: number
@@ -142,23 +157,6 @@ export default async function DashboardPage() {
   const totalWeeks = currentMicro?.mesocycle.microcycles.length ?? 0
   const weekNumber = currentMicro?.weekNumber ?? 0
   const progressPercent = totalWeeks > 0 ? Math.round((weekNumber / totalWeeks) * 100) : 0
-
-  // Recent workout logs
-  const recentWorkoutLogs = await prisma.workoutLog.findMany({
-    where: { userId: session.user.id },
-    orderBy: { completedAt: 'desc' },
-    take: 5,
-    select: {
-      id: true,
-      completedAt: true,
-      duration: true,
-      workout: { select: { name: true } },
-      exerciseLogs: {
-        select: { exerciseId: true },
-        distinct: ['exerciseId'],
-      },
-    },
-  })
 
   return (
     <div className="space-y-6">

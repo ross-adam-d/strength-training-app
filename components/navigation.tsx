@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 
-export function Navigation() {
+export function Navigation({ email }: { email: string }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const links = [
@@ -45,7 +44,7 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="hidden md:inline text-sm text-gray-600">{session?.user?.email}</span>
+            <span className="hidden md:inline text-sm text-gray-600">{email}</span>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
@@ -87,7 +86,7 @@ export function Navigation() {
               </Link>
             ))}
             <div className="pt-3 mt-3 border-t flex items-center justify-between">
-              <span className="text-sm text-gray-500">{session?.user?.email}</span>
+              <span className="text-sm text-gray-500">{email}</span>
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="text-sm font-medium text-gray-700 hover:text-gray-900"
