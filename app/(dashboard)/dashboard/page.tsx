@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { WelcomeChecklist } from '@/components/WelcomeChecklist'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -158,17 +159,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
 
-      {/* No training blocks exist at all */}
+      {/* No training blocks — show welcome checklist */}
       {blockCount === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg shadow-md">
-          <p className="text-gray-500 mb-4">No training block yet. Create one to get started.</p>
-          <Link
-            href="/macrocycles/setup"
-            className="inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition font-medium"
-          >
-            Create Training Block
-          </Link>
-        </div>
+        <WelcomeChecklist name={session.user.name} />
       )}
 
       {/* Stats row — only shown when there's an active phase */}
