@@ -23,6 +23,11 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum SubscriptionTier {
+  BASIC
+  PREMIERE
+}
+
 // User authentication and profile
 model User {
   id            String    @id @default(cuid())
@@ -47,6 +52,7 @@ model Subscription {
   userId                   String             @unique
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   status                   SubscriptionStatus @default(TRIALING)
+  tier                     SubscriptionTier   @default(PREMIERE)
   trialEndsAt              DateTime
   gracePeriodEndsAt        DateTime?
   manualAccessGrantedUntil DateTime?
@@ -115,6 +121,7 @@ model Macrocycle {
   endDate           DateTime
   goals             String?
   status            String   @default("planned") // planned, active, completed, paused
+  availableEquipment String[] @default([])
 
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)

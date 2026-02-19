@@ -23,6 +23,7 @@ declare module 'next-auth/jwt' {
     id: string
     role?: string
     subscriptionStatus?: string | null
+    tier?: string
     trialEndsAt?: string | null
     manualAccessGrantedUntil?: string | null
   }

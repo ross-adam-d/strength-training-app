@@ -49,24 +49,30 @@ interface WorkoutLog {
   }>
 }
 
-interface BlockStat {
+interface ComparisonItem {
   id: string
   name: string
-  startDate: string
-  endDate: string
+  label: string
+  subtitle?: string
   status: string
-  weekCount: number
   sessionsCompleted: number
   totalVolumeKg: number
   weeklyAvgVolumeKg: number
   avgWorkoutRpe: number | null
-  totalDurationMins: number
 }
+
+type ComparisonType = 'blocks' | 'phases' | 'weeks'
 
 const TIME_PERIODS = [
   { value: '4w', label: 'Last 4 weeks' },
   { value: '3m', label: 'Last 3 months' },
   { value: 'all', label: 'All time' },
+]
+
+const COMPARISON_OPTIONS = [
+  { value: 'blocks', label: 'Block vs Block' },
+  { value: 'phases', label: 'Phase vs Phase' },
+  { value: 'weeks', label: 'Weeks in Phase' },
 ]
 
 const RPE_LABELS: Record<number, string> = {
@@ -101,24 +107,30 @@ function statusColour(status: string) {
   return '#94a3b8'
 }
 
+function formatDate(isoString: string) {
+  return new Date(isoString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
 export default function ProgressPage() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExercise, setSelectedExercise] = useState<string>('')
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([])
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([])
-  const [blockStats, setBlockStats] = useState<BlockStat[]>([])
+  const [comparisonData, setComparisonData] = useState<ComparisonItem[]>([])
+  const [comparisonType, setComparisonType] = useState<ComparisonType>('blocks')
   const [timePeriod, setTimePeriod] = useState<string>('3m')
   const [loading, setLoading] = useState(true)
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [loadingComparison, setLoadingComparison] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  // Initial load: exercises (logged only), recent workouts, block stats
+  // Initial load: exercises (logged only) + recent workouts
   useEffect(() => {
     async function loadInitial() {
       try {
-        const [exercisesRes, workoutsRes, blocksRes] = await Promise.all([
+        const [exercisesRes, workoutsRes] = await Promise.all([
           fetch('/api/exercises?logged=true'),
           fetch('/api/workout-logs?limit=50'),
-          fetch('/api/progress/block-comparison'),
         ])
         if (exercisesRes.ok) {
           const data = await exercisesRes.json()
@@ -126,7 +138,6 @@ export default function ProgressPage() {
           if (data.length > 0) setSelectedExercise(data[0].id)
         }
         if (workoutsRes.ok) setRecentWorkouts(await workoutsRes.json())
-        if (blocksRes.ok) setBlockStats(await blocksRes.json())
       } catch (error) {
         console.error('Error loading progress data:', error)
       } finally {
@@ -135,6 +146,18 @@ export default function ProgressPage() {
     }
     loadInitial()
   }, [])
+
+  // Fetch comparison data whenever type changes (including on mount)
+  useEffect(() => {
+    let cancelled = false
+    setLoadingComparison(true)
+    fetch(`/api/progress/block-comparison?type=${comparisonType}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => { if (!cancelled) setComparisonData(data) })
+      .catch((err) => console.error('Comparison fetch error:', err))
+      .finally(() => { if (!cancelled) setLoadingComparison(false) })
+    return () => { cancelled = true }
+  }, [comparisonType])
 
   // Fetch exercise logs whenever exercise or time period changes
   const fetchExerciseLogs = useCallback(async (exerciseId: string, period: string) => {
@@ -158,6 +181,28 @@ export default function ProgressPage() {
     fetchExerciseLogs(selectedExercise, timePeriod)
   }, [selectedExercise, timePeriod, fetchExerciseLogs])
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/export/workout-logs')
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const today = new Date().toISOString().slice(0, 10)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `problock-export-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export error:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Filter recent workouts by time period
   const filteredWorkouts = recentWorkouts.filter((w) => {
     const since = getSinceDate(timePeriod)
@@ -166,12 +211,9 @@ export default function ProgressPage() {
   })
 
   // Aggregate exercise chart data — group by session date, best set per session
-  const weightProgressData = exerciseLogs
-    .reduce((acc: { date: string; maxWeight: number; estimated1RM: number }[], log) => {
-      const date = new Date(log.workoutLog.completedAt).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-      })
+  const weightProgressData = exerciseLogs.reduce(
+    (acc: { date: string; maxWeight: number; estimated1RM: number }[], log) => {
+      const date = formatDate(log.workoutLog.completedAt)
       const existing = acc.find((item) => item.date === date)
       const est1RM = calculate1RM(log.weight, log.reps)
       if (existing) {
@@ -183,14 +225,13 @@ export default function ProgressPage() {
         acc.push({ date, maxWeight: log.weight, estimated1RM: est1RM })
       }
       return acc
-    }, [])
+    },
+    []
+  )
 
   const volumeData = exerciseLogs.reduce(
     (acc: { date: string; volume: number; sets: number }[], log) => {
-      const date = new Date(log.workoutLog.completedAt).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-      })
+      const date = formatDate(log.workoutLog.completedAt)
       const existing = acc.find((item) => item.date === date)
       const vol = log.weight * log.reps
       if (existing) {
@@ -203,6 +244,72 @@ export default function ProgressPage() {
     },
     []
   )
+
+  // RPE trend: first set's exerciseRpe per session date
+  const rpeData = exerciseLogs.reduce(
+    (acc: { date: string; rpe: number }[], log) => {
+      if (log.exerciseRpe === null || log.setNumber !== 1) return acc
+      const date = formatDate(log.workoutLog.completedAt)
+      if (!acc.find((item) => item.date === date)) {
+        acc.push({ date, rpe: log.exerciseRpe })
+      }
+      return acc
+    },
+    []
+  )
+
+  // Performance summary derived from non-skipped logs
+  const validLogs = exerciseLogs.filter((l) => !l.skipped && l.weight > 0 && l.reps > 0)
+  const sessionDates = [...new Set(validLogs.map((l) => l.workoutLog.completedAt.slice(0, 10)))]
+
+  const performanceSummary = (() => {
+    if (validLogs.length === 0 || sessionDates.length < 2) return null
+
+    const firstDate = sessionDates[0]
+    const lastDate = sessionDates[sessionDates.length - 1]
+
+    const firstLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === firstDate)
+    const lastLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === lastDate)
+
+    const firstWeight = Math.max(...firstLogs.map((l) => l.weight))
+    const lastWeight = Math.max(...lastLogs.map((l) => l.weight))
+    const weightChange = firstWeight > 0 ? ((lastWeight - firstWeight) / firstWeight) * 100 : 0
+
+    const firstBestLog = firstLogs.reduce((best, l) =>
+      calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
+    )
+    const lastBestLog = lastLogs.reduce((best, l) =>
+      calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
+    )
+    const first1RM = calculate1RM(firstBestLog.weight, firstBestLog.reps)
+    const last1RM = calculate1RM(lastBestLog.weight, lastBestLog.reps)
+    const rmChange = first1RM > 0 ? ((last1RM - first1RM) / first1RM) * 100 : 0
+
+    const allTimeMaxWeight = Math.max(...validLogs.map((l) => l.weight))
+    const isPR = lastWeight >= allTimeMaxWeight && lastWeight > firstWeight
+
+    return {
+      firstWeight,
+      lastWeight,
+      weightChange,
+      first1RM,
+      last1RM,
+      rmChange,
+      isPR,
+      sessionCount: sessionDates.length,
+    }
+  })()
+
+  // Comparison chart helpers
+  const comparisonItems = comparisonData.filter((b) => b.sessionsCompleted > 0)
+  const isWeeks = comparisonType === 'weeks'
+  const volumeChartLabel = isWeeks ? 'Volume (kg)' : 'Weekly Avg (kg)'
+  const xAxisAngleProps = isWeeks
+    ? {}
+    : { angle: -30, textAnchor: 'end' as const, interval: 0 }
+  const chartMargin = isWeeks
+    ? { top: 4, right: 8, left: 0, bottom: 4 }
+    : { top: 4, right: 8, left: 0, bottom: 40 }
 
   if (loading) {
     return (
@@ -217,11 +324,28 @@ export default function ProgressPage() {
     )
   }
 
+  // Total volume in kg across filtered workouts (for T conversion)
+  const totalVolumeKg = filteredWorkouts.reduce(
+    (sum, w) => sum + w.exerciseLogs.reduce((s, l) => s + l.weight * l.reps, 0),
+    0
+  )
+
   return (
     <div>
-      {/* Header + time period */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Row 1: Title + Export CSV */}
+      <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="text-sm px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
+      </div>
+
+      {/* Row 2: Time period */}
+      <div className="flex justify-end mb-6">
         <div className="w-44">
           <Select
             options={TIME_PERIODS.map((p) => ({ value: p.value, label: p.label }))}
@@ -243,14 +367,9 @@ export default function ProgressPage() {
         </Card>
         <Card>
           <CardBody>
-            <p className="text-xs text-gray-500 text-center">Volume (kg)</p>
+            <p className="text-xs text-gray-500 text-center">Volume</p>
             <p className="text-2xl font-bold text-primary-600 text-center mt-1">
-              {Math.round(
-                filteredWorkouts.reduce(
-                  (sum, w) => sum + w.exerciseLogs.reduce((s, l) => s + l.weight * l.reps, 0),
-                  0
-                )
-              ).toLocaleString()}
+              {(totalVolumeKg / 1000).toFixed(1)}T
             </p>
           </CardBody>
         </Card>
@@ -296,8 +415,56 @@ export default function ProgressPage() {
             </div>
           ) : (
             <div className="space-y-8">
+              {/* Performance summary */}
+              {performanceSummary && (
+                <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Top Weight</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {performanceSummary.lastWeight} kg
+                    </p>
+                    <p
+                      className={`text-xs font-medium mt-0.5 ${
+                        performanceSummary.weightChange >= 0 ? 'text-green-600' : 'text-red-500'
+                      }`}
+                    >
+                      {performanceSummary.weightChange >= 0 ? '+' : ''}
+                      {performanceSummary.weightChange.toFixed(1)}%
+                      {performanceSummary.isPR && (
+                        <span className="ml-1 bg-amber-100 text-amber-700 text-xs px-1 py-0.5 rounded">
+                          PR
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Est. 1RM</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {performanceSummary.last1RM} kg
+                    </p>
+                    <p
+                      className={`text-xs font-medium mt-0.5 ${
+                        performanceSummary.rmChange >= 0 ? 'text-green-600' : 'text-red-500'
+                      }`}
+                    >
+                      {performanceSummary.rmChange >= 0 ? '+' : ''}
+                      {performanceSummary.rmChange.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Sessions</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {performanceSummary.sessionCount}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">logged</p>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-3">Max Weight & Estimated 1RM (kg)</p>
+                <p className="text-xs font-medium text-gray-500 mb-3">
+                  Max Weight & Estimated 1RM (kg)
+                </p>
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={weightProgressData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -338,101 +505,158 @@ export default function ProgressPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+
+              {rpeData.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-3">Exercise RPE (1–5)</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={rpeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        domain={[1, 5]}
+                        width={30}
+                        ticks={[1, 2, 3, 4, 5]}
+                      />
+                      <Tooltip
+                        formatter={(val: number) => {
+                          const label = RPE_LABELS[Math.round(val)] || ''
+                          return [`${val} — ${label}`, 'RPE']
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="rpe"
+                        stroke="#f59e0b"
+                        name="RPE"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           )}
         </CardBody>
       </Card>
 
-      {/* Training block comparison */}
-      {blockStats.filter((b) => b.sessionsCompleted > 0).length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <h2 className="text-base font-semibold text-gray-900">Training Block Comparison</h2>
-            <p className="text-xs text-gray-500 mt-0.5">All completed blocks — volume and effort over time</p>
-          </CardHeader>
-          <CardBody>
-            {(() => {
-              const blocks = blockStats.filter((b) => b.sessionsCompleted > 0)
-              return (
-                <div className="space-y-8">
-                  {/* Weekly average volume */}
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-3">Weekly Avg Volume (kg)</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={blocks} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fontSize: 11 }}
-                          angle={-30}
-                          textAnchor="end"
-                          interval={0}
-                        />
-                        <YAxis tick={{ fontSize: 11 }} width={50} />
-                        <Tooltip
-                          formatter={(val: number) => [`${val.toLocaleString()} kg`, 'Weekly avg']}
-                        />
-                        <Bar dataKey="weeklyAvgVolumeKg" name="Weekly avg (kg)" radius={[3, 3, 0, 0]}>
-                          {blocks.map((b) => (
-                            <Cell key={b.id} fill={statusColour(b.status)} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+      {/* Training comparison */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Training Comparison</h2>
+              {isWeeks && comparisonData.length > 0 && comparisonData[0].subtitle && (
+                <p className="text-xs text-gray-500 mt-0.5">{comparisonData[0].subtitle}</p>
+              )}
+            </div>
+            <div className="w-44 shrink-0">
+              <Select
+                options={COMPARISON_OPTIONS}
+                value={comparisonType}
+                onChange={(e) => setComparisonType(e.target.value as ComparisonType)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {loadingComparison ? (
+            <div className="text-center py-8 text-sm text-gray-500">Loading...</div>
+          ) : comparisonItems.length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-500">
+              No data to compare yet.
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Volume chart */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-3">{volumeChartLabel}</p>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={comparisonItems} margin={chartMargin}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} {...xAxisAngleProps} />
+                    <YAxis tick={{ fontSize: 11 }} width={50} />
+                    <Tooltip
+                      formatter={(val: number) => [`${val.toLocaleString()} kg`, volumeChartLabel]}
+                      labelFormatter={(label) => {
+                        const item = comparisonItems.find((b) => b.label === label)
+                        if (!item) return label
+                        return item.subtitle ? `${item.name} — ${item.subtitle}` : item.name
+                      }}
+                    />
+                    <Bar
+                      dataKey="weeklyAvgVolumeKg"
+                      name={volumeChartLabel}
+                      radius={[3, 3, 0, 0]}
+                    >
+                      {comparisonItems.map((b) => (
+                        <Cell key={b.id} fill={statusColour(b.status)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
 
-                  {/* Average workout RPE */}
-                  {blocks.some((b) => b.avgWorkoutRpe !== null) && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-3">Avg Workout RPE (1–5)</p>
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={blocks} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis
-                            dataKey="name"
-                            tick={{ fontSize: 11 }}
-                            angle={-30}
-                            textAnchor="end"
-                            interval={0}
-                          />
-                          <YAxis tick={{ fontSize: 11 }} domain={[0, 5]} width={30} />
-                          <Tooltip
-                            formatter={(val: number) => {
-                              const label = RPE_LABELS[Math.round(val as number)] || ''
-                              return [`${val} — ${label}`, 'Avg RPE']
-                            }}
-                          />
-                          <Bar dataKey="avgWorkoutRpe" name="Avg RPE" radius={[3, 3, 0, 0]}>
-                            {blocks.map((b) => (
-                              <Cell key={b.id} fill={statusColour(b.status)} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-
-                  {/* Legend */}
-                  <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#22c55e' }} />
-                      Active
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#3b82f6' }} />
-                      Completed
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#94a3b8' }} />
-                      Planned
-                    </span>
-                  </div>
+              {/* RPE chart */}
+              {comparisonItems.some((b) => b.avgWorkoutRpe !== null) && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-3">Avg Workout RPE (1–5)</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={comparisonItems} margin={chartMargin}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} {...xAxisAngleProps} />
+                      <YAxis tick={{ fontSize: 11 }} domain={[0, 5]} width={30} />
+                      <Tooltip
+                        formatter={(val: number) => {
+                          const rpeLabel = RPE_LABELS[Math.round(val)] || ''
+                          return [`${val} — ${rpeLabel}`, 'Avg RPE']
+                        }}
+                        labelFormatter={(label) => {
+                          const item = comparisonItems.find((b) => b.label === label)
+                          if (!item) return label
+                          return item.subtitle ? `${item.name} — ${item.subtitle}` : item.name
+                        }}
+                      />
+                      <Bar dataKey="avgWorkoutRpe" name="Avg RPE" radius={[3, 3, 0, 0]}>
+                        {comparisonItems.map((b) => (
+                          <Cell key={b.id} fill={statusColour(b.status)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              )
-            })()}
-          </CardBody>
-        </Card>
-      )}
+              )}
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-1">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-3 h-3 rounded-sm inline-block"
+                    style={{ background: '#22c55e' }}
+                  />
+                  Active
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-3 h-3 rounded-sm inline-block"
+                    style={{ background: '#3b82f6' }}
+                  />
+                  Completed
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-3 h-3 rounded-sm inline-block"
+                    style={{ background: '#94a3b8' }}
+                  />
+                  Planned
+                </span>
+              </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Recent workouts */}
       <Card>
@@ -473,7 +697,8 @@ export default function ProgressPage() {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      RPE {workout.overallRpe.toFixed(1)} · {RPE_LABELS[Math.round(workout.overallRpe)] ?? ''}
+                      RPE {workout.overallRpe.toFixed(1)} ·{' '}
+                      {RPE_LABELS[Math.round(workout.overallRpe)] ?? ''}
                     </span>
                   )}
                 </div>

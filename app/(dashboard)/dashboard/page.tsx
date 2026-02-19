@@ -189,13 +189,18 @@ export default async function DashboardPage() {
       {currentMicro && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Phase header with progress — clickable link to phase details */}
-          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b hover:bg-gray-50 transition">
+          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-gray-900">{currentMicro.mesocycle.name}</h2>
                 <p className="text-sm text-gray-500">Week {weekNumber} of {totalWeeks}</p>
               </div>
-              <span className="text-sm font-medium text-gray-500">{progressPercent}%</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-500">{progressPercent}%</span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div

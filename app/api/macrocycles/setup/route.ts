@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -48,6 +49,19 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Tier-based block limit (enforced post-beta; all users PREMIERE during beta)
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+    const tier = token?.tier ?? 'PREMIERE'
+    if (tier === 'BASIC') {
+      const count = await prisma.macrocycle.count({ where: { userId: session.user.id } })
+      if (count >= 3) {
+        return NextResponse.json(
+          { error: 'Basic plan is limited to 3 training blocks. Upgrade to Premiere for unlimited.' },
+          { status: 403 }
+        )
+      }
     }
 
     const body = await request.json()

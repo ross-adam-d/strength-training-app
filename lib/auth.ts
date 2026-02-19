@@ -51,6 +51,7 @@ export const authOptions: NextAuthOptions = {
             subscription: {
               select: {
                 status: true,
+                tier: true,
                 trialEndsAt: true,
                 manualAccessGrantedUntil: true,
               },
@@ -80,6 +81,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           subscriptionStatus: user.subscription?.status ?? null,
+          tier: user.subscription?.tier ?? 'PREMIERE',
           trialEndsAt: user.subscription?.trialEndsAt?.toISOString() ?? null,
           manualAccessGrantedUntil: user.subscription?.manualAccessGrantedUntil?.toISOString() ?? null,
         }
@@ -92,6 +94,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = user.role
         token.subscriptionStatus = (user as any).subscriptionStatus
+        token.tier = (user as any).tier
         token.trialEndsAt = (user as any).trialEndsAt
         token.manualAccessGrantedUntil = (user as any).manualAccessGrantedUntil
       }

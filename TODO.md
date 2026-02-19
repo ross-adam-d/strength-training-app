@@ -51,6 +51,12 @@
 - Progressive overload tracking + exercise analytics charts
 - Data export (CSV/PDF)
 - Stripe integration + email lifecycle (see separate beta plan doc)
+- **Equipment selection in block builder** *(advanced feature)*
+  - User selects available equipment when setting up a training block (e.g. barbell, dumbbell, cable, bodyweight)
+  - Exercise generation respects selection — only assigns exercises matching available equipment
+  - Affects `generate-workouts` API and split templates
+  - Store selection on Macrocycle or per-Mesocycle (TBD)
+  - UI: multi-select checkboxes in setup wizard / block builder
 
 ---
 

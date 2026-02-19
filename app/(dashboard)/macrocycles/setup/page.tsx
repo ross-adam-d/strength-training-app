@@ -160,7 +160,7 @@ export default function SetupPage() {
               </p>
             </div>
 
-            <div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Total Duration: <span className="text-primary-600 font-bold">{totalWeeks} weeks</span>
               </label>
@@ -171,7 +171,7 @@ export default function SetupPage() {
                 min={4}
                 max={52}
                 step={1}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>4 weeks</span>
@@ -193,7 +193,7 @@ export default function SetupPage() {
                   min={1}
                   max={8}
                   step={1}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                  className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>1 week</span>
@@ -215,7 +215,7 @@ export default function SetupPage() {
                   min={0}
                   max={3}
                   step={1}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                  className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>0 weeks</span>

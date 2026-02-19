@@ -37,72 +37,67 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+    <div className="min-h-[100dvh] bg-gray-900 flex items-center justify-center px-4">
+      <div className="max-w-sm w-full">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-white tracking-tight">ProBlock</h1>
+          <p className="text-gray-400 mt-2 text-sm">Sign in to continue</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <form onSubmit={onSubmit} className="space-y-6">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
-                placeholder="you@example.com"
-              />
+        <form onSubmit={onSubmit} className="space-y-5">
+          {error && (
+            <div className="p-3 bg-red-950 border border-red-800 text-red-300 rounded-md text-sm">
+              {error}
             </div>
+          )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 px-4 bg-primary-600 text-white rounded-md font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-                Sign up
-              </Link>
-            </p>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+              placeholder="you@example.com"
+            />
           </div>
-        </div>
 
-        <div className="mt-4 text-center">
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 px-4 bg-primary-600 text-white rounded-md font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition mt-2"
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center space-y-3">
+          <p className="text-sm text-gray-500">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="text-primary-400 hover:text-primary-300 font-medium">
+              Sign up
+            </Link>
+          </p>
+          <Link href="/" className="block text-sm text-gray-600 hover:text-gray-400 transition">
             ← Back to home
           </Link>
         </div>
