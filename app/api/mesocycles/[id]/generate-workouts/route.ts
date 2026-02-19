@@ -141,9 +141,9 @@ export async function POST(
             const equipmentFilter = availableEquipment.length > 0 ? availableEquipment : null
 
             let resolvedName = slot.exerciseName
-            if (equipmentFilter && !equipmentFilter.includes(slot.equipment)) {
+            if (equipmentFilter && !slot.equipment.every((eq) => equipmentFilter.includes(eq))) {
               const match = slot.alternatives.find(
-                (alt) => equipmentFilter.includes(alt.equipment) && exerciseMap.has(alt.exerciseName)
+                (alt) => alt.equipment.every((eq) => equipmentFilter.includes(eq)) && exerciseMap.has(alt.exerciseName)
               )
               if (match) resolvedName = match.exerciseName
               // else: fall back to primary regardless of equipment
