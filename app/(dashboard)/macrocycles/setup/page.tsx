@@ -254,10 +254,12 @@ export default function SetupPage() {
               <p className="text-sm text-gray-500 mb-3">Select the equipment you have access to. Leave all unselected to use all equipment.</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { key: 'barbell',   label: 'Barbell' },
-                  { key: 'dumbbell',  label: 'Dumbbells' },
-                  { key: 'cable',     label: 'Cable Machine' },
-                  { key: 'machine',   label: 'Machines' },
+                  { key: 'barbell',    label: 'Barbell' },
+                  { key: 'rack',       label: 'Rack' },
+                  { key: 'bench',      label: 'Bench' },
+                  { key: 'dumbbell',   label: 'Dumbbells' },
+                  { key: 'cable',      label: 'Cable Machine' },
+                  { key: 'machine',    label: 'Machines' },
                   { key: 'bodyweight', label: 'Bodyweight' },
                 ].map(({ key, label }) => (
                   <button
