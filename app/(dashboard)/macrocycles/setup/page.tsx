@@ -252,7 +252,7 @@ export default function SetupPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h3 className="font-medium text-gray-900 mb-1">Available Equipment</h3>
               <p className="text-sm text-gray-500 mb-3">Select the equipment you have access to. Leave all unselected to use all equipment.</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {[
                   { key: 'barbell',    label: 'Barbell' },
                   { key: 'rack',       label: 'Rack' },
@@ -262,18 +262,15 @@ export default function SetupPage() {
                   { key: 'machine',    label: 'Machines' },
                   { key: 'bodyweight', label: 'Bodyweight' },
                 ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleEquipment(key)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      availableEquipment.includes(key)
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'
-                    }`}
-                  >
-                    {label}
-                  </button>
+                  <label key={key} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={availableEquipment.includes(key)}
+                      onChange={() => toggleEquipment(key)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-700">{label}</span>
+                  </label>
                 ))}
               </div>
             </div>

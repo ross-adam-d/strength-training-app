@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Modal } from '@/components/ui/modal'
 import Link from 'next/link'
 
 interface Mesocycle {
@@ -67,6 +68,7 @@ export default function MacrocycleDetailPage() {
   const [dirtyStructure, setDirtyStructure] = useState<Set<string>>(new Set())
   const [updatingStructure, setUpdatingStructure] = useState<string | null>(null)
   const [rebuildModal, setRebuildModal] = useState<Mesocycle | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // Refs for batching phase config saves
   const pendingPhaseUpdates = useRef<Map<string, Record<string, unknown>>>(new Map())
@@ -96,10 +98,6 @@ export default function MacrocycleDetailPage() {
   }, [fetchMacrocycle])
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this training block? This will delete all associated data.')) {
-      return
-    }
-
     try {
       const response = await fetch(`/api/macrocycles/${params.id}`, {
         method: 'DELETE',
@@ -428,7 +426,7 @@ export default function MacrocycleDetailPage() {
               value={macrocycle.status}
               onChange={(e) => handleStatusChange(e.target.value as 'planned' | 'active' | 'paused' | 'completed')}
             />
-            <Button variant="danger" size="sm" onClick={handleDelete}>
+            <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
               Delete
             </Button>
           </div>
@@ -599,6 +597,26 @@ export default function MacrocycleDetailPage() {
       )}
 
       {/* Rebuild workouts modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Training Block"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to delete <span className="font-semibold">{macrocycle.name}</span>? This will permanently delete all phases, weeks, and workouts.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => { setShowDeleteModal(false); handleDelete() }}>
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {rebuildModal && (() => {
         const phaseIndex = macrocycle!.mesocycles.indexOf(rebuildModal) + 1
         return (
