@@ -41,6 +41,7 @@ const setupSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   status: z.enum(['planned', 'active', 'completed', 'paused']).default('active'),
+  availableEquipment: z.array(z.string()).default([]),
   mesocycles: z.array(mesocycleSchema),
 })
 
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         status: data.status,
+        availableEquipment: data.availableEquipment,
         userId: session.user.id,
       },
     })

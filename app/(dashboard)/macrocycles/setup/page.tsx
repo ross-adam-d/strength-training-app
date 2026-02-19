@@ -19,6 +19,13 @@ export default function SetupPage() {
   const [startDate] = useState(() => new Date())
   const [showActiveBlockWarning, setShowActiveBlockWarning] = useState(false)
   const [existingActiveBlockId, setExistingActiveBlockId] = useState<string | null>(null)
+  const [availableEquipment, setAvailableEquipment] = useState<string[]>(['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight'])
+
+  function toggleEquipment(eq: string) {
+    setAvailableEquipment(prev =>
+      prev.includes(eq) ? prev.filter(e => e !== eq) : [...prev, eq]
+    )
+  }
 
   const phaseLength = activeWeeks + recoveryWeeks
   const estimatedPhases = Math.ceil(totalWeeks / phaseLength)
@@ -68,6 +75,7 @@ export default function SetupPage() {
       startDate: format(startDate, 'yyyy-MM-dd'),
       endDate: format(endDate, 'yyyy-MM-dd'),
       status: 'planned' as const,
+      availableEquipment,
       mesocycles
     }
   }
@@ -238,6 +246,33 @@ export default function SetupPage() {
                 <p className="text-xs text-gray-500 mt-2">
                   ({activeWeeks} active + {recoveryWeeks} recovery = {phaseLength} weeks per phase)
                 </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-1">Available Equipment</h3>
+              <p className="text-sm text-gray-500 mb-3">Workouts will be tailored to the equipment you have access to.</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'barbell',   label: 'Barbell' },
+                  { key: 'dumbbell',  label: 'Dumbbells' },
+                  { key: 'cable',     label: 'Cable Machine' },
+                  { key: 'machine',   label: 'Machines' },
+                  { key: 'bodyweight', label: 'Bodyweight' },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleEquipment(key)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      availableEquipment.includes(key)
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 

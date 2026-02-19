@@ -1,6 +1,8 @@
 export interface ExerciseSlot {
   label: string
   exerciseName: string
+  equipment: string
+  alternatives: { exerciseName: string; equipment: string }[]
   buildSets: number
   buildReps: string
   recoverySets: number
@@ -25,95 +27,95 @@ const WORKOUT_TYPES: Record<string, WorkoutType> = {
   'Full Body': {
     name: 'Full Body',
     slots: [
-      { label: 'Legs (Compound)',  exerciseName: 'Barbell Squat',       buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
-      { label: 'Chest (Compound)', exerciseName: 'Barbell Bench Press', buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Back (Compound)',  exerciseName: 'Barbell Row',         buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
-      { label: 'Shoulders',        exerciseName: 'Overhead Press',      buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
-      { label: 'Core',             exerciseName: 'Plank',               buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
+      { label: 'Legs (Compound)',  exerciseName: 'Barbell Squat',       equipment: 'barbell',     alternatives: [{ exerciseName: 'Leg Press', equipment: 'machine' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                                                        buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
+      { label: 'Chest (Compound)', exerciseName: 'Barbell Bench Press', equipment: 'barbell',     alternatives: [{ exerciseName: 'Dumbbell Bench Press', equipment: 'dumbbell' }, { exerciseName: 'Push-ups', equipment: 'bodyweight' }],                                         buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Back (Compound)',  exerciseName: 'Barbell Row',         equipment: 'barbell',     alternatives: [{ exerciseName: 'Seated Cable Row', equipment: 'cable' }, { exerciseName: 'Lat Pulldown', equipment: 'cable' }],                                                  buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
+      { label: 'Shoulders',        exerciseName: 'Overhead Press',      equipment: 'barbell',     alternatives: [{ exerciseName: 'Dumbbell Shoulder Press', equipment: 'dumbbell' }],                                                                                             buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
+      { label: 'Core',             exerciseName: 'Plank',               equipment: 'bodyweight',  alternatives: [],                                                                                                                                                                buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
     ],
   },
   'Upper': {
     name: 'Upper',
     slots: [
-      { label: 'Chest (Compound)', exerciseName: 'Barbell Bench Press', buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Back (Compound)',  exerciseName: 'Barbell Row',         buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Shoulders',        exerciseName: 'Overhead Press',      buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
-      { label: 'Biceps',           exerciseName: 'Dumbbell Curl',       buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Chest (Compound)', exerciseName: 'Barbell Bench Press', equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Bench Press', equipment: 'dumbbell' }, { exerciseName: 'Push-ups', equipment: 'bodyweight' }],  buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Back (Compound)',  exerciseName: 'Barbell Row',         equipment: 'barbell',  alternatives: [{ exerciseName: 'Seated Cable Row', equipment: 'cable' }, { exerciseName: 'Lat Pulldown', equipment: 'cable' }],          buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Shoulders',        exerciseName: 'Overhead Press',      equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Shoulder Press', equipment: 'dumbbell' }],                                                    buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
+      { label: 'Biceps',           exerciseName: 'Dumbbell Curl',       equipment: 'dumbbell', alternatives: [{ exerciseName: 'Barbell Curl', equipment: 'barbell' }],                                                               buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
   'Lower': {
     name: 'Lower',
     slots: [
-      { label: 'Legs (Compound)',  exerciseName: 'Barbell Squat',       buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
-      { label: 'Posterior Chain',  exerciseName: 'Romanian Deadlift',  buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 150 },
-      { label: 'Quads',            exerciseName: 'Leg Extension',      buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Hamstrings',       exerciseName: 'Leg Curl',           buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Core',             exerciseName: 'Plank',              buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
+      { label: 'Legs (Compound)',  exerciseName: 'Barbell Squat',      equipment: 'barbell',    alternatives: [{ exerciseName: 'Leg Press', equipment: 'machine' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                                    buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
+      { label: 'Posterior Chain',  exerciseName: 'Romanian Deadlift', equipment: 'barbell',    alternatives: [{ exerciseName: 'Lunges', equipment: 'dumbbell' }, { exerciseName: 'Leg Curl', equipment: 'machine' }],                                        buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 150 },
+      { label: 'Quads',            exerciseName: 'Leg Extension',     equipment: 'machine',    alternatives: [{ exerciseName: 'Lunges', equipment: 'dumbbell' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                                       buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Hamstrings',       exerciseName: 'Leg Curl',          equipment: 'machine',    alternatives: [{ exerciseName: 'Romanian Deadlift', equipment: 'barbell' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                             buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Core',             exerciseName: 'Plank',             equipment: 'bodyweight', alternatives: [],                                                                                                                                              buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
     ],
   },
   'Push': {
     name: 'Push',
     slots: [
-      { label: 'Chest (Compound)',  exerciseName: 'Barbell Bench Press',  buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Shoulders',         exerciseName: 'Overhead Press',       buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
-      { label: 'Chest (Isolation)', exerciseName: 'Chest Fly (Dumbbell)', buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Side Delts',        exerciseName: 'Lateral Raise',        buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
-      { label: 'Triceps',           exerciseName: 'Tricep Pushdown',      buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Chest (Compound)',  exerciseName: 'Barbell Bench Press',  equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Bench Press', equipment: 'dumbbell' }, { exerciseName: 'Push-ups', equipment: 'bodyweight' }],                                       buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Shoulders',         exerciseName: 'Overhead Press',       equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Shoulder Press', equipment: 'dumbbell' }],                                                                                           buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
+      { label: 'Chest (Isolation)', exerciseName: 'Chest Fly (Dumbbell)', equipment: 'dumbbell', alternatives: [{ exerciseName: 'Push-ups', equipment: 'bodyweight' }],                                                                                                        buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Side Delts',        exerciseName: 'Lateral Raise',        equipment: 'dumbbell', alternatives: [{ exerciseName: 'Front Raise', equipment: 'dumbbell' }],                                                                                                       buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
+      { label: 'Triceps',           exerciseName: 'Tricep Pushdown',      equipment: 'cable',    alternatives: [{ exerciseName: 'Overhead Tricep Extension', equipment: 'dumbbell' }, { exerciseName: 'Tricep Dips', equipment: 'bodyweight' }],                               buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
   'Pull': {
     name: 'Pull',
     slots: [
-      { label: 'Back (Vertical)',   exerciseName: 'Pull-ups',       buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Back (Horizontal)', exerciseName: 'Barbell Row',   buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Biceps',            exerciseName: 'Dumbbell Curl', buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
-      { label: 'Rear Delts',        exerciseName: 'Face Pulls',    buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',   restPeriod: 60  },
+      { label: 'Back (Vertical)',   exerciseName: 'Pull-ups',       equipment: 'bodyweight', alternatives: [],                                                                                                                                     buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Back (Horizontal)', exerciseName: 'Barbell Row',    equipment: 'barbell',    alternatives: [{ exerciseName: 'Seated Cable Row', equipment: 'cable' }, { exerciseName: 'Lat Pulldown', equipment: 'cable' }],                        buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Biceps',            exerciseName: 'Dumbbell Curl',  equipment: 'dumbbell',   alternatives: [{ exerciseName: 'Barbell Curl', equipment: 'barbell' }],                                                                              buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Rear Delts',        exerciseName: 'Face Pulls',     equipment: 'cable',      alternatives: [{ exerciseName: 'Lateral Raise', equipment: 'dumbbell' }],                                                                           buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
     ],
   },
   'Legs': {
     name: 'Legs',
     slots: [
-      { label: 'Legs (Compound)', exerciseName: 'Barbell Squat',      buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
-      { label: 'Posterior Chain', exerciseName: 'Romanian Deadlift', buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 150 },
-      { label: 'Quads',           exerciseName: 'Leg Extension',     buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Hamstrings',      exerciseName: 'Leg Curl',          buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Core',            exerciseName: 'Plank',             buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
+      { label: 'Legs (Compound)', exerciseName: 'Barbell Squat',     equipment: 'barbell',    alternatives: [{ exerciseName: 'Leg Press', equipment: 'machine' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                            buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 180 },
+      { label: 'Posterior Chain', exerciseName: 'Romanian Deadlift', equipment: 'barbell',    alternatives: [{ exerciseName: 'Lunges', equipment: 'dumbbell' }, { exerciseName: 'Leg Curl', equipment: 'machine' }],                               buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 150 },
+      { label: 'Quads',           exerciseName: 'Leg Extension',     equipment: 'machine',    alternatives: [{ exerciseName: 'Lunges', equipment: 'dumbbell' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                              buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Hamstrings',      exerciseName: 'Leg Curl',          equipment: 'machine',    alternatives: [{ exerciseName: 'Romanian Deadlift', equipment: 'barbell' }, { exerciseName: 'Lunges', equipment: 'bodyweight' }],                    buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Core',            exerciseName: 'Plank',             equipment: 'bodyweight', alternatives: [],                                                                                                                                    buildSets: 3, buildReps: '60s',   recoverySets: 2, recoveryReps: '30s',   restPeriod: 60  },
     ],
   },
   'Chest': {
     name: 'Chest',
     slots: [
-      { label: 'Chest (Flat)',     exerciseName: 'Barbell Bench Press',  buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Chest (Incline)',  exerciseName: 'Incline Dumbbell Press', buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
-      { label: 'Chest (Isolation)', exerciseName: 'Chest Fly (Dumbbell)', buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Triceps',          exerciseName: 'Tricep Pushdown',     buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Chest (Flat)',      exerciseName: 'Barbell Bench Press',   equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Bench Press', equipment: 'dumbbell' }, { exerciseName: 'Push-ups', equipment: 'bodyweight' }],                                      buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Chest (Incline)',   exerciseName: 'Incline Dumbbell Press', equipment: 'dumbbell', alternatives: [{ exerciseName: 'Incline Barbell Bench Press', equipment: 'barbell' }, { exerciseName: 'Push-ups', equipment: 'bodyweight' }],                               buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 120 },
+      { label: 'Chest (Isolation)', exerciseName: 'Chest Fly (Dumbbell)',  equipment: 'dumbbell', alternatives: [{ exerciseName: 'Push-ups', equipment: 'bodyweight' }],                                                                                                       buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Triceps',           exerciseName: 'Tricep Pushdown',       equipment: 'cable',    alternatives: [{ exerciseName: 'Overhead Tricep Extension', equipment: 'dumbbell' }, { exerciseName: 'Tricep Dips', equipment: 'bodyweight' }],                              buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
   'Back': {
     name: 'Back',
     slots: [
-      { label: 'Back (Vertical)',   exerciseName: 'Pull-ups',       buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Back (Horizontal)', exerciseName: 'Barbell Row',   buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Back (Width)',      exerciseName: 'Lat Pulldown',  buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
-      { label: 'Biceps',            exerciseName: 'Dumbbell Curl', buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Back (Vertical)',   exerciseName: 'Pull-ups',      equipment: 'bodyweight', alternatives: [],                                                                                                                                      buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Back (Horizontal)', exerciseName: 'Barbell Row',   equipment: 'barbell',    alternatives: [{ exerciseName: 'Seated Cable Row', equipment: 'cable' }, { exerciseName: 'Lat Pulldown', equipment: 'cable' }],                        buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Back (Width)',      exerciseName: 'Lat Pulldown',  equipment: 'cable',      alternatives: [{ exerciseName: 'Pull-ups', equipment: 'bodyweight' }],                                                                               buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Biceps',            exerciseName: 'Dumbbell Curl', equipment: 'dumbbell',   alternatives: [{ exerciseName: 'Barbell Curl', equipment: 'barbell' }],                                                                              buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
   'Shoulders': {
     name: 'Shoulders',
     slots: [
-      { label: 'Shoulders (Press)',  exerciseName: 'Overhead Press',    buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
-      { label: 'Side Delts',         exerciseName: 'Lateral Raise',     buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
-      { label: 'Rear Delts',         exerciseName: 'Face Pulls',        buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
-      { label: 'Traps',              exerciseName: 'Dumbbell Shrugs',   buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
+      { label: 'Shoulders (Press)',  exerciseName: 'Overhead Press',  equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Shoulder Press', equipment: 'dumbbell' }],          buildSets: 4, buildReps: '6-8',   recoverySets: 2, recoveryReps: '8-10',  restPeriod: 150 },
+      { label: 'Side Delts',         exerciseName: 'Lateral Raise',   equipment: 'dumbbell', alternatives: [{ exerciseName: 'Front Raise', equipment: 'dumbbell' }],                     buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
+      { label: 'Rear Delts',         exerciseName: 'Face Pulls',      equipment: 'cable',    alternatives: [{ exerciseName: 'Lateral Raise', equipment: 'dumbbell' }],                   buildSets: 3, buildReps: '12-15', recoverySets: 2, recoveryReps: '15',    restPeriod: 60  },
+      { label: 'Traps',              exerciseName: 'Dumbbell Shrugs', equipment: 'dumbbell', alternatives: [],                                                                            buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 90  },
     ],
   },
   'Arms': {
     name: 'Arms',
     slots: [
-      { label: 'Biceps (Compound)',  exerciseName: 'Barbell Curl',      buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 90  },
-      { label: 'Biceps (Isolation)', exerciseName: 'Dumbbell Curl',     buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
-      { label: 'Triceps (Compound)', exerciseName: 'Close Grip Bench',  buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 90  },
-      { label: 'Triceps (Isolation)', exerciseName: 'Tricep Pushdown',   buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Biceps (Compound)',   exerciseName: 'Barbell Curl',     equipment: 'barbell',  alternatives: [{ exerciseName: 'Dumbbell Curl', equipment: 'dumbbell' }],                                                                               buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 90  },
+      { label: 'Biceps (Isolation)',  exerciseName: 'Dumbbell Curl',    equipment: 'dumbbell', alternatives: [{ exerciseName: 'Barbell Curl', equipment: 'barbell' }],                                                                                buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
+      { label: 'Triceps (Compound)',  exerciseName: 'Close Grip Bench', equipment: 'barbell',  alternatives: [{ exerciseName: 'Overhead Tricep Extension', equipment: 'dumbbell' }, { exerciseName: 'Tricep Dips', equipment: 'bodyweight' }],         buildSets: 3, buildReps: '8-10',  recoverySets: 2, recoveryReps: '10-12', restPeriod: 90  },
+      { label: 'Triceps (Isolation)', exerciseName: 'Tricep Pushdown',  equipment: 'cable',    alternatives: [{ exerciseName: 'Overhead Tricep Extension', equipment: 'dumbbell' }, { exerciseName: 'Tricep Dips', equipment: 'bodyweight' }],         buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
 }

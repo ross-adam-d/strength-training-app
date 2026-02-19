@@ -44,6 +44,9 @@ export async function POST(
         id: true,
         trainingDaysPerWeek: true,
         trainingSplit: true,
+        macrocycle: {
+          select: { availableEquipment: true },
+        },
         microcycles: {
           orderBy: {
             weekNumber: 'asc',
@@ -66,6 +69,9 @@ export async function POST(
         { status: 400 }
       )
     }
+
+    // availableEquipment: empty array = legacy macrocycle → treat as all available
+    const availableEquipment: string[] = mesocycle.macrocycle?.availableEquipment ?? []
 
     // If regenerating, delete all existing workouts across all microcycles first
     if (regenerate) {
@@ -133,9 +139,21 @@ export async function POST(
           }
 
           const exerciseSlots = workoutType.slots.map((slot, slotIdx) => {
-            const exerciseId = exerciseMap.get(slot.exerciseName)
+            // Resolve exercise: check primary equipment, walk alternatives, fall back to primary
+            const equipmentFilter = availableEquipment.length > 0 ? availableEquipment : null
+
+            let resolvedName = slot.exerciseName
+            if (equipmentFilter && !equipmentFilter.includes(slot.equipment)) {
+              const match = slot.alternatives.find(
+                (alt) => equipmentFilter.includes(alt.equipment) && exerciseMap.has(alt.exerciseName)
+              )
+              if (match) resolvedName = match.exerciseName
+              // else: fall back to primary regardless of equipment
+            }
+
+            const exerciseId = exerciseMap.get(resolvedName)
             if (!exerciseId) {
-              throw new Error(`Exercise not found in database: "${slot.exerciseName}". Please make sure all exercises exist in the exercise library.`)
+              throw new Error(`Exercise not found in database: "${resolvedName}". Please make sure all exercises exist in the exercise library.`)
             }
 
             return {
