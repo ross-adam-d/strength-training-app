@@ -72,6 +72,8 @@ export async function POST(
 
     // availableEquipment: empty array = legacy macrocycle → treat as all available
     const availableEquipment: string[] = mesocycle.macrocycle?.availableEquipment ?? []
+    console.log('[generate-workouts] macrocycle.availableEquipment raw:', mesocycle.macrocycle?.availableEquipment)
+    console.log('[generate-workouts] availableEquipment resolved:', availableEquipment)
 
     // If regenerating, delete all existing workouts across all microcycles first
     if (regenerate) {
@@ -151,6 +153,7 @@ export async function POST(
               // else: fall back to primary regardless of equipment
             }
 
+            console.log(`[generate-workouts] slot "${slot.label}": primary="${slot.exerciseName}"(${slot.equipment}) → resolved="${resolvedName}"`)
             const exerciseId = exerciseMap.get(resolvedName)
             if (!exerciseId) {
               throw new Error(`Exercise not found in database: "${resolvedName}". Please make sure all exercises exist in the exercise library.`)
