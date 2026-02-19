@@ -72,8 +72,6 @@ export async function POST(
 
     // availableEquipment: empty array = legacy macrocycle → treat as all available
     const availableEquipment: string[] = mesocycle.macrocycle?.availableEquipment ?? []
-    console.log('[generate-workouts] macrocycle.availableEquipment raw:', mesocycle.macrocycle?.availableEquipment)
-    console.log('[generate-workouts] availableEquipment resolved:', availableEquipment)
 
     // If regenerating, delete all existing workouts across all microcycles first
     if (regenerate) {
@@ -153,7 +151,6 @@ export async function POST(
               // else: fall back to primary regardless of equipment
             }
 
-            console.log(`[generate-workouts] slot "${slot.label}": primary="${slot.exerciseName}"(${slot.equipment}) → resolved="${resolvedName}"`)
             const exerciseId = exerciseMap.get(resolvedName)
             if (!exerciseId) {
               throw new Error(`Exercise not found in database: "${resolvedName}". Please make sure all exercises exist in the exercise library.`)
@@ -179,7 +176,7 @@ export async function POST(
     // Fire all creates in parallel — reduces N*M sequential round-trips to one parallel batch
     await Promise.all(workoutCreates.map((data) => prisma.workout.create({ data })))
 
-    return NextResponse.json({ success: true, _debug: { availableEquipment, storedRaw: mesocycle.macrocycle?.availableEquipment } })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error generating workouts:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate workouts'

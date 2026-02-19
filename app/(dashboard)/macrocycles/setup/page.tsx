@@ -19,7 +19,7 @@ export default function SetupPage() {
   const [startDate] = useState(() => new Date())
   const [showActiveBlockWarning, setShowActiveBlockWarning] = useState(false)
   const [existingActiveBlockId, setExistingActiveBlockId] = useState<string | null>(null)
-  const [availableEquipment, setAvailableEquipment] = useState<string[]>(['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight'])
+  const [availableEquipment, setAvailableEquipment] = useState<string[]>([])
 
   function toggleEquipment(eq: string) {
     setAvailableEquipment(prev =>
@@ -251,7 +251,7 @@ export default function SetupPage() {
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h3 className="font-medium text-gray-900 mb-1">Available Equipment</h3>
-              <p className="text-sm text-gray-500 mb-3">Workouts will be tailored to the equipment you have access to.</p>
+              <p className="text-sm text-gray-500 mb-3">Select the equipment you have access to. Leave all unselected to use all equipment.</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   { key: 'barbell',   label: 'Barbell' },
