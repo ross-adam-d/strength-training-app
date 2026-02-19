@@ -179,7 +179,7 @@ export async function POST(
     // Fire all creates in parallel — reduces N*M sequential round-trips to one parallel batch
     await Promise.all(workoutCreates.map((data) => prisma.workout.create({ data })))
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, _debug: { availableEquipment, storedRaw: mesocycle.macrocycle?.availableEquipment } })
   } catch (error) {
     console.error('Error generating workouts:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate workouts'
