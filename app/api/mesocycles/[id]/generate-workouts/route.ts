@@ -108,9 +108,7 @@ export async function POST(
     })
     const exerciseMap = new Map(exercises.map((e) => [e.name, e.id]))
 
-    // Build all workout create operations (synchronously) then fire in parallel
-    const workoutCreates: Parameters<typeof prisma.workout.create>[0]['data'][] = []
-
+    // Sequential creates — PgBouncer Session mode limits concurrent connections to pool_size
     for (const microcycle of mesocycle.microcycles) {
       workoutTypeCounts.clear()
 
@@ -169,12 +167,9 @@ export async function POST(
           workoutData.workoutExercises = { create: exerciseSlots }
         }
 
-        workoutCreates.push(workoutData)
+        await prisma.workout.create({ data: workoutData })
       }
     }
-
-    // Fire all creates in parallel — reduces N*M sequential round-trips to one parallel batch
-    await Promise.all(workoutCreates.map((data) => prisma.workout.create({ data })))
 
     return NextResponse.json({ success: true })
   } catch (error) {
