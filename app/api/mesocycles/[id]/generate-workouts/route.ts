@@ -4,14 +4,25 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getWorkoutType, getDaysOfWeek } from '@/lib/splitTemplates'
 
-// Map UI training split names to split keys
+// Map training split labels to workout type rotations
 function getSplitWorkoutTypes(trainingSplit: string): string[] {
   const splitMap: Record<string, string[]> = {
-    'Full Body': ['Full Body'],
-    'Upper/Lower': ['Upper', 'Lower'],
-    'Push/Pull/Legs': ['Push', 'Pull', 'Legs'],
-    'Bro Split': ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],
-    'Custom': ['Full Body'], // Default to Full Body for custom
+    // Current splits
+    'Full Body':         ['Full Body'],
+    'Push-Pull':         ['Push', 'Pull'],
+    'Upper-Lower':       ['Upper', 'Lower'],
+    'Upper-Lower-Upper': ['Upper', 'Lower', 'Upper'],
+    'Lower-Upper-Lower': ['Lower', 'Upper', 'Lower'],
+    '3×Upper + 2×Lower': ['Upper', 'Upper', 'Upper', 'Lower', 'Lower'],
+    '3×Lower + 2×Upper': ['Lower', 'Lower', 'Lower', 'Upper', 'Upper'],
+    '4×Upper + 3×Lower': ['Upper', 'Upper', 'Upper', 'Upper', 'Lower', 'Lower', 'Lower'],
+    '4×Lower + 3×Upper': ['Lower', 'Lower', 'Lower', 'Lower', 'Upper', 'Upper', 'Upper'],
+    'Bro Split':         ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],
+    'Custom':            ['Full Body'],
+    // Legacy names (backwards compatibility for existing DB data)
+    'Upper/Lower':       ['Upper', 'Lower'],
+    'Push/Pull':         ['Push', 'Pull'],
+    'Push/Pull/Legs':    ['Push', 'Pull', 'Legs'],
   }
 
   return splitMap[trainingSplit] || ['Full Body']

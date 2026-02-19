@@ -19,8 +19,9 @@ export interface SplitConfig {
   key: string
   label: string
   workoutTypes: string[]
-  minDays: number
+  minDays?: number
   maxDays?: number
+  allowedDays?: number[]
 }
 
 const WORKOUT_TYPES: Record<string, WorkoutType> = {
@@ -125,18 +126,23 @@ export function getWorkoutType(name: string): WorkoutType {
 }
 
 export const SPLIT_CONFIGS: SplitConfig[] = [
-  { key: 'fullbody',   label: 'Full Body',            workoutTypes: ['Full Body'],                               minDays: 2 },
-  { key: 'upperlower', label: 'Upper / Lower',        workoutTypes: ['Upper', 'Lower'],                          minDays: 2 },
-  { key: 'pushpull',   label: 'Push / Pull',          workoutTypes: ['Push', 'Pull'],                            minDays: 2 },
-  { key: 'ppl',        label: 'Push / Pull / Legs',   workoutTypes: ['Push', 'Pull', 'Legs'],                    minDays: 3 },
-  { key: 'ppl_fb',     label: 'PPL + Full Body',      workoutTypes: ['Push', 'Pull', 'Legs', 'Full Body'],       minDays: 4, maxDays: 4 },
-  { key: 'ppl_ul',     label: 'PPL + Upper / Lower',  workoutTypes: ['Push', 'Pull', 'Legs', 'Upper', 'Lower'],  minDays: 5 },
+  { key: 'fullbody',   label: 'Full Body',           workoutTypes: ['Full Body'],                                                                     minDays: 2 },
+  { key: 'pushpull',   label: 'Push-Pull',            workoutTypes: ['Push', 'Pull'],                                                                  minDays: 2 },
+  { key: 'upperlower', label: 'Upper-Lower',          workoutTypes: ['Upper', 'Lower'],                                                                allowedDays: [2, 4, 6] },
+  { key: 'ulu',        label: 'Upper-Lower-Upper',    workoutTypes: ['Upper', 'Lower', 'Upper'],                                                       allowedDays: [3] },
+  { key: 'lul',        label: 'Lower-Upper-Lower',    workoutTypes: ['Lower', 'Upper', 'Lower'],                                                       allowedDays: [3] },
+  { key: '3u2l',       label: '3×Upper + 2×Lower',   workoutTypes: ['Upper', 'Upper', 'Upper', 'Lower', 'Lower'],                                     allowedDays: [5] },
+  { key: '3l2u',       label: '3×Lower + 2×Upper',   workoutTypes: ['Lower', 'Lower', 'Lower', 'Upper', 'Upper'],                                     allowedDays: [5] },
+  { key: 'brosplit',   label: 'Bro Split',            workoutTypes: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],                                   minDays: 5 },
+  { key: '4u3l',       label: '4×Upper + 3×Lower',   workoutTypes: ['Upper', 'Upper', 'Upper', 'Upper', 'Lower', 'Lower', 'Lower'],                   allowedDays: [7] },
+  { key: '4l3u',       label: '4×Lower + 3×Upper',   workoutTypes: ['Lower', 'Lower', 'Lower', 'Lower', 'Upper', 'Upper', 'Upper'],                   allowedDays: [7] },
 ]
 
 export function getSplitsForDays(days: number): SplitConfig[] {
-  return SPLIT_CONFIGS.filter(
-    (s) => days >= s.minDays && (s.maxDays === undefined || days <= s.maxDays)
-  )
+  return SPLIT_CONFIGS.filter((s) => {
+    if (s.allowedDays) return s.allowedDays.includes(days)
+    return days >= (s.minDays ?? 2) && (s.maxDays === undefined || days <= s.maxDays)
+  })
 }
 
 const DAY_MAPPINGS: Record<number, number[]> = {

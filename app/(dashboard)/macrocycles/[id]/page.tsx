@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
 import Link from 'next/link'
+import { getSplitsForDays } from '@/lib/splitTemplates'
 
 interface Mesocycle {
   id: string
@@ -45,14 +46,13 @@ const GOAL_OPTIONS = [
   { value: 'Deload', label: 'Deload' },
 ]
 
-const TRAINING_SPLIT_OPTIONS = [
-  { value: '', label: 'Select split...' },
-  { value: 'Full Body', label: 'Full Body' },
-  { value: 'Upper/Lower', label: 'Upper/Lower' },
-  { value: 'Push/Pull/Legs', label: 'Push/Pull/Legs' },
-  { value: 'Bro Split', label: 'Bro Split (Chest/Back/Legs/Shoulders/Arms)' },
-  { value: 'Custom', label: 'Custom' },
-]
+function getSplitOptions(days: number | null) {
+  const placeholder = { value: '', label: 'Select split...' }
+  const custom = { value: 'Custom', label: 'Custom' }
+  if (!days) return [placeholder, custom]
+  const splits = getSplitsForDays(days).map((s) => ({ value: s.label, label: s.label }))
+  return [placeholder, ...splits, custom]
+}
 
 export default function MacrocycleDetailPage() {
   const router = useRouter()
@@ -559,7 +559,7 @@ export default function MacrocycleDetailPage() {
                             <p className="text-sm text-gray-600 py-2">{phase.trainingSplit || '—'}</p>
                           ) : (
                             <Select
-                              options={TRAINING_SPLIT_OPTIONS}
+                              options={getSplitOptions(phase.trainingDaysPerWeek ?? null)}
                               value={phase.trainingSplit || ''}
                               onChange={(e) => handleUpdateTrainingSplit(phase.id, e.target.value)}
                             />
