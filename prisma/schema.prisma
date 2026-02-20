@@ -169,6 +169,7 @@ model Microcycle {
   startDate         DateTime
   endDate           DateTime
   weekNumber        Int      // week number within mesocycle
+  isRecovery        Boolean  @default(false)
 
   mesocycleId       String
   mesocycle         Mesocycle @relation(fields: [mesocycleId], references: [id], onDelete: Cascade)

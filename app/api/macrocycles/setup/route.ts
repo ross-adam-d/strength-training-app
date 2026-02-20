@@ -25,6 +25,7 @@ const microcycleSchema = z.object({
   weekNumber: z.number().int(),
   startDate: z.string(),
   endDate: z.string(),
+  isRecovery: z.boolean().optional().default(false),
   workouts: z.array(workoutSchema),
 })
 
@@ -138,6 +139,7 @@ export async function POST(request: Request) {
             weekNumber: microData.weekNumber,
             startDate: new Date(microData.startDate),
             endDate: new Date(microData.endDate),
+            isRecovery: microData.isRecovery ?? false,
             mesocycleId: meso.id,
           },
         })

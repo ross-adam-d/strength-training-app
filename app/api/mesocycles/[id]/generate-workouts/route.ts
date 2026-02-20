@@ -28,6 +28,15 @@ function getSplitWorkoutTypes(trainingSplit: string): string[] {
   return splitMap[trainingSplit] || ['Full Body']
 }
 
+// Goal-based set/rep overrides — applied when a phase has a training goal set
+const GOAL_OVERRIDES: Record<string, { compound: { sets: number; reps: string }; isolation: { sets: number; reps: string } }> = {
+  Hypertrophy: { compound: { sets: 4, reps: '6-12'  }, isolation: { sets: 3, reps: '10-15' } },
+  Strength:    { compound: { sets: 5, reps: '3-6'   }, isolation: { sets: 3, reps: '6-8'   } },
+  Power:       { compound: { sets: 5, reps: '1-5'   }, isolation: { sets: 3, reps: '3-6'   } },
+  Maintenance: { compound: { sets: 3, reps: '10-15' }, isolation: { sets: 2, reps: '12-15' } },
+  Deload:      { compound: { sets: 2, reps: '12-15' }, isolation: { sets: 2, reps: '12-15' } },
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -55,6 +64,7 @@ export async function POST(
         id: true,
         trainingDaysPerWeek: true,
         trainingSplit: true,
+        goal: true,
         macrocycle: {
           select: { availableEquipment: true },
         },
@@ -65,6 +75,7 @@ export async function POST(
           select: {
             id: true,
             weekNumber: true,
+            isRecovery: true,
           },
         },
       },
@@ -83,6 +94,7 @@ export async function POST(
 
     // availableEquipment: empty array = legacy macrocycle → treat as all available
     const availableEquipment: string[] = mesocycle.macrocycle?.availableEquipment ?? []
+    const goal = mesocycle.goal ?? null
 
     // If regenerating, delete all existing workouts across all microcycles first
     if (regenerate) {
@@ -165,11 +177,27 @@ export async function POST(
               throw new Error(`Exercise not found in database: "${resolvedName}". Please make sure all exercises exist in the exercise library.`)
             }
 
+            // Priority: isRecovery > goal > default slot values
+            let targetSets: number
+            let targetReps: string
+
+            if (microcycle.isRecovery) {
+              targetSets = Math.max(2, slot.recoverySets)
+              targetReps = slot.recoveryReps
+            } else if (goal && GOAL_OVERRIDES[goal]) {
+              const override = GOAL_OVERRIDES[goal][slot.isCompound ? 'compound' : 'isolation']
+              targetSets = override.sets
+              targetReps = override.reps
+            } else {
+              targetSets = slot.buildSets
+              targetReps = slot.buildReps
+            }
+
             return {
               exerciseId,
               orderIndex: slotIdx,
-              targetSets: slot.buildSets,
-              targetReps: slot.buildReps,
+              targetSets,
+              targetReps,
               notes: slot.label,
               restPeriod: slot.restPeriod,
             }
