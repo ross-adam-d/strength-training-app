@@ -262,6 +262,205 @@ async function main() {
       equipment: ['cable'],
       isPublic: true,
     },
+
+    // Chest additions
+    {
+      name: 'Cable Fly',
+      description: 'Cable-based chest fly providing constant tension throughout the range of motion',
+      muscleGroups: ['chest'],
+      equipment: ['cable'],
+      isPublic: true,
+    },
+    {
+      name: 'Machine Chest Press',
+      description: 'Guided chest press machine for chest development without stabilisation demands',
+      muscleGroups: ['chest', 'triceps', 'shoulders'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Decline Bench Press',
+      description: 'Barbell press on a decline angle targeting the lower chest',
+      muscleGroups: ['chest', 'triceps', 'shoulders'],
+      equipment: ['barbell', 'bench'],
+      isPublic: true,
+    },
+
+    // Back additions
+    {
+      name: 'T-Bar Row',
+      description: 'Barbell row using a T-bar setup for mid-back thickness',
+      muscleGroups: ['back', 'biceps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Single-Arm Dumbbell Row',
+      description: 'Unilateral dumbbell row for balanced lat and mid-back development',
+      muscleGroups: ['back', 'biceps'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+      isUnilateral: true,
+    },
+    {
+      name: 'Pendlay Row',
+      description: 'Strict barbell row reset to the floor each rep for explosive back strength',
+      muscleGroups: ['back', 'biceps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+
+    // Shoulder & trap additions
+    {
+      name: 'Barbell Shrugs',
+      description: 'Heavy shrug movement for upper trapezius development',
+      muscleGroups: ['shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Upright Row',
+      description: 'Vertical pull targeting the traps and lateral deltoids',
+      muscleGroups: ['shoulders', 'biceps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Arnold Press',
+      description: 'Rotating dumbbell shoulder press hitting all three deltoid heads',
+      muscleGroups: ['shoulders', 'triceps'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Rear Delt Fly',
+      description: 'Dumbbell fly isolation for the posterior deltoid and upper back',
+      muscleGroups: ['shoulders'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+    },
+
+    // Glute additions
+    {
+      name: 'Hip Thrusts',
+      description: 'Hip extension movement with barbell for isolated glute development',
+      muscleGroups: ['glutes', 'hamstrings'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Bulgarian Split Squat',
+      description: 'Rear-foot-elevated split squat for unilateral quad and glute development',
+      muscleGroups: ['quads', 'glutes'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+      isUnilateral: true,
+    },
+    {
+      name: 'Hack Squat',
+      description: 'Machine-based squat for quad-dominant lower body development without a rack',
+      muscleGroups: ['quads', 'glutes'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+
+    // Leg additions
+    {
+      name: 'Box Squat',
+      description: 'Squat to a box developing hip drive and posterior chain strength',
+      muscleGroups: ['quads', 'hamstrings', 'glutes', 'core'],
+      equipment: ['barbell', 'rack'],
+      isPublic: true,
+    },
+    {
+      name: 'Seated Leg Curl',
+      description: 'Seated machine curl for isolated hamstring development',
+      muscleGroups: ['hamstrings'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Cable Pull-Through',
+      description: 'Cable hip hinge targeting the glutes and hamstrings',
+      muscleGroups: ['hamstrings', 'glutes'],
+      equipment: ['cable'],
+      isPublic: true,
+    },
+
+    // Bicep additions
+    {
+      name: 'Cable Curl',
+      description: 'Cable-based curl providing constant tension throughout the range of motion',
+      muscleGroups: ['biceps'],
+      equipment: ['cable'],
+      isPublic: true,
+    },
+    {
+      name: 'Preacher Curl',
+      description: 'Strict bicep curl on a preacher pad eliminating shoulder involvement',
+      muscleGroups: ['biceps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Incline Dumbbell Curl',
+      description: 'Curl on an incline bench for maximum long-head bicep stretch',
+      muscleGroups: ['biceps'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+    },
+
+    // Tricep additions
+    {
+      name: 'Skull Crushers',
+      description: 'Lying barbell extension for overall tricep mass development',
+      muscleGroups: ['triceps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Tricep Kickback',
+      description: 'Dumbbell kickback isolating the tricep through full extension',
+      muscleGroups: ['triceps'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+      isUnilateral: true,
+    },
+
+    // Core additions
+    {
+      name: 'Ab Wheel Rollout',
+      description: 'Anti-extension core exercise for total core and shoulder stability',
+      muscleGroups: ['core'],
+      equipment: ['bodyweight'],
+      isPublic: true,
+      isBodyweight: true,
+    },
+    {
+      name: 'Decline Crunch',
+      description: 'Crunch on a decline bench for upper ab focus',
+      muscleGroups: ['core'],
+      equipment: ['bodyweight'],
+      isPublic: true,
+      isBodyweight: true,
+    },
+    {
+      name: 'Russian Twist',
+      description: 'Rotational core exercise targeting the obliques',
+      muscleGroups: ['core'],
+      equipment: ['bodyweight'],
+      isPublic: true,
+      isBodyweight: true,
+    },
+
+    // Forearm addition
+    {
+      name: 'Reverse Curl',
+      description: 'Overhand curl targeting the brachialis, brachioradialis, and forearms',
+      muscleGroups: ['biceps', 'forearms'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
   ]
 
   for (const exercise of exercises) {
