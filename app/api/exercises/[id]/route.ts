@@ -9,6 +9,55 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const url = new URL(request.url)
+
+    // Usage check — returns whether exercise is in any active/planned training block
+    if (url.searchParams.get('usage') === 'true') {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      const activeUsage = await prisma.workoutExercise.findFirst({
+        where: {
+          exerciseId: id,
+          workout: {
+            microcycle: {
+              mesocycle: {
+                macrocycle: {
+                  status: { in: ['planned', 'active'] },
+                  userId: session.user.id,
+                },
+              },
+            },
+          },
+        },
+        select: {
+          workout: {
+            select: {
+              microcycle: {
+                select: {
+                  mesocycle: {
+                    select: {
+                      macrocycle: { select: { name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+
+      if (activeUsage) {
+        return NextResponse.json({
+          inUse: true,
+          blockName: activeUsage.workout.microcycle.mesocycle.macrocycle.name,
+        })
+      }
+      return NextResponse.json({ inUse: false })
+    }
+
     const exercise = await prisma.exercise.findUnique({
       where: {
         id,

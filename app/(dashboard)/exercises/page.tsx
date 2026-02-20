@@ -92,6 +92,14 @@ export default function ExercisesPage() {
   const [isTimed, setIsTimed] = useState(false)
   const [isBodyweight, setIsBodyweight] = useState(false)
 
+  // Delete state
+  const [deletingExercise, setDeletingExercise] = useState<Exercise | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deleteUsage, setDeleteUsage] = useState<
+    { loading: true } | { loading: false; inUse: false } | { loading: false; inUse: true; blockName: string }
+  >({ loading: false, inUse: false })
+  const [isDeleting, setIsDeleting] = useState(false)
+
   useEffect(() => {
     fetchExercises()
   }, [])
@@ -279,6 +287,40 @@ export default function ExercisesPage() {
     }
   }
 
+  async function handleOpenDelete(exercise: Exercise) {
+    setDeletingExercise(exercise)
+    setDeleteUsage({ loading: true })
+    setIsDeleteModalOpen(true)
+    try {
+      const res = await fetch(`/api/exercises/${exercise.id}?usage=true`)
+      const data = await res.json()
+      setDeleteUsage(
+        data.inUse
+          ? { loading: false, inUse: true, blockName: data.blockName }
+          : { loading: false, inUse: false }
+      )
+    } catch {
+      setDeleteUsage({ loading: false, inUse: false })
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingExercise) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/exercises/${deletingExercise.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setExercises((prev) => prev.filter((e) => e.id !== deletingExercise.id))
+        setIsDeleteModalOpen(false)
+        setDeletingExercise(null)
+      }
+    } catch (error) {
+      console.error('Error deleting exercise:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>
   }
@@ -383,14 +425,25 @@ export default function ExercisesPage() {
                 </div>
               </div>
 
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => handleOpenEdit(exercise)}
-                className="w-full"
-              >
-                Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleOpenEdit(exercise)}
+                  className="flex-1"
+                >
+                  Edit
+                </Button>
+                {!exercise.isPublic && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleOpenDelete(exercise)}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </div>
             </CardBody>
           </Card>
         ))}
@@ -571,6 +624,66 @@ export default function ExercisesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingExercise(null)
+        }}
+        title={`Delete ${deletingExercise?.name ?? 'Exercise'}`}
+        size="sm"
+      >
+        {deleteUsage.loading ? (
+          <p className="py-4 text-center text-sm text-gray-500">Checking usage...</p>
+        ) : deleteUsage.inUse ? (
+          <>
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
+              <p className="text-sm font-medium text-amber-800 mb-1">This exercise is in an active training block</p>
+              <p className="text-sm text-amber-700">
+                <strong>{deletingExercise?.name}</strong> is currently assigned to workouts in your{' '}
+                <strong>{deleteUsage.blockName}</strong> block. We recommend going to that block and swapping it for
+                another exercise before deleting.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              If you delete it anyway, it will be removed from all workouts and all logged history for this exercise
+              will be permanently lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDelete} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete Anyway'}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{deletingExercise?.name}</strong>? This will permanently delete
+              all logged history for this exercise. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDelete} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </>
+        )}
       </Modal>
 
       <Modal
