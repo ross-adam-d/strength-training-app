@@ -50,11 +50,13 @@ export default function SetupPage() {
       for (let w = 0; w < phaseWeeks; w++) {
         const weekStart = addWeeks(phaseStart, w)
         const weekEnd = addWeeks(weekStart, 1)
+        const isRecovery = recoveryWeeks > 0 && w >= activeWeeks
         microcycles.push({
-          name: `Week ${currentWeek + w + 1}`,
+          name: `Week ${currentWeek + w + 1}${isRecovery ? ' (Recovery)' : ''}`,
           weekNumber: currentWeek + w + 1,
           startDate: format(weekStart, 'yyyy-MM-dd'),
           endDate: format(weekEnd, 'yyyy-MM-dd'),
+          isRecovery,
           workouts: [] // Empty - user will configure on overview page
         })
       }
