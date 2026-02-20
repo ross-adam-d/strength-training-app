@@ -154,9 +154,33 @@
 ### Beta Operations (immediate)
 - Monitor beta users via admin dashboard
 - Extend trials / grant access manually as needed
-- Collect feedback for post-beta feature prioritisation
 
-### Post-Beta Features (8-12 hours) ⭐ NEXT
+---
+
+### ~~Sessions 26-27: Periodisation~~ ✅ COMPLETE
+
+- ✅ `Microcycle.isRecovery` schema field added + DB pushed
+- ✅ `isCompound: boolean` added to `ExerciseSlot` interface + all slots marked
+- ✅ Setup route persists `isRecovery` from wizard payload
+- ✅ Setup page `generateSimplifiedPlan()` now flags recovery weeks correctly
+- ✅ `generate-workouts`: GOAL_OVERRIDES constant + priority logic (isRecovery > goal > slot default)
+- ✅ Training block page rebuild modal description updated
+
+---
+
+### Next Up: Bug Fixes + Exercise Library (Session 28)
+
+#### Bug Fixes
+- **RDL duplicate** ⚠️ *Code written, not committed* — Good Mornings replaces RDL alt in Lower + Legs Hamstrings slots. Need to verify `Good Mornings` exists in exercise DB before deploying.
+- **Add exercise sets not populating** ⚠️ *Code written, not committed* — POST response now returns full exercise fields; `handleAddExercise()` updates `workout` state directly, skipping `fetchWorkout()`.
+
+#### Exercise Library (~3-4h)
+- **Muscle groups**: Remove `legs`; add `quads`, `hamstrings`, `adductors`, `abductors`. Update `MUSCLE_GROUP_OPTIONS` in exercises page + phase overview form. Run DB script to reclassify existing exercises.
+- **Library expansion**: Add ~20-30 exercises to reduce repetition across splits. Focus areas: chest (cable fly, decline, weighted dips), back (T-bar row, chest-supported row), legs (hack squat, Bulgarian split squat, Nordic curl, hip thrust), shoulders (cable lateral raise, Arnold press, reverse fly), arms (hammer curl, preacher curl, skull crushers).
+
+---
+
+### Post-Beta Features (later)
 - Progressive overload tracking + exercise analytics charts
 - Data export (CSV/PDF)
 - Stripe integration + email lifecycle (separate plan)
@@ -174,7 +198,7 @@
 
 ---
 
-### Phase 6D: Additional Exercise Types
+### ~~Phase 6D: Additional Exercise Types~~ ✅ COMPLETE
 **Priority**: MEDIUM
 **Effort**: 7-9 hours
 **Impact**: More exercise type flexibility
@@ -217,7 +241,7 @@ model ExerciseLog {
 
 ---
 
-### Phase 7: Dashboard Redesign
+### ~~Phase 7: Dashboard Redesign~~ ✅ COMPLETE
 **Priority**: MEDIUM
 **Effort**: 16-20 hours
 **Impact**: Better workout-focused UX
@@ -273,12 +297,14 @@ model ExerciseLog {
 | Session 17 | Code Quality & Polish | 2h | ✅ Complete |
 | **User Requests** | **Dashboard + Exercise Library + Wizard** | **4-6h** | **✅ Complete** |
 | Session 18 | Live Workout Exercise Management | 3h | ✅ Complete |
-| Session 19 | Phase 6D (Timed/BW) + Dashboard Redesign | 5h | ✅ Complete |
+| Phase 6D | Additional Exercise Types | 7-9h | ✅ Complete |
+| Phase 7 | Dashboard Redesign | 16-20h | ✅ Complete |
+| Sessions 26-27 | Periodisation (recovery weeks + goal-based) | ~4h | ✅ Complete |
 | Phase 8 | Progress Enhancements | 10-12h | 📋 Pending |
 | Phase 9 | Training Block Menu | 12-16h | 📋 Pending |
 
-**Completed**: ~79 hours
-**Next Up**: Progressive overload tracking, exercise analytics, data export
+**Completed**: ~91 hours
+**Next Up**: Bug fixes (RDL duplicate, add exercise sets), exercise library expansion
 **Remaining**: ~22-28 hours (Phases 8-9)
 **Total Project**: ~101-107 hours
 
@@ -371,5 +397,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 17, 2026 (End of Session 19)
-**Next Session**: Progressive overload tracking, exercise analytics, or data export
+**Last Updated**: Feb 20, 2026 (Session 27)
+**Next Session**: Commit + deploy bug fixes (verify Good Mornings in DB first), exercise library expansion

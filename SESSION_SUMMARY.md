@@ -1,3 +1,83 @@
+# Session Summary — 2026-02-10 to 2026-02-20 (Sessions 9-27)
+
+---
+
+# Session 27 — Periodisation + Bug Fixes (2026-02-20)
+
+## Overview
+Wired up the periodisation system end-to-end (recovery weeks + goal-based loading), fixed a root-cause bug in the setup wizard, resolved the DIRECT_URL misconfiguration, and began work on two bug fixes (uncommitted).
+
+## Features Implemented
+
+### 1. Periodisation — Recovery Weeks + Goal-Based Loading
+
+**Files changed**: `prisma/schema.prisma`, `lib/splitTemplates.ts`, `app/api/macrocycles/setup/route.ts`, `app/(dashboard)/macrocycles/setup/page.tsx`, `app/api/mesocycles/[id]/generate-workouts/route.ts`, `app/(dashboard)/macrocycles/[id]/page.tsx`
+
+#### Schema
+- Added `isRecovery Boolean @default(false)` to `Microcycle` model
+- Applied to DB via Supabase SQL editor (DIRECT_URL was misconfigured — see below)
+- Ran `prisma generate` locally to update client types
+
+#### splitTemplates.ts
+- Added `isCompound: boolean` to `ExerciseSlot` interface
+- Marked all slots: `true` for multi-joint lifts (squats, presses, rows, pulls, hip hinges), `false` for isolation (curls, raises, extensions, core)
+
+#### Setup route (`api/macrocycles/setup/route.ts`)
+- Added `isRecovery: z.boolean().optional().default(false)` to `microcycleSchema`
+- Passes `isRecovery` to `prisma.microcycle.create()`
+
+#### Setup page (`macrocycles/setup/page.tsx`) — Root cause fix
+- `generateSimplifiedPlan()` was the actual function used (not `lib/generatePlan.ts`)
+- Was not setting `isRecovery` on any microcycle — all defaulted to `false`
+- Fixed: `const isRecovery = recoveryWeeks > 0 && w >= activeWeeks`
+- Recovery weeks now named `Week N (Recovery)` and saved with `isRecovery: true`
+
+#### generate-workouts route
+- Added `GOAL_OVERRIDES` constant: Hypertrophy / Strength / Power / Maintenance / Deload
+- Fetches `goal` from mesocycle and `isRecovery` from each microcycle
+- Priority logic: **isRecovery → goal override → slot default**
+- Recovery weeks: `Math.max(2, slot.recoverySets)` sets, `slot.recoveryReps` reps
+- Goal weeks (e.g. Hypertrophy): compound 4×6-12, isolation 3×10-15
+- No goal: falls back to `slot.buildSets` / `slot.buildReps`
+
+#### Commits
+```
+d1c8363 - Wire up periodisation: recovery weeks + goal-based loading
+596a927 - Fix: set isRecovery on microcycles in setup wizard
+```
+
+### 2. DIRECT_URL Fix
+- `.env` `DIRECT_URL` was pointing to the session pooler (`pooler.supabase.com:5432`) instead of the direct connection
+- Fixed to: `postgresql://postgres:...@db.yxudddkwzemqbjdpugvi.supabase.co:5432/postgres`
+- `npm run db:push` now connects to correct host (though still blocked by Supabase network restrictions from local machine — use SQL editor for schema changes)
+
+### 3. Bug Fixes — Begun, NOT committed
+
+#### RDL Duplicate (`lib/splitTemplates.ts`)
+- `Hamstrings` slot in `Lower` and `Legs` workout types had `Romanian Deadlift` as barbell alternative
+- Same exercise as `Posterior Chain` primary → appeared twice when barbell available
+- Fixed: replaced with `Good Mornings` (equipment: `['barbell']`)
+- ⚠️ Need to verify `Good Mornings` exists in exercise DB before deploying
+
+#### Add Exercise Sets Not Populating (`workouts/[id]/log/page.tsx` + `api/workout-exercises/route.ts`)
+- Root cause: `handleAddExercise()` called `fetchWorkout()`, which found an active draft and showed the draft modal, interrupting the flow
+- Fix 1: POST response now returns full exercise data (`isUnilateral`, `isTimed`, `isBodyweight`)
+- Fix 2: `handleAddExercise()` updates `workout` state directly via `setWorkout(prev => ...)`, skipping `fetchWorkout()` entirely
+- ⚠️ Written but not committed
+
+## Lessons Learned
+
+- **`generateSimplifiedPlan()` vs `lib/generatePlan.ts`**: The setup page has its own plan generator — always check which function is actually called before assuming the shared lib is used.
+- **Draft modal side effect**: Calling `fetchWorkout()` mid-session triggers the draft detection branch → shows draft modal unexpectedly. Any mid-session re-fetch needs to bypass draft logic or update state directly.
+- **Supabase network restrictions**: Direct connection (port 5432 on `db.xxx.supabase.co`) is blocked from local machine. Use SQL editor for schema DDL. `DIRECT_URL` must point to the direct host, not the pooler.
+- **Schema DDL via SQL editor**: `ALTER TABLE microcycles ADD COLUMN IF NOT EXISTS "isRecovery" BOOLEAN NOT NULL DEFAULT false;`
+
+## Status
+- Periodisation: ✅ Complete and deployed
+- Bug fixes: ⚠️ Code written, not committed — pending Good Mornings DB verification
+
+---
+
 # Session Summary — 2026-02-10 to 2026-02-13 (Sessions 9-15)
 
 ## Project

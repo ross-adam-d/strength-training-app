@@ -124,6 +124,13 @@ async function main() {
       isPublic: true,
     },
     {
+      name: 'Good Mornings',
+      description: 'Hip hinge movement targeting hamstrings and lower back',
+      muscleGroups: ['legs'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
       name: 'Leg Extension',
       description: 'Isolation exercise for quadriceps',
       muscleGroups: ['legs'],

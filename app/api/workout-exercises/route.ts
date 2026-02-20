@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         notes: data.notes,
         restPeriod: data.restPeriod,
       },
-      include: { exercise: { select: { id: true, name: true } } },
+      include: { exercise: { select: { id: true, name: true, description: true, isUnilateral: true, isTimed: true, isBodyweight: true } } },
     })
 
     return NextResponse.json(slot, { status: 201 })
