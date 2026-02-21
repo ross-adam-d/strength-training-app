@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { LiftHistoryModal } from '@/components/LiftHistoryModal'
+import { getSuggestion, estimate1RM } from '@/lib/progressiveOverload'
 
 interface WorkoutExercise {
   id: string
@@ -26,6 +27,7 @@ interface WorkoutExercise {
     isUnilateral: boolean
     isTimed: boolean
     isBodyweight: boolean
+    equipment: string[]
   }
 }
 
@@ -181,6 +183,10 @@ export default function WorkoutLogPage() {
   const [hasDraft, setHasDraft] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
 
+  // Progressive overload suggestions and all-time PR bests
+  const [suggestions, setSuggestions] = useState<Map<string, Map<number, { weight: string; reps: string; duration?: string }>>>(new Map())
+  const [allTimeBests, setAllTimeBests] = useState<Record<string, number>>({})
+
   // Add exercise modal state
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
   const [addExerciseForm, setAddExerciseForm] = useState({
@@ -226,7 +232,7 @@ export default function WorkoutLogPage() {
         }
 
         // Build lookup from most recent completed workout log
-        const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number }[]>()
+        const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number; rir?: number | null; duration?: number | null }[]>()
         const lastExerciseNotes: Record<string, string> = {}
         const lastExerciseRpes: Record<string, number> = {}
 
@@ -251,22 +257,52 @@ export default function WorkoutLogPage() {
         setExerciseNotes(lastExerciseNotes)
         setExerciseRpes(lastExerciseRpes)
 
-        // Pre-populate sets from the workout plan, using last log values where available
-        const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
-          Array.from({ length: we.targetSets }, (_, i) => {
+        // Compute progressive overload suggestions per exercise × set
+        const newSuggestions = new Map<string, Map<number, { weight: string; reps: string; duration?: string }>>()
+        for (const we of data.workoutExercises) {
+          const setMap = new Map<number, { weight: string; reps: string; duration?: string }>()
+          for (let i = 0; i < we.targetSets; i++) {
             const lastSet = lastLogSets.get(we.exercise.id)?.find((s) => s.setNumber === i + 1)
-            return {
-              exerciseId: we.exercise.id,
-              setNumber: i + 1,
-              reps: lastSet ? String(lastSet.reps) : '',
-              weight: lastSet ? String(lastSet.weight) : '',
-              rir: undefined,
-              notes: '',
-              skipped: false,
+            if (we.exercise.isTimed) {
+              setMap.set(i + 1, {
+                weight: lastSet?.weight ? String(lastSet.weight) : '',
+                reps: '',
+                duration: lastSet?.duration ? String(lastSet.duration) : '',
+              })
+            } else {
+              const suggestion = getSuggestion(
+                lastSet,
+                we.targetReps,
+                we.exercise.equipment ?? [],
+                we.exercise.isBodyweight
+              )
+              setMap.set(i + 1, suggestion)
             }
-          })
+          }
+          newSuggestions.set(we.exercise.id, setMap)
+        }
+        setSuggestions(newSuggestions)
+
+        // Initialise empty sets (ghost placeholders handle the suggestions)
+        const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
+          Array.from({ length: we.targetSets }, (_, i) => ({
+            exerciseId: we.exercise.id,
+            setNumber: i + 1,
+            reps: '',
+            weight: '',
+            rir: undefined,
+            notes: '',
+            skipped: false,
+          }))
         )
         setExerciseLogs(prepopulated)
+
+        // Fetch all-time PR bests for PR detection
+        const exerciseIds = data.workoutExercises.map((we: WorkoutExercise) => we.exercise.id)
+        if (exerciseIds.length > 0) {
+          const bestsRes = await fetch(`/api/exercises/bests?ids=${exerciseIds.join(',')}`)
+          if (bestsRes.ok) setAllTimeBests(await bestsRes.json())
+        }
       }
     } catch (error) {
       console.error('Error fetching workout:', error)
@@ -286,6 +322,23 @@ export default function WorkoutLogPage() {
       console.error('Error fetching exercises:', error)
     }
   }, [])
+
+  // Compute which sets are PRs (new all-time best estimated 1RM)
+  const prSets = useMemo(() => {
+    const result = new Set<string>()
+    for (const log of exerciseLogs) {
+      if (log.skipped) continue
+      const weight = parseFloat(String(log.weight))
+      const reps = parseInt(String(log.reps))
+      if (!weight || !reps || weight <= 0 || reps <= 0) continue
+      const oneRM = estimate1RM(weight, reps)
+      const best = allTimeBests[log.exerciseId]
+      if (best !== undefined && oneRM > best) {
+        result.add(`${log.exerciseId}-${log.setNumber}`)
+      }
+    }
+    return result
+  }, [exerciseLogs, allTimeBests])
 
   const saveDraft = useCallback(() => {
     if (!workout) return
@@ -1198,11 +1251,11 @@ export default function WorkoutLogPage() {
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9.]*"
-                          placeholder={we.exercise.isBodyweight ? "BW" : "0"}
-                          value={we.exercise.isBodyweight && log.weight === '0' ? '' : log.weight}
+                          placeholder={we.exercise.isBodyweight ? 'BW' : (suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || '')}
+                          value={log.weight}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                          className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                          className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                         />
                         {we.exercise.isUnilateral ? (
                           <>
@@ -1232,22 +1285,22 @@ export default function WorkoutLogPage() {
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            placeholder="0"
+                            placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.duration || ''}
                             value={log.duration ?? ''}
                             onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'duration', e.target.value)}
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
-                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                           />
                         ) : (
                           <input
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            placeholder="0"
+                            placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
                             value={log.reps}
                             onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                           />
                         )}
                         <input
@@ -1261,6 +1314,9 @@ export default function WorkoutLogPage() {
                           className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
                         />
                       </div>
+                      {prSets.has(`${log.exerciseId}-${log.setNumber}`) && (
+                        <p className="text-xs text-yellow-600 font-semibold ml-[2.5rem]">New PR!</p>
+                      )}
                       <div className="ml-[2.5rem] space-y-2">
                         {/* Row 1: Timed exercise timer controls (only for timed exercises) */}
                         {we.exercise.isTimed && (
