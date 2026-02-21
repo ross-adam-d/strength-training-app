@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-21'
+export const CURRENT_RELEASE_ID = '2026-02-22'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-22',
+    date: 'February 22, 2026',
+    title: 'Progressive Overload & Workout Improvements',
+    changes: [
+      'Workout inputs now show personalised load and rep targets as ghost text — based on your last session\'s performance and your training goals, the app suggests whether to add a rep or increase the weight',
+      'A "New PR!" indicator appears when you log a set that beats your all-time best estimated 1RM for that exercise',
+      'Fixed a crash that occurred when navigating back to the dashboard after completing a workout',
+    ],
+  },
   {
     id: '2026-02-21',
     date: 'February 21, 2026',
