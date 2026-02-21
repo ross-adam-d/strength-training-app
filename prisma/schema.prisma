@@ -38,6 +38,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  lastSeenReleaseId String?
+
   profile       Profile?
   macrocycles   Macrocycle[]
   exercises     Exercise[]

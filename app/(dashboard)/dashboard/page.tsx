@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { WelcomeChecklist } from '@/components/WelcomeChecklist'
+import { ReleaseNotesDialog } from '@/components/ReleaseNotesDialog'
+import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -28,7 +30,7 @@ export default async function DashboardPage() {
   const now = new Date()
 
   // Stage 1: independent queries in parallel
-  const [blockCount, activeBlock, recentWorkoutLogs] = await Promise.all([
+  const [blockCount, activeBlock, recentWorkoutLogs, userData] = await Promise.all([
     prisma.macrocycle.count({
       where: { userId: session.user.id },
     }),
@@ -51,6 +53,10 @@ export default async function DashboardPage() {
           distinct: ['exerciseId'],
         },
       },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { lastSeenReleaseId: true },
     }),
   ])
 
@@ -139,6 +145,8 @@ export default async function DashboardPage() {
       }, 0)
     , 0)
   }
+
+  const unseenNotes = getUnseenReleaseNotes(userData?.lastSeenReleaseId ?? null)
 
   // Sort workouts: days 0–6 in order, null (unscheduled) last
   const sortedWorkouts = currentMicro
@@ -294,6 +302,10 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {unseenNotes.length > 0 && (
+        <ReleaseNotesDialog unseenNotes={unseenNotes} />
       )}
     </div>
   )
