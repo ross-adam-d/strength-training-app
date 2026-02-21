@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -129,7 +129,6 @@ function playBeep() {
 }
 
 export default function WorkoutLogPage() {
-  const router = useRouter()
   const params = useParams()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
@@ -1017,7 +1016,7 @@ export default function WorkoutLogPage() {
         clearDraft()
         setSaving(false)
         // Redirect to dashboard
-        router.push('/dashboard')
+        window.location.assign('/dashboard')
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
@@ -1554,7 +1553,7 @@ export default function WorkoutLogPage() {
       <div className="flex justify-end gap-3 mb-8">
         <Button
           variant="secondary"
-          onClick={() => router.push('/dashboard')}
+          onClick={() => window.location.assign('/dashboard')}
         >
           Cancel
         </Button>
