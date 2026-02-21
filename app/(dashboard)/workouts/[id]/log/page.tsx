@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
@@ -1046,12 +1045,12 @@ export default function WorkoutLogPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <Link
+        <a
           href="/dashboard"
           className="text-primary-600 hover:text-primary-700 text-sm"
         >
           ← Back to Dashboard
-        </Link>
+        </a>
       </div>
 
       {/* Sticky header on mobile */}

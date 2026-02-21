@@ -138,7 +138,7 @@ export default function ManualWorkoutPage() {
       })
 
       if (res.ok) {
-        router.push('/dashboard')
+        window.location.assign('/dashboard')
       } else {
         const errorData = await res.json().catch(() => ({}))
         console.error('Server error:', errorData)
@@ -280,7 +280,7 @@ export default function ManualWorkoutPage() {
       </Card>
 
       <div className="flex justify-end gap-3 mb-8">
-        <Button variant="secondary" onClick={() => router.push('/dashboard')}>
+        <Button variant="secondary" onClick={() => window.location.assign('/dashboard')}>
           Cancel
         </Button>
         <Button onClick={handleComplete} disabled={saving}>
