@@ -4,8 +4,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
 function statusBadge(
   status: string | null,
   trialEndsAt: Date | null,

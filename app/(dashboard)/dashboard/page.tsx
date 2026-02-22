@@ -6,8 +6,6 @@ import { WelcomeChecklist } from '@/components/WelcomeChecklist'
 import { ReleaseNotesDialog } from '@/components/ReleaseNotesDialog'
 import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 
-export const dynamic = 'force-dynamic'
-
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function formatVolume(kg: number): string {
