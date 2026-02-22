@@ -132,7 +132,7 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
               <BarChart
                 data={muscleVolumeData}
                 layout="vertical"
-                margin={{ top: 4, right: 16, left: 80, bottom: 4 }}
+                margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
