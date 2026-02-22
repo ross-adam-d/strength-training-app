@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-22'
+export const CURRENT_RELEASE_ID = '2026-02-22b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-22b',
+    date: 'February 22, 2026',
+    title: 'Progress Page — Phase 8',
+    changes: [
+      'Progress page is now organised into three tabs: Volume & Intensity, Exercise Metrics, and Deep Analytics',
+      'Volume & Intensity tab shows a new Muscle Group Volume chart — see your average sets per week per muscle group at a glance',
+      'Exercise Metrics tab now includes a full Personal Records table with estimated 1RM, 5RM and 10RM for every exercise you\'ve logged',
+      'Deep Analytics tab (Premiere) shows Training Readiness (green/amber/red traffic light), RPE Creep detection, and Weak Point Analysis against minimum effective volume targets per muscle group',
+      'CSV export and advanced analytics are now Premiere-tier features',
+    ],
+  },
   {
     id: '2026-02-22',
     date: 'February 22, 2026',

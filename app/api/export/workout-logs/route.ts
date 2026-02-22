@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import type { NextRequest } from 'next/server'
 
 function escapeCsvField(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return ''
@@ -12,11 +14,20 @@ function escapeCsvField(value: string | number | boolean | null | undefined): st
   return str
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+    const tier = token?.tier ?? 'PREMIERE'
+    if (tier === 'BASIC') {
+      return NextResponse.json(
+        { error: 'CSV export is a Premiere feature. Upgrade to access data export.' },
+        { status: 403 }
+      )
     }
 
     const logs = await prisma.workoutLog.findMany({
