@@ -64,12 +64,18 @@ export default async function WorkoutLogDetailPage({
     <div className="min-h-screen pb-20">
       {/* Sticky Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10 mb-4">
-        <Link
-          href={mesocycleId ? `/mesocycles/${mesocycleId}` : '/dashboard'}
-          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-        >
-          ← Back to {mesocycleId ? log.workout?.microcycle?.mesocycle?.name : 'Dashboard'}
-        </Link>
+        {mesocycleId ? (
+          <Link
+            href={`/mesocycles/${mesocycleId}`}
+            className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+          >
+            ← Back to {log.workout?.microcycle?.mesocycle?.name}
+          </Link>
+        ) : (
+          <a href="/dashboard" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+            ← Back to Dashboard
+          </a>
+        )}
         <h1 className="text-lg font-bold text-gray-900 mt-2">
           {log.workout?.name ?? 'Manual Workout'}
         </h1>
