@@ -10,7 +10,7 @@ export function Navigation({ email, role }: { email: string; role?: string }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const links = [
-    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard', label: 'Dashboard', hardNav: true },
     { href: '/macrocycles', label: 'Training Blocks' },
     { href: '/workout-history', label: 'History' },
     { href: '/exercises', label: 'Exercises' },
@@ -19,28 +19,32 @@ export function Navigation({ email, role }: { email: string; role?: string }) {
     ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
+  function navLinkClass(href: string) {
+    return `px-3 py-2 rounded-md text-sm font-medium transition ${
+      pathname === href ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+    }`
+  }
+
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link href="/dashboard" className="text-xl font-bold text-primary-600">
+            <a href="/dashboard" className="text-xl font-bold text-primary-600">
               ProBlock
-            </Link>
+            </a>
             <div className="hidden md:flex space-x-4">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                    pathname === link.href
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {links.map((link) =>
+                link.hardNav ? (
+                  <a key={link.href} href={link.href} className={navLinkClass(link.href)}>
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link key={link.href} href={link.href} className={navLinkClass(link.href)}>
+                    {link.label}
+                  </Link>
+                )
+              )}
             </div>
           </div>
 
@@ -72,20 +76,27 @@ export function Navigation({ email, role }: { email: string; role?: string }) {
       {mobileOpen && (
         <div className="md:hidden border-t">
           <div className="px-4 py-3 space-y-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 rounded-md text-sm font-medium transition ${
-                  pathname === link.href
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {links.map((link) =>
+              link.hardNav ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block ${navLinkClass(link.href)}`}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block ${navLinkClass(link.href)}`}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
             <div className="pt-3 mt-3 border-t flex items-center justify-between">
               <span className="text-sm text-gray-500">{email}</span>
               <button
