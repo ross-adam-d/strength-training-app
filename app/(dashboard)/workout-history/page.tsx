@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+function TrashIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  )
+}
+
 interface WorkoutLog {
   id: string
   completedAt: string
@@ -23,6 +32,8 @@ export default function WorkoutHistoryPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchWorkoutLogs()
@@ -41,6 +52,19 @@ export default function WorkoutHistoryPage() {
       console.error('Error fetching workout logs:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/workout-logs/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setWorkoutLogs((prev) => prev.filter((l) => l.id !== id))
+      }
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -232,49 +256,84 @@ export default function WorkoutHistoryPage() {
             {sortedWorkouts.map((log) => {
               const logDate = new Date(log.completedAt)
               const uniqueExercises = new Set(log.exerciseLogs.map((el) => el.exercise.id)).size
+              const isConfirming = confirmDeleteId === log.id
+              const isDeleting = deletingId === log.id
 
               return (
-                <Link
-                  key={log.id}
-                  href={`/workout-logs/${log.id}`}
-                  className="block p-4 border rounded-md hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">
-                        {log.workout?.name ?? 'Manual Workout'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {logDate.toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </p>
-                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-2">
-                        <span>{uniqueExercises} exercises</span>
-                        {log.duration && (
-                          <>
-                            <span>•</span>
-                            <span>{log.duration} min</span>
-                          </>
-                        )}
-                        {log.overallRpe && (
-                          <>
-                            <span>•</span>
-                            <span>RPE {log.overallRpe.toFixed(1)}</span>
-                          </>
-                        )}
+                <div key={log.id} className="border rounded-md transition overflow-hidden">
+                  <a
+                    href={`/workout-logs/${log.id}`}
+                    className="block p-4 hover:bg-gray-50 transition"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">
+                          {log.workout?.name ?? 'Manual Workout'}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {logDate.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </p>
+                        <div className="flex items-center gap-3 text-sm text-gray-500 mt-2">
+                          <span>{uniqueExercises} exercises</span>
+                          {log.duration && (
+                            <>
+                              <span>•</span>
+                              <span>{log.duration} min</span>
+                            </>
+                          )}
+                          {log.overallRpe && (
+                            <>
+                              <span>•</span>
+                              <span>RPE {log.overallRpe.toFixed(1)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ml-4 flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setConfirmDeleteId(isConfirming ? null : log.id)
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                          aria-label="Delete workout"
+                        >
+                          <TrashIcon />
+                        </button>
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
-                    <div className="ml-4">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                  </a>
+
+                  {isConfirming && (
+                    <div className="flex items-center justify-between px-4 py-3 bg-red-50 border-t border-red-100">
+                      <p className="text-sm text-red-700">Delete this workout permanently?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={isDeleting}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-white transition-colors disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleDelete(log.id)}
+                          disabled={isDeleting}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          {isDeleting ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  )}
+                </div>
               )
             })}
           </div>

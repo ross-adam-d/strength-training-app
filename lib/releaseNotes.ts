@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-22b'
+export const CURRENT_RELEASE_ID = '2026-02-23'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-23',
+    date: 'February 23, 2026',
+    title: 'Delete Past Workouts',
+    changes: [
+      'You can now delete past workouts from your history — use the trash icon on any workout in the history list, or the Delete Workout button at the bottom of a workout detail page',
+      'Deleting a workout permanently removes all its data, and your progress metrics (PRs, volume, readiness) update immediately to reflect the change',
+    ],
+  },
   {
     id: '2026-02-22b',
     date: 'February 22, 2026',

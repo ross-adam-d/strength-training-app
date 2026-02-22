@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import DeleteWorkoutLogButton from './DeleteWorkoutLogButton'
 
 export default async function WorkoutLogDetailPage({
   params,
@@ -164,6 +165,11 @@ export default async function WorkoutLogDetailPage({
             </div>
           )
         })}
+      </div>
+
+      {/* Delete */}
+      <div className="px-4 pt-4 pb-8">
+        <DeleteWorkoutLogButton id={log.id} />
       </div>
     </div>
   )
