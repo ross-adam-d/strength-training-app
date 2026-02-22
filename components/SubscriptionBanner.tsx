@@ -1,6 +1,10 @@
 import { getUserSubscriptionStatus } from '@/lib/subscription'
 
 export async function SubscriptionBanner({ userId }: { userId: string }) {
+  if (!userId) {
+    console.error('[SubscriptionBanner] userId is missing:', userId)
+    return null
+  }
   const { canWrite, isExpired, daysUntilExpiry, status } = await getUserSubscriptionStatus(userId)
 
   // Fully expired — banner shown on the /subscribe page itself, not here
