@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import DeleteWorkoutLogButton from './DeleteWorkoutLogButton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function WorkoutLogDetailPage({
   params,
 }: {
