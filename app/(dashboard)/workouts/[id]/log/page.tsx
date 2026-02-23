@@ -696,21 +696,22 @@ export default function WorkoutLogPage() {
   }
 
   function addSet(exerciseId: string) {
-    const exerciseSets = exerciseLogs.filter((log) => log.exerciseId === exerciseId)
-    const setNumber = exerciseSets.length + 1
-
-    setExerciseLogs([
-      ...exerciseLogs,
-      {
-        exerciseId,
-        setNumber,
-        reps: '',
-        weight: '',
-        rir: undefined,
-        notes: '',
-        skipped: false,
-      },
-    ])
+    setExerciseLogs((prev) => {
+      const exerciseSets = prev.filter((log) => log.exerciseId === exerciseId)
+      const setNumber = exerciseSets.length + 1
+      return [
+        ...prev,
+        {
+          exerciseId,
+          setNumber,
+          reps: '',
+          weight: '',
+          rir: undefined,
+          notes: '',
+          skipped: false,
+        },
+      ]
+    })
   }
 
   function completeExercise(exerciseId: string) {
@@ -751,8 +752,8 @@ export default function WorkoutLogPage() {
   }
 
   function updateLog(exerciseId: string, setNumber: number, field: string, value: any) {
-    setExerciseLogs(
-      exerciseLogs.map((log) =>
+    setExerciseLogs((prev) =>
+      prev.map((log) =>
         log.exerciseId === exerciseId && log.setNumber === setNumber
           ? { ...log, [field]: value }
           : log
@@ -766,8 +767,8 @@ export default function WorkoutLogPage() {
       setTimerSecondsLeft(0)
       setTimerFlashing(false)
     }
-    setExerciseLogs(
-      exerciseLogs
+    setExerciseLogs((prev) =>
+      prev
         .filter((log) => !(log.exerciseId === exerciseId && log.setNumber === setNumber))
         .map((log) => {
           if (log.exerciseId === exerciseId && log.setNumber > setNumber) {
@@ -840,36 +841,30 @@ export default function WorkoutLogPage() {
   }
 
   async function handleCompleteWithAutoSkip() {
-    // Auto-skip incomplete sets
-    setExerciseLogs((prev) =>
-      prev.map((log) => {
-        if (log.skipped) return log
+    // Compute auto-skipped logs synchronously so we can pass them directly to saveWorkout,
+    // avoiding any stale-closure timing issues with React state updates.
+    const autoSkippedLogs = exerciseLogs.map((log) => {
+      if (log.skipped) return log
 
-        // Check if incomplete (handle timed exercises)
-        const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
-        const isTimed = workoutExercise?.exercise.isTimed || false
+      const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+      const isTimed = workoutExercise?.exercise.isTimed || false
 
-        const isIncomplete = isTimed
-          ? (log.duration === '' || log.duration === undefined || log.weight === '')
-          : (log.reps === '' || log.weight === '')
+      const isIncomplete = isTimed
+        ? (log.duration === '' || log.duration === undefined || log.weight === '')
+        : (log.reps === '' || log.weight === '')
 
-        if (isIncomplete) {
-          return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
-        }
-        return log
-      })
-    )
+      if (isIncomplete) {
+        return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
+      }
+      return log
+    })
 
-    // Close modal and proceed
+    setExerciseLogs(autoSkippedLogs)
     setShowIncompleteModal(false)
-
-    // Use setTimeout to ensure state update completes
-    setTimeout(() => {
-      saveWorkout()
-    }, 0)
+    await saveWorkout(autoSkippedLogs)
   }
 
-  async function saveWorkout() {
+  async function saveWorkout(logsOverride?: ExerciseLog[]) {
     setSaving(true)
 
     const endTime = new Date()
@@ -881,13 +876,15 @@ export default function WorkoutLogPage() {
       ? rpeValues.reduce((sum, rpe) => sum + rpe, 0) / rpeValues.length
       : undefined
 
+    const logsToSave = logsOverride ?? exerciseLogs
+
     const data = {
       workoutId: params.id,
       duration,
       notes: overallNotes,
       overallRating,
       overallRpe,
-      exerciseLogs: exerciseLogs.map((log) => {
+      exerciseLogs: logsToSave.map((log) => {
         if (log.skipped) {
           // Check if exercise is unilateral or timed
           const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
