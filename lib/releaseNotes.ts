@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-23'
+export const CURRENT_RELEASE_ID = '2026-02-23b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,14 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-23b',
+    date: 'February 23, 2026',
+    title: 'Bug Fix: Workout Logging',
+    changes: [
+      'Fixed a critical bug where reps were saved as 0 for most exercises — caused by a React state timing issue on mobile when moving quickly between the weight and reps inputs',
+    ],
+  },
   {
     id: '2026-02-23',
     date: 'February 23, 2026',
