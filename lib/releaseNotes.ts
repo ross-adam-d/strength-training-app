@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-23b'
+export const CURRENT_RELEASE_ID = '2026-02-24'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-24',
+    date: 'February 24, 2026',
+    title: 'Install as App',
+    changes: [
+      'Strength Training App is now installable as a home screen app on iOS and Android — tap "Add to Home Screen" in your browser to get a full-screen experience with no browser chrome',
+      'The app now loads instantly and works offline for previously-visited pages',
+    ],
+  },
   {
     id: '2026-02-23b',
     date: 'February 23, 2026',
