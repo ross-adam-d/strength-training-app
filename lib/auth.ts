@@ -104,7 +104,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role
-        ;(session.user as any).tier = token.tier ?? 'PREMIERE'
+        session.user.tier = token.tier ?? 'PREMIERE'
+        session.user.subscriptionStatus = token.subscriptionStatus ?? null
       }
       return session
     },

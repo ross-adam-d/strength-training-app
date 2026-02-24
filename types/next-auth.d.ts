@@ -7,6 +7,8 @@ declare module 'next-auth' {
       email: string
       name?: string | null
       role?: string
+      tier?: string
+      subscriptionStatus?: string | null
     }
   }
 
