@@ -23,6 +23,7 @@ interface Mesocycle {
   microcycles: {
     id: string
     weekNumber: number
+    workouts: { id: string }[]
   }[]
 }
 
@@ -247,7 +248,7 @@ export default function MacrocycleDetailPage() {
     setRebuildModal(phase)
   }
 
-  async function confirmRebuild(mode: 'default' | 'manual') {
+  async function confirmRebuild(mode: 'default' | 'manual' | 'repeat-previous') {
     if (!rebuildModal) return
     const phase = rebuildModal
     setRebuildModal(null)
@@ -619,21 +620,19 @@ export default function MacrocycleDetailPage() {
 
       {rebuildModal && (() => {
         const phaseIndex = macrocycle!.mesocycles.indexOf(rebuildModal) + 1
+        const prevPhase = phaseIndex > 1 ? macrocycle!.mesocycles[phaseIndex - 2] : null
+        const prevPhaseHasWorkouts = prevPhase?.microcycles.some((mc) => mc.workouts.length > 0) ?? false
         return (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
               <div className="p-5 border-b">
                 <h2 className="text-lg font-bold text-gray-900">Rebuild Phase {phaseIndex} Workouts</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  {rebuildModal.trainingDaysPerWeek} days/week · {rebuildModal.trainingSplit}
+                  This will replace the current workout structure. Choose how to set up the new workouts:
                 </p>
               </div>
 
               <div className="p-5">
-                <p className="text-sm text-gray-600 mb-5">
-                  This will replace the current workout structure. Choose how to set up the new workouts:
-                </p>
-
                 <div className="space-y-3">
                   <button
                     type="button"
@@ -652,6 +651,28 @@ export default function MacrocycleDetailPage() {
                     <p className="font-semibold text-gray-800 text-sm">✏️ Manually Create Workouts</p>
                     <p className="text-xs text-gray-500 mt-0.5">Create empty workout slots and add exercises yourself</p>
                   </button>
+
+                  {phaseIndex > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => prevPhaseHasWorkouts ? confirmRebuild('repeat-previous') : undefined}
+                      disabled={!prevPhaseHasWorkouts}
+                      className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                        prevPhaseHasWorkouts
+                          ? 'border-purple-200 bg-purple-50 hover:bg-purple-100 cursor-pointer'
+                          : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <p className={`font-semibold text-sm ${prevPhaseHasWorkouts ? 'text-purple-800' : 'text-gray-500'}`}>
+                        📋 Repeat Phase {phaseIndex - 1}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${prevPhaseHasWorkouts ? 'text-purple-600' : 'text-gray-400'}`}>
+                        {prevPhaseHasWorkouts
+                          ? `Copy all exercises, sets, reps, rest times and RIR targets from Phase ${phaseIndex - 1}`
+                          : `Generate workouts in Phase ${phaseIndex - 1} first`}
+                      </p>
+                    </button>
+                  )}
                 </div>
               </div>
 

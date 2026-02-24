@@ -56,6 +56,10 @@ export async function GET(
               select: {
                 id: true,
                 weekNumber: true,
+                workouts: {
+                  take: 1,
+                  select: { id: true },
+                },
               },
               orderBy: {
                 weekNumber: 'asc',

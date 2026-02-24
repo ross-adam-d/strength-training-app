@@ -50,7 +50,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { mode, regenerate } = body // mode: 'default' or 'manual'; regenerate: bool
+    const { mode, regenerate } = body // mode: 'default' | 'manual' | 'repeat-previous'; regenerate: bool
 
     // Fetch mesocycle with ownership verification
     const mesocycle = await prisma.mesocycle.findFirst({
@@ -66,7 +66,7 @@ export async function POST(
         trainingSplit: true,
         goal: true,
         macrocycle: {
-          select: { availableEquipment: true },
+          select: { id: true, availableEquipment: true },
         },
         microcycles: {
           orderBy: {
@@ -85,7 +85,7 @@ export async function POST(
       return NextResponse.json({ error: 'Phase not found' }, { status: 404 })
     }
 
-    if (!mesocycle.trainingDaysPerWeek || !mesocycle.trainingSplit) {
+    if (mode !== 'repeat-previous' && (!mesocycle.trainingDaysPerWeek || !mesocycle.trainingSplit)) {
       return NextResponse.json(
         { error: 'Please set training days and split for this phase first' },
         { status: 400 }
@@ -104,9 +104,114 @@ export async function POST(
       })
     }
 
+    // ── Repeat Previous Phase ────────────────────────────────────────────
+    if (mode === 'repeat-previous') {
+      const macrocycleId = mesocycle.macrocycle!.id
+
+      // All phases in this block ordered by startDate
+      const allPhases = await prisma.mesocycle.findMany({
+        where: { macrocycleId },
+        orderBy: { startDate: 'asc' },
+        select: { id: true, trainingDaysPerWeek: true, trainingSplit: true },
+      })
+
+      const thisIndex = allPhases.findIndex((m) => m.id === id)
+      if (thisIndex <= 0) {
+        return NextResponse.json(
+          { error: 'No previous phase to repeat — this is the first phase' },
+          { status: 400 }
+        )
+      }
+
+      const sourcePhase = allPhases[thisIndex - 1]
+
+      // Fetch week 1 workouts of source phase
+      const sourceWeek1 = await prisma.microcycle.findFirst({
+        where: { mesocycleId: sourcePhase.id, weekNumber: 1 },
+        select: {
+          workouts: {
+            orderBy: { orderIndex: 'asc' },
+            select: {
+              name: true,
+              dayOfWeek: true,
+              estimatedDuration: true,
+              warmupNotes: true,
+              orderIndex: true,
+              workoutExercises: {
+                orderBy: { orderIndex: 'asc' },
+                select: {
+                  exerciseId: true,
+                  orderIndex: true,
+                  targetSets: true,
+                  targetReps: true,
+                  targetRpe: true,
+                  targetRir: true,
+                  tempo: true,
+                  restPeriod: true,
+                  supersetWithPrevious: true,
+                  notes: true,
+                },
+              },
+            },
+          },
+        },
+      })
+
+      if (!sourceWeek1 || sourceWeek1.workouts.length === 0) {
+        return NextResponse.json(
+          { error: 'The previous phase has no workouts to repeat. Generate workouts in the previous phase first.' },
+          { status: 400 }
+        )
+      }
+
+      // Clone workouts into each destination microcycle sequentially
+      for (const microcycle of mesocycle.microcycles) {
+        for (const sourceWorkout of sourceWeek1.workouts) {
+          await prisma.workout.create({
+            data: {
+              name: sourceWorkout.name,
+              dayOfWeek: sourceWorkout.dayOfWeek,
+              estimatedDuration: sourceWorkout.estimatedDuration,
+              warmupNotes: sourceWorkout.warmupNotes,
+              orderIndex: sourceWorkout.orderIndex,
+              microcycleId: microcycle.id,
+              workoutExercises: {
+                create: sourceWorkout.workoutExercises.map((we) => ({
+                  exerciseId: we.exerciseId,
+                  orderIndex: we.orderIndex,
+                  targetSets: microcycle.isRecovery
+                    ? Math.max(1, Math.floor(we.targetSets * 0.6))
+                    : we.targetSets,
+                  targetReps: we.targetReps,
+                  targetRpe: we.targetRpe,
+                  targetRir: we.targetRir,
+                  tempo: we.tempo,
+                  restPeriod: we.restPeriod,
+                  supersetWithPrevious: we.supersetWithPrevious,
+                  notes: we.notes,
+                })),
+              },
+            },
+          })
+        }
+      }
+
+      // Sync destination phase split/days to match source (goal intentionally not copied)
+      await prisma.mesocycle.update({
+        where: { id },
+        data: {
+          trainingDaysPerWeek: sourcePhase.trainingDaysPerWeek,
+          trainingSplit: sourcePhase.trainingSplit,
+        },
+      })
+
+      return NextResponse.json({ success: true })
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     // Get workout types based on split
-    const workoutTypeNames = getSplitWorkoutTypes(mesocycle.trainingSplit)
-    const daysOfWeek = getDaysOfWeek(mesocycle.trainingDaysPerWeek)
+    const workoutTypeNames = getSplitWorkoutTypes(mesocycle.trainingSplit!)
+    const daysOfWeek = getDaysOfWeek(mesocycle.trainingDaysPerWeek!)
 
     // Create workout rotation
     const rotation = daysOfWeek.map((_: number, i: number) =>

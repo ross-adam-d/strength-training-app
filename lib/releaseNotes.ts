@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-24'
+export const CURRENT_RELEASE_ID = '2026-02-24b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-24b',
+    date: 'February 24, 2026',
+    title: 'Repeat Previous Phase',
+    changes: [
+      'When rebuilding workouts for Phase 2 or later, you can now choose "Repeat Phase N" to copy the full workout structure from the preceding phase — same exercises, sets, reps, rest times and RIR targets',
+      'Recovery weeks automatically reduce sets by 40% when repeating a phase',
+    ],
+  },
   {
     id: '2026-02-24',
     date: 'February 24, 2026',
