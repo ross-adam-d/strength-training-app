@@ -9,6 +9,7 @@ declare module 'next-auth' {
       role?: string
       tier?: string
       subscriptionStatus?: string | null
+      trialEndsAt?: string | null
     }
   }
 

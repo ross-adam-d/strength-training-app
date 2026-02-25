@@ -1,10 +1,31 @@
 import { getUserSubscriptionStatus } from '@/lib/subscription'
 
-export async function SubscriptionBanner({ userId }: { userId: string }) {
-  if (!userId) {
-    console.error('[SubscriptionBanner] userId is missing:', userId)
-    return null
+export async function SubscriptionBanner({
+  userId,
+  subscriptionStatus,
+  trialEndsAt,
+}: {
+  userId: string
+  subscriptionStatus?: string | null
+  trialEndsAt?: string | null
+}) {
+  if (!userId) return null
+
+  // Skip DB call for statuses that never show a banner
+  if (subscriptionStatus === 'ACTIVE') return null
+  if (
+    subscriptionStatus === 'CANCELLED' ||
+    subscriptionStatus === 'READ_ONLY' ||
+    subscriptionStatus === 'PAST_DUE'
+  ) return null
+
+  // Skip DB call for trialing users with plenty of time left
+  if (subscriptionStatus === 'TRIALING' && trialEndsAt) {
+    const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    if (daysLeft > 7) return null
   }
+
+  // DB query only for: trialing ≤7 days, manual override cases, or unknown status
   const { canWrite, isExpired, daysUntilExpiry, status } = await getUserSubscriptionStatus(userId)
 
   // Fully expired — banner shown on the /subscribe page itself, not here

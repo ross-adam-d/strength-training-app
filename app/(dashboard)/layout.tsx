@@ -20,7 +20,11 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation email={session.user?.email ?? ''} role={session.user?.role} />
-      <SubscriptionBanner userId={session.user?.id} />
+      <SubscriptionBanner
+        userId={session.user?.id}
+        subscriptionStatus={session.user?.subscriptionStatus}
+        trialEndsAt={session.user?.trialEndsAt}
+      />
       <main className="container mx-auto px-4 py-8">{children}</main>
     </div>
   )
