@@ -1,23 +1,27 @@
 /**
- * PBeX brand mark — three chevron/arrowhead segments in a clockwise cycle.
+ * PBeX brand mark — three circular arrow segments in a clockwise cycle.
  *
- * Each segment is an annular chevron:
- *   - Outer arc: 108° (6→114, 126→234, 246→354)
- *   - Inner arc:  84° (18→102, 138→222, 258→342) — 12° taper each side
+ * Each segment is a curved arrow with:
+ *   - Blunt arrowhead at the front (tip at mid-radius, 10° past outer arc end)
+ *   - Concave V-notch at the back (notch point at small radius toward centre)
  *
  * Path per segment:
- *   M outer-start
- *   A R R 0 0 1 outer-end      ← outer arc clockwise
- *   L inner-end                ← diagonal to inner (creates pointed tip)
- *   A r r 0 0 0 inner-start   ← inner arc counter-clockwise
- *   Z                          ← diagonal back (creates angled back)
+ *   M outer-start (OS)
+ *   A R R 0 0 1 outer-end (OE)     ← outer arc clockwise
+ *   L tip (TIP)                    ← blunt arrowhead tip (mid-radius, +10° past OE)
+ *   L inner-end (IE)               ← inner edge of arrowhead
+ *   A r r 0 0 0 inner-start (IS)  ← inner arc counter-clockwise
+ *   L back-notch (BN)              ← concave V-notch (deep toward centre)
+ *   Z                              ← closes to OS
  *
- * The 12° gaps at the outer rim sit between each outer-end (point) and the
- * next outer-start — "small gap between the point of one arrow and the start
- * of the next arc."
+ * TIP and BN are at the same angle as the adjacent segment's BN and TIP
+ * respectively — creating the interlocking "flowing arrows" appearance.
  *
- * 48×48 mark  — centre (24,24), R=21, r=12
- * Stacked mark — centre (60,40), R=26, r=15  (same shape, scaled)
+ * 48×48 mark  — centre (24,24), R=21, r=9, r_tip=15, r_notch=12
+ * Stacked mark — centre (60,40), R=26, r=11, r_tip=18, r_notch=15
+ *
+ * Outer arcs: 100° each (10→110, 130→230, 250→350). Gaps: 20°.
+ * TIP angles: 120°, 240°, 0°. BN angles: 0°, 120°, 240°.
  */
 
 interface LogoProps {
@@ -26,43 +30,42 @@ interface LogoProps {
 }
 
 /**
- * Shared chevron segments for the 48×48 mark.
- * Centre (24,24), outer R=21, inner r=12.
+ * Shared arrow segments for the 48×48 mark.
+ * Centre (24,24), R=21, r=9, r_tip=15, r_notch=5.
  *
- * Precomputed coordinates (all values rounded to 2 dp):
+ * Trig used:
+ *   0°:   cos=1.0000  sin=0.0000
+ *   10°:  cos=0.9848  sin=0.1736
+ *   110°: cos=-0.3420 sin=0.9397
+ *   120°: cos=-0.5000 sin=0.8660
+ *   130°: cos=-0.6428 sin=0.7660
+ *   230°: cos=-0.6428 sin=-0.7660
+ *   240°: cos=-0.5000 sin=-0.8660
+ *   250°: cos=-0.3420 sin=-0.9397
+ *   350°: cos=0.9848  sin=-0.1736
  *
- * Trig values used:
- *   6°:  cos=0.9945 sin=0.1045   18°: cos=0.9511 sin=0.3090
- *   102°: cos=-0.2079 sin=0.9781  114°: cos=-0.4067 sin=0.9135
- *   126°: cos=-0.5878 sin=0.8090  138°: cos=-0.7431 sin=0.6691
- *   222°: cos=-0.7431 sin=-0.6691 234°: cos=-0.5878 sin=-0.8090
- *   246°: cos=-0.4067 sin=-0.9135 258°: cos=-0.2079 sin=-0.9781
- *   342°: cos=0.9511 sin=-0.3090  354°: cos=0.9945 sin=-0.1045
- *
- * Seg 1 (Plan):    OS(44.88,26.19) OE(15.46,43.18) IE(21.51,35.74) IS(35.41,27.71)
- * Seg 2 (Build):   OS(11.66,40.99) OE(11.66, 7.01) IE(15.08,15.97) IS(15.08,32.03)
- * Seg 3 (Execute): OS(15.46, 4.82) OE(44.88,21.81) IE(35.41,20.29) IS(21.51,12.26)
+ * Seg 1: OS(44.68,27.64) OE(16.82,43.73) TIP(16.50,36.99) IE(20.92,32.46) IS(32.86,25.56) BN(29.00,24.00)
+ * Seg 2: OS(10.50,40.09) OE(10.50, 7.91) TIP(16.50,11.01) IE(18.21,17.11) IS(18.21,30.89) BN(21.50,28.33)
+ * Seg 3: OS(16.82, 4.27) OE(44.68,20.36) TIP(39.00,24.00) IE(32.86,22.44) IS(20.92,15.54) BN(21.50,19.67)
  */
 function Mark48({ color }: { color: string }) {
   return (
     <>
-      {/* Seg 1 — Plan: outer 6°→114°, inner 18°→102° */}
+      {/* Seg 1 — Plan: outer 10°→110°, tip 120°, notch 0° */}
       <path
-        d="M 44.88 26.19 A 21 21 0 0 1 15.46 43.18 L 21.51 35.74 A 12 12 0 0 0 35.41 27.71 Z"
+        d="M 44.68 27.64 A 21 21 0 0 1 16.82 43.73 L 16.50 36.99 L 20.92 32.46 A 9 9 0 0 0 32.86 25.56 L 36.00 24.00 Z"
         fill={color}
       />
-      {/* Seg 2 — Build: outer 126°→234°, inner 138°→222° */}
+      {/* Seg 2 — Build: outer 130°→230°, tip 240°, notch 120° */}
       <path
-        d="M 11.66 40.99 A 21 21 0 0 1 11.66 7.01 L 15.08 15.97 A 12 12 0 0 0 15.08 32.03 Z"
+        d="M 10.50 40.09 A 21 21 0 0 1 10.50 7.91 L 16.50 11.01 L 18.21 17.11 A 9 9 0 0 0 18.21 30.89 L 18.00 34.39 Z"
         fill={color}
       />
-      {/* Seg 3 — Execute: outer 246°→354°, inner 258°→342° */}
+      {/* Seg 3 — Execute: outer 250°→350°, tip 0°, notch 240° */}
       <path
-        d="M 15.46 4.82 A 21 21 0 0 1 44.88 21.81 L 35.41 20.29 A 12 12 0 0 0 21.51 12.26 Z"
+        d="M 16.82 4.27 A 21 21 0 0 1 44.68 20.36 L 39.00 24.00 L 32.86 22.44 A 9 9 0 0 0 20.92 15.54 L 18.00 13.61 Z"
         fill={color}
       />
-      {/* Centre hub */}
-      <circle cx="24" cy="24" r="3.5" fill="white" />
     </>
   )
 }
@@ -111,11 +114,11 @@ export function PBeXLogo({ className, color = '#FF8000' }: LogoProps) {
 
 /**
  * Stacked logo — larger mark above wordmark + tagline.
- * Centre (60,40), R=26, r=15. ViewBox 0 0 120 120.
+ * Centre (60,40), R=26, r=11, r_tip=18, r_notch=6. ViewBox 0 0 120 120.
  *
- * Seg 1 (Plan):    OS(85.86,42.72) OE(49.43,63.75) IE(56.88,54.67) IS(74.27,44.64)
- * Seg 2 (Build):   OS(44.72,61.03) OE(44.72,18.97) IE(48.85,29.96) IS(48.85,50.04)
- * Seg 3 (Execute): OS(49.43,16.25) OE(85.86,37.28) IE(74.27,35.36) IS(56.88,25.33)
+ * Seg 1: OS(85.60,44.51) OE(51.11,64.43) TIP(51.00,55.59) IE(56.24,50.34) IS(70.83,41.91) BN(66.00,40.00)
+ * Seg 2: OS(43.29,59.92) OE(43.29,20.08) TIP(51.00,24.41) IE(52.93,31.57) IS(52.93,48.43) BN(57.00,45.20)
+ * Seg 3: OS(51.11,15.57) OE(85.60,35.49) TIP(78.00,40.00) IE(70.83,38.09) IS(56.24,29.66) BN(57.00,34.80)
  */
 export function PBeXLogoStacked({ className, color = '#FF8000' }: LogoProps) {
   const tagColor = color === '#ffffff' || color === 'white'
@@ -130,23 +133,21 @@ export function PBeXLogoStacked({ className, color = '#FF8000' }: LogoProps) {
       aria-label="PBeX — Plan, Build, Execute"
       role="img"
     >
-      {/* Seg 1 — Plan */}
+      {/* Seg 1 — Plan: outer 10°→110°, tip 120°, notch 0° */}
       <path
-        d="M 85.86 42.72 A 26 26 0 0 1 49.43 63.75 L 56.88 54.67 A 15 15 0 0 0 74.27 44.64 Z"
+        d="M 85.60 44.51 A 26 26 0 0 1 51.11 64.43 L 51.00 55.59 L 56.24 50.34 A 11 11 0 0 0 70.83 41.91 L 75.00 40.00 Z"
         fill={color}
       />
-      {/* Seg 2 — Build */}
+      {/* Seg 2 — Build: outer 130°→230°, tip 240°, notch 120° */}
       <path
-        d="M 44.72 61.03 A 26 26 0 0 1 44.72 18.97 L 48.85 29.96 A 15 15 0 0 0 48.85 50.04 Z"
+        d="M 43.29 59.92 A 26 26 0 0 1 43.29 20.08 L 51.00 24.41 L 52.93 31.57 A 11 11 0 0 0 52.93 48.43 L 52.50 52.99 Z"
         fill={color}
       />
-      {/* Seg 3 — Execute */}
+      {/* Seg 3 — Execute: outer 250°→350°, tip 0°, notch 240° */}
       <path
-        d="M 49.43 16.25 A 26 26 0 0 1 85.86 37.28 L 74.27 35.36 A 15 15 0 0 0 56.88 25.33 Z"
+        d="M 51.11 15.57 A 26 26 0 0 1 85.60 35.49 L 78.00 40.00 L 70.83 38.09 A 11 11 0 0 0 56.24 29.66 L 52.50 27.01 Z"
         fill={color}
       />
-      {/* Centre hub */}
-      <circle cx="60" cy="40" r="4.5" fill="white" />
 
       {/* Wordmark */}
       <text
