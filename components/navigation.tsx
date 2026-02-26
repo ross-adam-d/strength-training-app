@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { PBeXLogo } from '@/components/PBeXLogo'
 
 export function Navigation({
   email,
@@ -54,8 +55,8 @@ export function Navigation({
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <a href="/dashboard" className="text-xl font-bold text-primary-600">
-              ProBlock
+            <a href="/dashboard" className="flex items-center">
+              <PBeXLogo className="h-8 w-auto" />
             </a>
             <div className="hidden md:flex space-x-4">
               {links.map((link) =>
