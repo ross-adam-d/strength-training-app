@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-24b'
+export const CURRENT_RELEASE_ID = '2026-02-26'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-26',
+    date: 'February 26, 2026',
+    title: 'Bug Fixes',
+    changes: [
+      'Fixed a bug where unilateral exercises (e.g. dumbbell curls logged left/right separately) were incorrectly auto-skipped when the incomplete-sets prompt appeared at the end of a workout',
+      'Fixed the Muscle Group Volume chart showing incorrect weekly averages for the 4-week and 3-month periods — averages are now calculated from your actual training history rather than a fixed number of weeks',
+    ],
+  },
   {
     id: '2026-02-24b',
     date: 'February 24, 2026',

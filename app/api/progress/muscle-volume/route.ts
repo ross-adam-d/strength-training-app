@@ -34,19 +34,14 @@ export async function GET(request: NextRequest) {
 
   if (logs.length === 0) return NextResponse.json([])
 
-  // For 'all', derive weeks from earliest log to now
-  let weeksInPeriod: number
-  if (period === '4w') {
-    weeksInPeriod = 4
-  } else if (period === '3m') {
-    weeksInPeriod = 13
-  } else {
-    const earliest = logs.reduce(
-      (min, l) => (l.workoutLog.completedAt < min ? l.workoutLog.completedAt : min),
-      logs[0].workoutLog.completedAt
-    )
-    weeksInPeriod = Math.max(1, Math.round((now.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
-  }
+  // Derive weeks from the earliest log in the result — never hardcode the period length.
+  // Logs are already filtered by `since`, so earliest will never exceed the period boundary.
+  // This correctly handles users who have less history than the selected period.
+  const earliest = logs.reduce(
+    (min, l) => (l.workoutLog.completedAt < min ? l.workoutLog.completedAt : min),
+    logs[0].workoutLog.completedAt
+  )
+  const weeksInPeriod = Math.max(1, Math.round((now.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
 
   // Count sets per muscle group — each log counts once per muscle group on the exercise
   const counts: Record<string, number> = {}

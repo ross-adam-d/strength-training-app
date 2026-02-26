@@ -847,11 +847,14 @@ export default function WorkoutLogPage() {
       if (log.skipped) return log
 
       const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
+      const isUnilateral = workoutExercise?.exercise.isUnilateral || false
       const isTimed = workoutExercise?.exercise.isTimed || false
 
       const isIncomplete = isTimed
         ? (log.duration === '' || log.duration === undefined || log.weight === '')
-        : (log.reps === '' || log.weight === '')
+        : isUnilateral
+          ? (log.repsLeft === '' || log.repsLeft === undefined || log.repsRight === '' || log.repsRight === undefined || log.weight === '')
+          : (log.reps === '' || log.weight === '')
 
       if (isIncomplete) {
         return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
