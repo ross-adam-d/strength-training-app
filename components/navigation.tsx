@@ -5,9 +5,33 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 
-export function Navigation({ email, role }: { email: string; role?: string }) {
+export function Navigation({
+  email,
+  role,
+  subscriptionStatus,
+}: {
+  email: string
+  role?: string
+  subscriptionStatus?: string | null
+}) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [billingLoading, setBillingLoading] = useState(false)
+
+  async function manageBilling() {
+    setBillingLoading(true)
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.assign(data.url)
+      }
+    } finally {
+      setBillingLoading(false)
+    }
+  }
+
+  const showBillingButton = subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'PAST_DUE'
 
   const links = [
     { href: '/dashboard', label: 'Dashboard', hardNav: true },
@@ -50,6 +74,15 @@ export function Navigation({ email, role }: { email: string; role?: string }) {
 
           <div className="flex items-center space-x-4">
             <span className="hidden md:inline text-sm text-gray-600">{email}</span>
+            {showBillingButton && (
+              <button
+                onClick={manageBilling}
+                disabled={billingLoading}
+                className="hidden md:inline px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition disabled:opacity-60"
+              >
+                {billingLoading ? 'Loading…' : 'Manage Billing'}
+              </button>
+            )}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
@@ -97,14 +130,25 @@ export function Navigation({ email, role }: { email: string; role?: string }) {
                 </Link>
               )
             )}
-            <div className="pt-3 mt-3 border-t flex items-center justify-between">
-              <span className="text-sm text-gray-500">{email}</span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Sign Out
-              </button>
+            <div className="pt-3 mt-3 border-t space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">{email}</span>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Sign Out
+                </button>
+              </div>
+              {showBillingButton && (
+                <button
+                  onClick={manageBilling}
+                  disabled={billingLoading}
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition disabled:opacity-60"
+                >
+                  {billingLoading ? 'Loading…' : 'Manage Billing'}
+                </button>
+              )}
             </div>
           </div>
         </div>

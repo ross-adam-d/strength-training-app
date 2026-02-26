@@ -19,7 +19,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation email={session.user?.email ?? ''} role={session.user?.role} />
+      <Navigation
+        email={session.user?.email ?? ''}
+        role={session.user?.role}
+        subscriptionStatus={session.user?.subscriptionStatus}
+      />
       <SubscriptionBanner
         userId={session.user?.id}
         subscriptionStatus={session.user?.subscriptionStatus}

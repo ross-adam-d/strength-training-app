@@ -23,7 +23,12 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
   )
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>
+}) {
+  const { billing } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return null
 
@@ -166,6 +171,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+
+      {/* Billing return banners */}
+      {billing === 'success' && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800">
+          <span className="font-semibold">Subscription activated!</span> Welcome aboard — your plan is now active.
+        </div>
+      )}
+      {billing === 'cancelled' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+          Checkout was cancelled. You can subscribe any time from the banner above.
+        </div>
+      )}
 
       {/* No training blocks — show welcome checklist */}
       {blockCount === 0 && (
