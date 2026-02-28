@@ -23,7 +23,7 @@ export default async function AdminLayout({
       <aside className="w-56 bg-white border-r border-gray-200 flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
           <a href="/dashboard" className="text-xl font-bold text-primary-600">
-            ProBlock
+            pbX
           </a>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">

@@ -15,21 +15,23 @@ export default function Home() {
 
       {/* Top nav */}
       <header className="border-b border-gray-100">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-16 grid grid-cols-3 items-center">
           <PBeXLogo className="h-8 w-auto" />
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition"
-            >
-              Log in
-            </Link>
+          <div className="flex justify-center">
             <Link
               href="/register"
               className="text-sm font-medium px-4 py-2 rounded-lg text-white hover:opacity-90 transition"
               style={{ backgroundColor: '#FF8000' }}
             >
               Get started free
+            </Link>
+          </div>
+          <div className="flex justify-end">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition"
+            >
+              Log in
             </Link>
           </div>
         </div>
@@ -95,7 +97,7 @@ export default function Home() {
               {
                 icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
                 title: 'Structured Training Blocks',
-                body: 'Organise your training into macrocycles, phases, and weeks. Plan your season like a professional coach.',
+                body: 'Organise your training into blocks, phases, and weeks. Plan your season like a professional coach.',
               },
               {
                 icon: 'M13 10V3L4 14h7v7l9-11h-7z',
@@ -225,9 +227,10 @@ export default function Home() {
                 <ul className="space-y-3 mb-8 flex-1">
                   {[
                     'Everything in Core',
+                    'Unlimited training blocks',
                     'Deep analytics',
                     'Training readiness score',
-                    'Data export',
+                    'Own your data, export your training history at any time',
                   ].map((item) => (
                     <li key={item} className="flex gap-2 text-sm text-gray-600">
                       <CheckIcon />

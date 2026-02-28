@@ -50,7 +50,7 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
     {
       number: 1,
       title: 'Set up your training block',
-      description: 'Build your macrocycle, phases, and weekly workout structure. ProBlock handles the periodisation — you just fill in the details.',
+      description: 'Build your training block, phases, and weekly workout structure. pbX handles the periodisation — you just fill in the details.',
       href: '/macrocycles/setup',
       cta: 'Create your first block',
       primary: true,
@@ -58,6 +58,14 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
     },
     {
       number: 2,
+      title: 'Log your first workout',
+      description: 'Once your block is set up, navigate to your active training week and tap any workout to log sets, reps, weight, and RPE in real time.',
+      href: '/macrocycles',
+      cta: 'Go to training blocks',
+      icon: null,
+    },
+    {
+      number: 3,
       title: 'Review your workout history',
       description: 'Every session you log is saved here. Browse past workouts, view sets and reps, and track your consistency over time.',
       href: '/workout-history',
@@ -65,7 +73,7 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
       icon: null,
     },
     {
-      number: 3,
+      number: 4,
       title: 'Track your performance',
       description: 'Visualise strength gains, training volume, and intensity trends across your phases. See exactly how your training is paying off.',
       href: '/progress',
@@ -73,7 +81,7 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
       icon: null,
     },
     {
-      number: 4,
+      number: 5,
       title: 'Build your exercise library',
       description: 'Browse the built-in exercise library or create your own custom movements with muscle group and equipment tagging.',
       href: '/exercises',
@@ -86,12 +94,12 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
     <div className="space-y-6">
       {/* Welcome header */}
       <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl p-6 md:p-8 text-white">
-        <p className="text-primary-200 text-sm font-medium mb-1">Welcome to ProBlock</p>
+        <p className="text-primary-200 text-sm font-medium mb-1">Welcome to pbX</p>
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           Hey {firstName}! Let&apos;s get you set up.
         </h1>
         <p className="text-primary-100 text-sm md:text-base leading-relaxed max-w-xl">
-          ProBlock is built around structured periodisation — training blocks, phases, and weeks that build on each other. Here&apos;s what you need to know to get started.
+          pbX is built around structured periodisation — training blocks, phases, and weeks that build on each other. Here&apos;s what you need to know to get started.
         </p>
       </div>
 
