@@ -156,11 +156,17 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   })
   if (!sub) return
 
+  // Retrieve actual subscription status — don't hardcode ACTIVE.
+  // Stripe fires invoice.payment_succeeded for $0 trial invoices too,
+  // in which case the subscription is still TRIALING, not ACTIVE.
+  const stripeSubscription = await getStripe().subscriptions.retrieve(subId)
+  const status = mapStripeStatus(stripeSubscription.status)
+
   await prisma.subscription.update({
     where: { id: sub.id },
-    data: { status: SubscriptionStatus.ACTIVE },
+    data: { status },
   })
-  console.log(`[Webhook] invoice.payment_succeeded: subscriptionId=${subId}`)
+  console.log(`[Webhook] invoice.payment_succeeded: subscriptionId=${subId}, status=${status}`)
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
