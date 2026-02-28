@@ -229,25 +229,23 @@ export default function WorkoutLogPage() {
           return
         }
 
-        // Build lookup from most recent completed workout log
+        // Build lookup from most recent exercise logs (cross-week, by exercise ID)
         const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number; rir?: number | null; duration?: number | null }[]>()
         const lastExerciseNotes: Record<string, string> = {}
         const lastExerciseRpes: Record<string, number> = {}
 
-        if (data.workoutLogs && data.workoutLogs.length > 0) {
-          for (const el of data.workoutLogs[0].exerciseLogs) {
-            if (!lastLogSets.has(el.exerciseId)) lastLogSets.set(el.exerciseId, [])
-            lastLogSets.get(el.exerciseId)!.push(el)
+        for (const el of (data.recentExerciseLogs ?? [])) {
+          if (!lastLogSets.has(el.exerciseId)) lastLogSets.set(el.exerciseId, [])
+          lastLogSets.get(el.exerciseId)!.push(el)
 
-            // Extract exercise-level notes from first set (where we store them)
-            if (el.setNumber === 1 && el.notes) {
-              lastExerciseNotes[el.exerciseId] = el.notes
-            }
+          // Extract exercise-level notes from first set (where we store them)
+          if (el.setNumber === 1 && el.notes) {
+            lastExerciseNotes[el.exerciseId] = el.notes
+          }
 
-            // Extract exercise-level RPE from first set (where we store it)
-            if (el.setNumber === 1 && el.exerciseRpe) {
-              lastExerciseRpes[el.exerciseId] = el.exerciseRpe
-            }
+          // Extract exercise-level RPE from first set (where we store it)
+          if (el.setNumber === 1 && el.exerciseRpe) {
+            lastExerciseRpes[el.exerciseId] = el.exerciseRpe
           }
         }
 

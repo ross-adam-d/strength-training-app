@@ -81,32 +81,6 @@ export async function GET(
             },
           },
         },
-        workoutLogs: {
-          orderBy: {
-            completedAt: 'desc',
-          },
-          take: 1,
-          select: {
-            id: true,
-            completedAt: true,
-            exerciseLogs: {
-              where: { skipped: false },
-              orderBy: { setNumber: 'asc' },
-              select: {
-                exerciseId: true,
-                setNumber: true,
-                reps: true,
-                repsLeft: true,
-                repsRight: true,
-                weight: true,
-                rir: true,
-                duration: true,
-                notes: true,
-                exerciseRpe: true,
-              },
-            },
-          },
-        },
       },
     })
 
@@ -117,8 +91,71 @@ export async function GET(
       )
     }
 
+    // Fetch the most recent exercise log per exercise (across all weeks/workouts for this user)
+    // so progressive overload suggestions work from week 2 onwards, not just for repeat completions.
+    const exerciseIds = workout.workoutExercises.map((we) => we.exercise.id)
+
+    const allRecentLogs = await prisma.exerciseLog.findMany({
+      where: {
+        exerciseId: { in: exerciseIds },
+        skipped: false,
+        workoutLog: {
+          workout: {
+            microcycle: {
+              mesocycle: {
+                macrocycle: { userId: session.user.id },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { workoutLog: { completedAt: 'desc' } },
+        { setNumber: 'asc' },
+      ],
+      select: {
+        exerciseId: true,
+        setNumber: true,
+        weight: true,
+        reps: true,
+        rir: true,
+        duration: true,
+        notes: true,
+        exerciseRpe: true,
+        workoutLog: { select: { completedAt: true } },
+      },
+    })
+
+    // Keep only the most recent session per exercise (first batch due to DESC ordering)
+    const latestDateByExercise = new Map<string, number>()
+    const recentExerciseLogs: Array<{
+      exerciseId: string
+      setNumber: number
+      weight: number | null
+      reps: number | null
+      rir: number | null
+      duration: number | null
+      notes: string | null
+      exerciseRpe: number | null
+    }> = []
+
+    for (const log of allRecentLogs) {
+      const completedAt = log.workoutLog.completedAt?.getTime()
+      if (!completedAt) continue
+      const existing = latestDateByExercise.get(log.exerciseId)
+      if (existing === undefined) {
+        latestDateByExercise.set(log.exerciseId, completedAt)
+        const { workoutLog: _wl, ...rest } = log
+        recentExerciseLogs.push(rest)
+      } else if (completedAt === existing) {
+        const { workoutLog: _wl, ...rest } = log
+        recentExerciseLogs.push(rest)
+      }
+      // Older session — skip
+    }
+
     // Add cache headers (2 minutes - workouts don't change often during a session)
-    return NextResponse.json(workout, {
+    return NextResponse.json({ ...workout, recentExerciseLogs }, {
       headers: {
         'Cache-Control': 'private, s-maxage=120, stale-while-revalidate=300',
       },
