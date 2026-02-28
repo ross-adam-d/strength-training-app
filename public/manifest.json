@@ -1,7 +1,7 @@
 {
-  "name": "Strength Training App",
-  "short_name": "Strength",
-  "description": "Track your strength training with periodization",
+  "name": "pbX",
+  "short_name": "pbX",
+  "description": "Plan, Build, Execute — structured strength training",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",

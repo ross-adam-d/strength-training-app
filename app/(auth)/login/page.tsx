@@ -40,7 +40,7 @@ export default function LoginPage() {
     <div className="min-h-[100dvh] bg-gray-900 flex items-center justify-center px-4">
       <div className="max-w-sm w-full">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-white tracking-tight">ProBlock</h1>
+          <h1 className="text-4xl font-bold text-white tracking-tight">pbX</h1>
           <p className="text-gray-400 mt-2 text-sm">Sign in to continue</p>
         </div>
 

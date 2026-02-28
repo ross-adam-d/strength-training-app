@@ -274,7 +274,7 @@ export default function Home() {
             <Link href="/login" className="hover:text-white transition">Log in</Link>
             <Link href="/register" className="hover:text-white transition">Register</Link>
           </div>
-          <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} PBeX. All rights reserved.</p>
+          <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} pbX. All rights reserved.</p>
         </div>
       </footer>
 

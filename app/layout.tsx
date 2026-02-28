@@ -6,13 +6,13 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Strength Training App',
-  description: 'Track your strength training with periodization',
+  title: 'pbX',
+  description: 'Plan, Build, Execute — structured strength training',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Strength',
+    title: 'pbX',
   },
   icons: {
     icon: [

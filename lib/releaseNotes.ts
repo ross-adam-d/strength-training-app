@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-26'
+export const CURRENT_RELEASE_ID = '2026-02-28'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-02-28',
+    date: 'February 28, 2026',
+    title: 'Rebrand to pbX',
+    changes: [
+      'App renamed to pbX — Plan, Build, Execute',
+      'New orange colour scheme throughout the app',
+      'Updated logo mark with cleaner arrow design',
+    ],
+  },
   {
     id: '2026-02-26',
     date: 'February 26, 2026',
