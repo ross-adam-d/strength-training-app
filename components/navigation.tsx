@@ -32,7 +32,7 @@ export function Navigation({
     }
   }
 
-  const showBillingButton = subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'PAST_DUE'
+  const showBillingButton = subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'PAST_DUE' || subscriptionStatus === 'TRIALING'
 
   const links = [
     { href: '/dashboard', label: 'Dashboard', hardNav: true },
