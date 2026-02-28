@@ -13,7 +13,7 @@ type PriceMap = {
   ELITE_USD_ANNUAL: string
 }
 
-export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft: number; priceIds: PriceMap }) {
+export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; priceIds: PriceMap }) {
   const [currency, setCurrency] = useState<'AUD' | 'USD'>('AUD')
   const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null) // priceId currently loading
@@ -63,10 +63,11 @@ export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft: number; pric
   return (
     <div className="space-y-4">
       <p className="text-amber-800 text-sm font-medium">
-        {daysLeft === 1
-          ? 'Last day of your free trial'
-          : `${daysLeft} days left in your free trial`}{' '}
-        — choose a plan to keep your access.
+        {daysLeft === undefined
+          ? 'Choose a plan to continue with pbX.'
+          : daysLeft === 1
+            ? 'Last day of your free trial — choose a plan to keep your access.'
+            : `${daysLeft} days left in your free trial — choose a plan to keep your access.`}
       </p>
 
       {/* Toggles */}
