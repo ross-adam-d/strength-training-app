@@ -39,6 +39,7 @@ export async function GET(
         endDate: true,
         description: true,
         goals: true,
+        createdByCoachId: true,
         mesocycles: {
           orderBy: {
             startDate: 'asc',
