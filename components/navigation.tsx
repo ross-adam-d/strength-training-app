@@ -41,6 +41,7 @@ export function Navigation({
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
     { href: '/workout/start', label: 'Log Manual Workout' },
+    ...(role === 'USER' || !role ? [{ href: '/my-coach', label: 'My Coach' }] : []),
     ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 

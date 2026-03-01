@@ -1,12 +1,12 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Feb 18, 2026 - End of Session 22)
+## 📍 Current Status (Updated: Mar 1, 2026 - Session 43)
 
 **Production App**: https://strength-training-app.vercel.app
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
-**Branch**: `master`
-**Latest Commit**: `f616b1a` - "Fix subscription enforcement for stale JWTs and promote both admin accounts"
-**Status**: Beta launched — access management live, admin dashboard operational
+**Branch**: `feature/stripe-integration` (active development) | `master`: `ffa2cca`
+**Latest Commit**: `e178ae5` - pbX copy/UX updates
+**Status**: Coach extension in progress (Session 43). Blocked on live Stripe setup before merging feature branch.
 
 ---
 
@@ -151,7 +151,66 @@
 
 ## 🚀 Upcoming Work
 
-### Beta Operations (immediate)
+### Coach Extension (Session 43 — IN PROGRESS)
+
+**Branch**: `feature/stripe-integration`
+
+#### ✅ Phase 1 COMPLETE — Foundation
+- Schema: `UserRole` enum + COACH, `CoachProfile`, `CoachClientRelationship`, `CoachInvite`, `CoachMessage` models, `Macrocycle.createdByCoachId`
+- DB pushed via Session mode pooler
+- `resend` npm package installed
+- `lib/coachAccess.ts` — `verifyCoachClientAccess()` helper
+- `lib/email.ts` — `sendCoachInvite()` via Resend
+- `middleware.ts` — COACH bypasses subscription checks, `/dashboard` redirects to `/coach`, `/invites` public
+- `app/(dashboard)/layout.tsx` — COACH redirected to `/coach`
+- `components/navigation.tsx` — "My Coach" link for USER role
+- `app/(coach)/layout.tsx` — role-guarded sidebar layout
+- `app/(coach)/coach/page.tsx` — client list with at-a-glance metrics
+- `app/(coach)/coach/invite/page.tsx` — invite form
+- `app/api/coach/clients/route.ts` — GET client list, POST send invite
+- `app/api/invites/[token]/route.ts` — GET invite details, POST accept/decline
+- `app/invites/[token]/page.tsx` — accept/decline UI (client component)
+- `app/(admin)/admin/users/[id]/page.tsx` — Role section with COACH grant button + maxClients
+- `app/api/admin/users/[id]/route.ts` — PATCH handler for role change + CoachProfile create
+
+#### 🔜 Phase 2 — Client Visibility (NEXT)
+Files to create:
+- `app/api/coach/clients/[clientId]/route.ts` — GET client detail + relationship
+- `app/api/coach/clients/[clientId]/macrocycles/route.ts` — GET client's blocks
+- `app/api/coach/clients/[clientId]/workout-logs/route.ts` — GET recent logs
+- `app/api/coach/clients/[clientId]/progress/route.ts` — GET PRs/volume
+- `app/(coach)/coach/clients/[clientId]/page.tsx` — client overview
+- `app/(coach)/coach/clients/[clientId]/blocks/page.tsx` — block list
+- `app/(coach)/coach/clients/[clientId]/history/page.tsx` — workout history
+- `app/(coach)/coach/clients/[clientId]/progress/page.tsx` — progress charts
+- `app/(dashboard)/my-coach/page.tsx` — client-facing coach page
+- Macrocycle/mesocycle pages: show read-only notice if `createdByCoachId` set
+
+#### 🔜 Phase 3 — Block Creation & Management
+- `app/(coach)/coach/clients/[clientId]/blocks/new/page.tsx` — create block form
+- `app/api/coach/clients/[clientId]/macrocycles/route.ts` — POST create block for client
+- Update PATCH/DELETE in macrocycle, mesocycle, workout, workout-exercise routes — add coach ownership check
+- Update `generate-workouts` route for coach access
+- `app/(coach)/coach/clients/[clientId]/blocks/[blockId]/page.tsx` — block detail with edit controls
+
+#### 🔜 Phase 4 — Messaging
+- `app/api/coach/clients/[clientId]/messages/route.ts` — GET thread, POST send (coach side)
+- `app/api/messages/route.ts` — GET/POST (client side)
+- `app/api/messages/unread/route.ts` — GET unread count
+- `app/(coach)/coach/messages/page.tsx` — coach messages overview
+- `app/(coach)/coach/clients/[clientId]/messages/page.tsx` — thread (30s poll)
+- Client messages in `my-coach` page
+- Unread badge in Navigation
+
+#### 🔜 Phase 5 — Seats & Admin UI
+- Enforce `maxClients` already done in invite POST route
+- `app/(admin)/admin/coaches/page.tsx` — list all COACH users with seat usage
+- `maxClients` admin control already added to user detail page
+
+### ⚠️ Still Blocked: Live Stripe Setup
+Must be done before merging `feature/stripe-integration` → master. See memory for steps.
+
+### Beta Operations
 - Monitor beta users via admin dashboard
 - Extend trials / grant access manually as needed
 
@@ -397,5 +456,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Feb 20, 2026 (Session 27)
-**Next Session**: Commit + deploy bug fixes (verify Good Mornings in DB first), exercise library expansion
+**Last Updated**: Mar 1, 2026 (Session 43)
+**Next Session**: Continue Coach Extension — Phase 2 (client visibility API + pages)

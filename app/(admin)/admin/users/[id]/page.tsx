@@ -20,6 +20,7 @@ type UserDetail = {
   role: string
   createdAt: string
   subscription: Subscription | null
+  coachProfile: { maxClients: number } | null
   macrocycles: Array<{
     id: string
     name: string
@@ -66,6 +67,8 @@ export default function AdminUserDetailPage() {
   const [trialEndsAt, setTrialEndsAt] = useState('')
   const [manualAccessDate, setManualAccessDate] = useState('')
   const [clearManualAccess, setClearManualAccess] = useState(false)
+  const [roleLoading, setRoleLoading] = useState(false)
+  const [maxClientsInput, setMaxClientsInput] = useState<number>(5)
 
   useEffect(() => {
     fetch(`/api/admin/users/${id}`)
@@ -76,6 +79,9 @@ export default function AdminUserDetailPage() {
           setStatus(data.subscription.status)
           setTrialEndsAt(toDateInputValue(data.subscription.trialEndsAt))
           setManualAccessDate(toDateInputValue(data.subscription.manualAccessGrantedUntil))
+        }
+        if (data.coachProfile) {
+          setMaxClientsInput(data.coachProfile.maxClients)
         }
       })
       .catch(() => setError('Failed to load user'))
@@ -171,6 +177,113 @@ export default function AdminUserDetailPage() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Role controls */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
+          Role
+        </h3>
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-sm text-gray-700">
+            Current role: <strong>{user.role}</strong>
+          </span>
+          {user.role === 'USER' && (
+            <button
+              onClick={async () => {
+                setRoleLoading(true)
+                setError(null)
+                setSuccessMsg(null)
+                const res = await fetch(`/api/admin/users/${id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ role: 'COACH', maxClients: maxClientsInput }),
+                })
+                if (res.ok) {
+                  const d = await res.json()
+                  setUser((prev) => prev ? { ...prev, role: d.role, coachProfile: d.coachProfile } : prev)
+                  setSuccessMsg('Role updated to COACH.')
+                } else {
+                  const d = await res.json()
+                  setError(d.error ?? 'Failed to update role')
+                }
+                setRoleLoading(false)
+              }}
+              disabled={roleLoading}
+              className="px-4 py-2 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition"
+            >
+              {roleLoading ? 'Saving…' : 'Grant COACH role'}
+            </button>
+          )}
+          {user.role === 'COACH' && (
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-700">Max clients:</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={maxClientsInput}
+                  onChange={(e) => setMaxClientsInput(parseInt(e.target.value))}
+                  className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button
+                  onClick={async () => {
+                    setRoleLoading(true)
+                    setError(null)
+                    setSuccessMsg(null)
+                    const res = await fetch(`/api/admin/users/${id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ maxClients: maxClientsInput }),
+                    })
+                    if (res.ok) {
+                      const d = await res.json()
+                      setUser((prev) => prev ? { ...prev, coachProfile: d.coachProfile } : prev)
+                      setSuccessMsg('Seat limit updated.')
+                    } else {
+                      const d = await res.json()
+                      setError(d.error ?? 'Failed to update')
+                    }
+                    setRoleLoading(false)
+                  }}
+                  disabled={roleLoading}
+                  className="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+                >
+                  Save
+                </button>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!confirm('Revoke COACH role? This will revert the user to USER.')) return
+                  setRoleLoading(true)
+                  setError(null)
+                  setSuccessMsg(null)
+                  const res = await fetch(`/api/admin/users/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'USER' }),
+                  })
+                  if (res.ok) {
+                    const d = await res.json()
+                    setUser((prev) => prev ? { ...prev, role: d.role, coachProfile: null } : prev)
+                    setSuccessMsg('Role reverted to USER.')
+                  } else {
+                    const d = await res.json()
+                    setError(d.error ?? 'Failed to update role')
+                  }
+                  setRoleLoading(false)
+                }}
+                disabled={roleLoading}
+                className="px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition"
+              >
+                Revoke COACH role
+              </button>
+            </>
+          )}
+        </div>
+        {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
+        {successMsg && <p className="text-sm text-green-600 mt-3">{successMsg}</p>}
       </div>
 
       {/* Subscription controls */}

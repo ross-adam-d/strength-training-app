@@ -10,7 +10,7 @@ function canAccess(token: {
   trialEndsAt?: string | null
   manualAccessGrantedUntil?: string | null
 }): { canWrite: boolean; isExpired: boolean } {
-  if (token.role === 'ADMIN') {
+  if (token.role === 'ADMIN' || token.role === 'COACH') {
     return { canWrite: true, isExpired: false }
   }
 
@@ -62,7 +62,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/register') ||
     pathname.startsWith('/subscribe') ||
     pathname.startsWith('/terms') ||
-    pathname.startsWith('/privacy')
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/invites')
   ) {
     return NextResponse.next()
   }
@@ -74,12 +75,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // COACH users: redirect from /dashboard to /coach
+  if (token.role === 'COACH' && pathname === '/dashboard') {
+    return NextResponse.redirect(new URL('/coach', request.url))
+  }
+
   // Only enforce on protected API routes (not /api/auth/*)
   const isProtectedApiRoute =
     pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')
 
   // Only enforce on dashboard page routes
-  const isDashboardPage = !pathname.startsWith('/api/') && !pathname.startsWith('/admin')
+  const isDashboardPage = !pathname.startsWith('/api/') && !pathname.startsWith('/admin') && !pathname.startsWith('/coach')
 
   if (!isProtectedApiRoute && !isDashboardPage) {
     return NextResponse.next()

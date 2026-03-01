@@ -1,4 +1,66 @@
-# Session Summary — 2026-02-10 to 2026-02-20 (Sessions 9-27)
+# Session Summary — Sessions 9–43
+
+---
+
+# Session 43 — Coach Extension Phase 1 (2026-03-01)
+
+## Overview
+Began implementing the coach-to-client layer. Phase 1 (foundation) is complete: schema, auth, layouts, invite flow, and admin grant UI are all in place. Phase 2 (client visibility) is next.
+
+## Branch
+`feature/stripe-integration` | Previous commit: `e178ae5`
+
+## What Was Done
+
+### Schema (`prisma/schema.prisma`)
+- Added `COACH` to `UserRole` enum
+- Added enums: `CoachClientStatus`, `MessageSender`
+- Added models: `CoachProfile`, `CoachClientRelationship`, `CoachInvite`, `CoachMessage`
+- Extended `User` with 5 new relations (`coachProfile`, `coachRelationships`, `clientRelationships`, `coachInvitesSent`, `coachCreatedMacrocycles`)
+- Extended `Macrocycle` with `createdByCoachId` + `createdByCoach` relation
+- DB pushed via Session mode pooler (`aws-1-ap-south-1.pooler.supabase.com:5432`) — DIRECT_URL unreachable locally
+
+### New Dependencies
+- `resend` installed (`npm install resend`)
+- Env vars needed: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+
+### New Files Created
+| File | Purpose |
+|------|---------|
+| `lib/coachAccess.ts` | `verifyCoachClientAccess(coachId, clientId)` helper |
+| `lib/email.ts` | `sendCoachInvite()` via Resend |
+| `app/(coach)/layout.tsx` | Coach layout — role-guarded sidebar |
+| `app/(coach)/coach/page.tsx` | Coach dashboard — client list + metrics |
+| `app/(coach)/coach/invite/page.tsx` | Invite form (client component) |
+| `app/api/coach/clients/route.ts` | GET client list, POST send invite |
+| `app/api/invites/[token]/route.ts` | GET invite details, POST accept/decline |
+| `app/invites/[token]/page.tsx` | Accept/decline UI (client component, no auth group) |
+
+### Modified Files
+| File | Change |
+|------|--------|
+| `middleware.ts` | COACH bypasses subscription; `/dashboard` → `/coach` redirect; `/invites` public |
+| `app/(dashboard)/layout.tsx` | COACH role → redirect to `/coach` |
+| `components/navigation.tsx` | "My Coach" link for USER role |
+| `app/(admin)/admin/users/[id]/page.tsx` | Role section: grant/revoke COACH, maxClients field |
+| `app/api/admin/users/[id]/route.ts` | Added PATCH handler (role change, CoachProfile create/update) |
+| `app/api/admin/users/[id]/route.ts` | GET now includes `coachProfile` in select |
+
+## Key Decisions
+- Invite requires target user to already have a pbX account (no pre-registration flow)
+- `db:push` must use session mode pooler locally (`DIRECT_URL` override): `DIRECT_URL="postgresql://postgres.yxudddkwzemqbjdpugvi:[pw]@aws-1-ap-south-1.pooler.supabase.com:5432/postgres" npx prisma db push`
+- Coach has no athlete dashboard — always redirected to `/coach`
+- `force-dynamic` NOT in coach layout (no SubscriptionBanner)
+- `lib/releaseNotes.ts` NOT updated this session — bundle with next deploy
+
+## What's Next (Phase 2)
+- `app/api/coach/clients/[clientId]/route.ts` — client detail
+- `app/api/coach/clients/[clientId]/macrocycles/route.ts` — client blocks (GET)
+- `app/api/coach/clients/[clientId]/workout-logs/route.ts` — recent logs
+- `app/api/coach/clients/[clientId]/progress/route.ts` — PRs/volume
+- Coach client pages: overview, blocks, history, progress
+- `app/(dashboard)/my-coach/page.tsx` — client-facing coach page
+- Read-only gating on coach-created blocks in existing macrocycle/mesocycle pages
 
 ---
 

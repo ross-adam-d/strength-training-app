@@ -12,7 +12,20 @@ datasource db {
 
 enum UserRole {
   USER
+  COACH
   ADMIN
+}
+
+enum CoachClientStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum MessageSender {
+  COACH
+  CLIENT
 }
 
 enum SubscriptionStatus {
@@ -45,6 +58,12 @@ model User {
   exercises     Exercise[]
   workoutLogs   WorkoutLog[]
   subscription  Subscription?
+
+  coachProfile          CoachProfile?
+  coachRelationships    CoachClientRelationship[] @relation("CoachRelationships")
+  clientRelationships   CoachClientRelationship[] @relation("ClientRelationships")
+  coachInvitesSent      CoachInvite[]
+  coachCreatedMacrocycles Macrocycle[] @relation("CoachCreatedBlocks")
 
   @@map("users")
 }
@@ -127,6 +146,9 @@ model Macrocycle {
 
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdByCoachId  String?
+  createdByCoach    User?    @relation("CoachCreatedBlocks", fields: [createdByCoachId], references: [id], onDelete: SetNull)
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -286,4 +308,58 @@ model ExerciseLog {
   @@map("exercise_logs")
   @@index([workoutLogId])
   @@index([exerciseId])
+}
+
+model CoachProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  maxClients Int      @default(5)
+  bio        String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("coach_profiles")
+}
+
+model CoachClientRelationship {
+  id        String            @id @default(cuid())
+  coachId   String
+  coach     User              @relation("CoachRelationships", fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    User              @relation("ClientRelationships", fields: [clientId], references: [id], onDelete: Cascade)
+  status    CoachClientStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  messages  CoachMessage[]
+
+  @@unique([coachId, clientId])
+  @@map("coach_client_relationships")
+}
+
+model CoachInvite {
+  id         String    @id @default(cuid())
+  coachId    String
+  coach      User      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  email      String
+  token      String    @unique @default(cuid())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("coach_invites")
+}
+
+model CoachMessage {
+  id             String                  @id @default(cuid())
+  relationshipId String
+  relationship   CoachClientRelationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  senderRole     MessageSender
+  senderId       String
+  content        String
+  workoutLogId   String?
+  readAt         DateTime?
+  createdAt      DateTime                @default(now())
+
+  @@map("coach_messages")
 }
