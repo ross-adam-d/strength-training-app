@@ -203,8 +203,9 @@ export default function WorkoutLogPage() {
   const [workoutTimerRunning, setWorkoutTimerRunning] = useState(true)
   const workoutTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Invalid field highlighting (populated when completeExercise fails validation)
-  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+  // Tracks exercises where the user has attempted completion with missing data
+  // Invalidity is computed inline per-render from actual log values
+  const [validationAttemptedFor, setValidationAttemptedFor] = useState<Set<string>>(new Set())
 
   // Exercise display order (local reorder during log session; IDs of WorkoutExercise)
   const [exerciseDisplayOrder, setExerciseDisplayOrder] = useState<string[]>([])
@@ -804,7 +805,7 @@ export default function WorkoutLogPage() {
     }
 
     if (newInvalid.size > 0) {
-      setInvalidFields((prev) => new Set([...prev, ...newInvalid]))
+      setValidationAttemptedFor((prev) => new Set([...prev, exerciseId]))
       // Count distinct incomplete sets (a set may have multiple missing fields)
       const incompleteSetNumbers = new Set(Array.from(newInvalid).map((k) => k.split('-')[1]))
       setExerciseIncompleteCount(incompleteSetNumbers.size)
@@ -824,12 +825,11 @@ export default function WorkoutLogPage() {
           : log
       )
     )
-    // Clear invalid marker for this field as the user types
-    const fieldKey = `${exerciseId}-${setNumber}-${field}`
-    setInvalidFields((prev) => {
-      if (!prev.has(fieldKey)) return prev
+    // Clear validation highlight once user starts editing any field in this exercise
+    setValidationAttemptedFor((prev) => {
+      if (!prev.has(exerciseId)) return prev
       const next = new Set(prev)
-      next.delete(fieldKey)
+      next.delete(exerciseId)
       return next
     })
   }
@@ -874,12 +874,10 @@ export default function WorkoutLogPage() {
       })
     )
 
-    // Clear invalid markers for this exercise
-    setInvalidFields((prev) => {
+    // Clear validation attempted flag for this exercise
+    setValidationAttemptedFor((prev) => {
       const next = new Set(prev)
-      for (const key of Array.from(next)) {
-        if (key.startsWith(`${exerciseId}-`)) next.delete(key)
-      }
+      next.delete(exerciseId)
       return next
     })
 
@@ -1197,11 +1195,6 @@ export default function WorkoutLogPage() {
                   >
                     ↺
                   </button>
-                  {lastSavedAt && (
-                    <p className="text-xs text-green-600 font-medium">
-                      ✓ In progress
-                    </p>
-                  )}
                 </div>
               </div>
               <Button onClick={handleComplete} disabled={saving} className="shrink-0">
@@ -1399,82 +1392,81 @@ export default function WorkoutLogPage() {
                       {/* Larger touch targets for mobile - min 44px height */}
                       <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 items-center`}>
                         <span className={`text-sm md:text-base font-semibold ${completedExercises.has(we.exercise.id) ? 'text-gray-400' : 'text-gray-600'}`}>{log.setNumber}</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9.]*"
-                          placeholder={we.exercise.isBodyweight ? 'BW' : (suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || '')}
-                          value={log.weight}
-                          onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
-                          onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                          className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
-                            completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                            invalidFields.has(`${log.exerciseId}-${log.setNumber}-weight`) ? 'border-red-500 bg-red-50' :
-                            'border-gray-300'
-                          }`}
-                        />
-                        {we.exercise.isUnilateral ? (
-                          <>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              placeholder="0"
-                              value={log.repsLeft ?? ''}
-                              onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
-                              onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
-                              className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                                completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsLeft`) ? 'border-red-500 bg-red-50' :
-                                'border-gray-300'
-                              }`}
-                            />
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              placeholder="0"
-                              value={log.repsRight ?? ''}
-                              onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
-                              onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
-                              className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                                completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsRight`) ? 'border-red-500 bg-red-50' :
-                                'border-gray-300'
-                              }`}
-                            />
-                          </>
-                        ) : we.exercise.isTimed ? (
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.duration || ''}
-                            value={log.duration ?? ''}
-                            onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'duration', e.target.value)}
-                            onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
-                            className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
-                              completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-duration`) ? 'border-red-500 bg-red-50' :
-                              'border-gray-300'
-                            }`}
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
-                            value={log.reps}
-                            onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
-                            onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                            className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
-                              completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-reps`) ? 'border-red-500 bg-red-50' :
-                              'border-gray-300'
-                            }`}
-                          />
-                        )}
+                        {(() => {
+                          const attempted = validationAttemptedFor.has(we.exercise.id) && !log.skipped
+                          const isCompleted = completedExercises.has(we.exercise.id)
+                          const weightMissing = attempted && (log.weight === '' || log.weight === undefined || log.weight === null)
+                          const repsMissing = attempted && !we.exercise.isUnilateral && !we.exercise.isTimed && (log.reps === '' || log.reps === undefined || log.reps === null)
+                          const leftMissing = attempted && we.exercise.isUnilateral && (log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null)
+                          const rightMissing = attempted && we.exercise.isUnilateral && (log.repsRight === '' || log.repsRight === undefined || log.repsRight === null)
+                          const durationMissing = attempted && we.exercise.isTimed && (log.duration === '' || log.duration === undefined || log.duration === null)
+
+                          const baseCls = 'w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+                          const completedCls = 'bg-gray-100 opacity-60 border-gray-300'
+                          const invalidCls = 'border-red-500 bg-red-50'
+                          const normalCls = 'border-gray-300'
+
+                          return (
+                            <>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9.]*"
+                                placeholder={we.exercise.isBodyweight ? 'BW' : (suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || '')}
+                                value={log.weight}
+                                onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
+                                onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
+                                className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : weightMissing ? invalidCls : normalCls}`}
+                              />
+                              {we.exercise.isUnilateral ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="0"
+                                    value={log.repsLeft ?? ''}
+                                    onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
+                                    onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
+                                    className={`${baseCls} ${isCompleted ? completedCls : leftMissing ? invalidCls : normalCls}`}
+                                  />
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="0"
+                                    value={log.repsRight ?? ''}
+                                    onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
+                                    onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
+                                    className={`${baseCls} ${isCompleted ? completedCls : rightMissing ? invalidCls : normalCls}`}
+                                  />
+                                </>
+                              ) : we.exercise.isTimed ? (
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.duration || ''}
+                                  value={log.duration ?? ''}
+                                  onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'duration', e.target.value)}
+                                  onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
+                                  className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : durationMissing ? invalidCls : normalCls}`}
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
+                                  value={log.reps}
+                                  onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
+                                  onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
+                                  className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : repsMissing ? invalidCls : normalCls}`}
+                                />
+                              )}
+                            </>
+                          )
+                        })()}
                         <input
                           type="text"
                           inputMode="numeric"
