@@ -225,7 +225,15 @@ export async function POST(
       workoutTypeNames[i % workoutTypeNames.length]
     )
 
-    // Count occurrences of each workout type to add A, B, C suffixes
+    // Pre-compute how many times each workout type appears in the rotation.
+    // Suffix (A, B, C…) is only added when a type appears more than once —
+    // e.g. "Upper" in ULU → "Upper A" / "Upper B", but "Olympic A" (once) stays "Olympic A".
+    const workoutTypeTotal = new Map<string, number>()
+    for (const name of rotation) {
+      workoutTypeTotal.set(name, (workoutTypeTotal.get(name) || 0) + 1)
+    }
+
+    // Running count used to derive the per-occurrence suffix
     const workoutTypeCounts = new Map<string, number>()
 
     // Fetch all exercises to resolve names to IDs (include coach + client custom exercises)
@@ -256,8 +264,10 @@ export async function POST(
         const currentCount = (workoutTypeCounts.get(workoutTypeName) || 0) + 1
         workoutTypeCounts.set(workoutTypeName, currentCount)
 
-        const suffix = String.fromCharCode(64 + currentCount)
-        const workoutName = `${workoutTypeName} ${suffix}`
+        const total = workoutTypeTotal.get(workoutTypeName) || 1
+        const workoutName = total > 1
+          ? `${workoutTypeName} ${String.fromCharCode(64 + currentCount)}`
+          : workoutTypeName
 
         const workoutData: any = {
           name: workoutName,
