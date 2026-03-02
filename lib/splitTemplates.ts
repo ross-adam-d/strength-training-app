@@ -121,10 +121,10 @@ const WORKOUT_TYPES: Record<string, WorkoutType> = {
     ],
   },
 
-  // ── Power sessions — Olympic lift focused ─────────────────────────────
-  // Power A: Clean-led session — floor pull + front squat + overhead push
-  'Power A': {
-    name: 'Power A',
+  // ── Olympic Lifting sessions ───────────────────────────────────────────
+  // Olympic A: Clean-led session — floor pull + front squat + overhead push
+  'Olympic A': {
+    name: 'Olympic A',
     slots: [
       { label: 'Olympic (Clean)',   exerciseName: 'Power Clean',          equipment: ['barbell'], alternatives: [{ exerciseName: 'Hang Power Clean', equipment: ['barbell'] }, { exerciseName: 'Clean High Pull', equipment: ['barbell'] }],                                        isCompound: true, buildSets: 5, buildReps: '2-4', recoverySets: 3, recoveryReps: '3', restPeriod: 240 },
       { label: 'Posterior Pull',    exerciseName: 'Clean Pull',           equipment: ['barbell'], alternatives: [{ exerciseName: 'Snatch Grip Deadlift', equipment: ['barbell'] }, { exerciseName: 'Deadlift', equipment: ['barbell'] }, { exerciseName: 'Romanian Deadlift', equipment: ['barbell'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '3', restPeriod: 180 },
@@ -134,9 +134,9 @@ const WORKOUT_TYPES: Record<string, WorkoutType> = {
     ],
   },
 
-  // Power B: Snatch-led session — wide pull + overhead squat + horizontal back
-  'Power B': {
-    name: 'Power B',
+  // Olympic B: Snatch-led session — wide pull + overhead squat + horizontal back
+  'Olympic B': {
+    name: 'Olympic B',
     slots: [
       { label: 'Olympic (Snatch)',  exerciseName: 'Power Snatch',         equipment: ['barbell'], alternatives: [{ exerciseName: 'Hang Power Snatch', equipment: ['barbell'] }, { exerciseName: 'Snatch High Pull', equipment: ['barbell'] }, { exerciseName: 'Clean High Pull', equipment: ['barbell'] }], isCompound: true, buildSets: 5, buildReps: '2-3', recoverySets: 3, recoveryReps: '2', restPeriod: 240 },
       { label: 'Snatch Pull',       exerciseName: 'Snatch Pull',          equipment: ['barbell'], alternatives: [{ exerciseName: 'Snatch High Pull', equipment: ['barbell'] }, { exerciseName: 'Snatch Grip Deadlift', equipment: ['barbell'] }, { exerciseName: 'Romanian Deadlift', equipment: ['barbell'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '3', restPeriod: 180 },
@@ -162,8 +162,8 @@ export const SPLIT_CONFIGS: SplitConfig[] = [
   { key: 'brosplit',   label: 'Bro Split',            workoutTypes: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],                                   minDays: 5 },
   { key: '4u3l',       label: '4×Upper + 3×Lower',   workoutTypes: ['Upper', 'Upper', 'Upper', 'Upper', 'Lower', 'Lower', 'Lower'],                   allowedDays: [7] },
   { key: '4l3u',       label: '4×Lower + 3×Upper',   workoutTypes: ['Lower', 'Lower', 'Lower', 'Lower', 'Upper', 'Upper', 'Upper'],                   allowedDays: [7] },
-  // Olympic / Power split — alternates Power A (clean) and Power B (snatch) sessions
-  { key: 'power',      label: 'Power',                workoutTypes: ['Power A', 'Power B'],                                                            minDays: 2 },
+  // Olympic Lifts split — alternates Olympic A (clean-led) and Olympic B (snatch-led) sessions
+  { key: 'olympic',    label: 'Olympic Lifts',         workoutTypes: ['Olympic A', 'Olympic B'],                                                        minDays: 2 },
 ]
 
 export function getSplitsForDays(days: number): SplitConfig[] {
