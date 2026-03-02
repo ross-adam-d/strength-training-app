@@ -151,9 +151,14 @@ export default function WorkoutLogPage() {
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
 
-  // Missing fields modal state
+  // Missing fields modal state (workout-level)
   const [showIncompleteModal, setShowIncompleteModal] = useState(false)
   const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
+
+  // Missing fields modal state (exercise-level)
+  const [showExerciseIncompleteModal, setShowExerciseIncompleteModal] = useState(false)
+  const [exerciseIncompleteId, setExerciseIncompleteId] = useState<string | null>(null)
+  const [exerciseIncompleteCount, setExerciseIncompleteCount] = useState(0)
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -800,6 +805,11 @@ export default function WorkoutLogPage() {
 
     if (newInvalid.size > 0) {
       setInvalidFields((prev) => new Set([...prev, ...newInvalid]))
+      // Count distinct incomplete sets (a set may have multiple missing fields)
+      const incompleteSetNumbers = new Set(Array.from(newInvalid).map((k) => k.split('-')[1]))
+      setExerciseIncompleteCount(incompleteSetNumbers.size)
+      setExerciseIncompleteId(exerciseId)
+      setShowExerciseIncompleteModal(true)
       return
     }
 
@@ -840,6 +850,42 @@ export default function WorkoutLogPage() {
           return log
         })
     )
+  }
+
+  function completeExerciseAnyway(exerciseId: string) {
+    const workoutExercise = workout?.workoutExercises.find((we) => we.exercise.id === exerciseId)
+    if (!workoutExercise) return
+
+    // Fill in '0' for any empty required fields
+    setExerciseLogs((prev) =>
+      prev.map((log) => {
+        if (log.exerciseId !== exerciseId || log.skipped) return log
+        const updates: Partial<ExerciseLog> = {}
+        if (log.weight === '' || log.weight === undefined || log.weight === null) updates.weight = '0'
+        if (workoutExercise.exercise.isUnilateral) {
+          if (log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null) updates.repsLeft = '0'
+          if (log.repsRight === '' || log.repsRight === undefined || log.repsRight === null) updates.repsRight = '0'
+        } else if (workoutExercise.exercise.isTimed) {
+          if (log.duration === '' || log.duration === undefined || log.duration === null) updates.duration = '0'
+        } else {
+          if (log.reps === '' || log.reps === undefined || log.reps === null) updates.reps = '0'
+        }
+        return Object.keys(updates).length > 0 ? { ...log, ...updates } : log
+      })
+    )
+
+    // Clear invalid markers for this exercise
+    setInvalidFields((prev) => {
+      const next = new Set(prev)
+      for (const key of Array.from(next)) {
+        if (key.startsWith(`${exerciseId}-`)) next.delete(key)
+      }
+      return next
+    })
+
+    setCompletedExercises((prev) => new Set([...prev, exerciseId]))
+    setShowExerciseIncompleteModal(false)
+    setExerciseIncompleteId(null)
   }
 
   function moveExercise(weId: string, direction: 'up' | 'down') {
@@ -1363,7 +1409,7 @@ export default function WorkoutLogPage() {
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
                           className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
                             completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                            invalidFields.has(`${log.exerciseId}-${log.setNumber}-weight`) ? 'border-red-400 bg-red-50' :
+                            invalidFields.has(`${log.exerciseId}-${log.setNumber}-weight`) ? 'border-red-500 bg-red-50' :
                             'border-gray-300'
                           }`}
                         />
@@ -1379,7 +1425,7 @@ export default function WorkoutLogPage() {
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
                               className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
                                 completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsLeft`) ? 'border-red-400 bg-red-50' :
+                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsLeft`) ? 'border-red-500 bg-red-50' :
                                 'border-gray-300'
                               }`}
                             />
@@ -1393,7 +1439,7 @@ export default function WorkoutLogPage() {
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
                               className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
                                 completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsRight`) ? 'border-red-400 bg-red-50' :
+                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsRight`) ? 'border-red-500 bg-red-50' :
                                 'border-gray-300'
                               }`}
                             />
@@ -1409,7 +1455,7 @@ export default function WorkoutLogPage() {
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
                             className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
                               completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-duration`) ? 'border-red-400 bg-red-50' :
+                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-duration`) ? 'border-red-500 bg-red-50' :
                               'border-gray-300'
                             }`}
                           />
@@ -1424,7 +1470,7 @@ export default function WorkoutLogPage() {
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
                             className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
                               completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
-                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-reps`) ? 'border-red-400 bg-red-50' :
+                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-reps`) ? 'border-red-500 bg-red-50' :
                               'border-gray-300'
                             }`}
                           />
@@ -1688,6 +1734,36 @@ export default function WorkoutLogPage() {
           {saving ? 'Saving...' : 'Complete Workout'}
         </Button>
       </div>
+
+      {/* Exercise-level Incomplete Sets Modal */}
+      <Modal
+        isOpen={showExerciseIncompleteModal}
+        onClose={() => { setShowExerciseIncompleteModal(false); setExerciseIncompleteId(null) }}
+        title="Incomplete Sets"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            {exerciseIncompleteCount} {exerciseIncompleteCount === 1 ? 'set is' : 'sets are'} missing weight or reps — highlighted in red below.
+          </p>
+          <p className="text-gray-700">
+            Fill them in, or complete the exercise and log 0 for any empty fields.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => { setShowExerciseIncompleteModal(false); setExerciseIncompleteId(null) }}
+            >
+              Continue Editing
+            </Button>
+            <Button
+              onClick={() => exerciseIncompleteId && completeExerciseAnyway(exerciseIncompleteId)}
+            >
+              Complete with 0s
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Incomplete Sets Warning Modal */}
       <Modal
