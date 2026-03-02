@@ -42,7 +42,7 @@ export function Navigation({
     { href: '/progress', label: 'Progress' },
     { href: '/workout/start', label: 'Log Manual Workout' },
     ...(role === 'USER' || !role ? [{ href: '/my-coach', label: 'My Coach' }] : []),
-    ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
+    ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin', hardNav: true }] : []),
   ]
 
   function navLinkClass(href: string) {
