@@ -24,6 +24,8 @@ function getSplitWorkoutTypes(trainingSplit: string): string[] {
     'Upper/Lower':       ['Upper', 'Lower'],
     'Push/Pull':         ['Push', 'Pull'],
     'Push/Pull/Legs':    ['Push', 'Pull', 'Legs'],
+    // Olympic / Power split
+    'Power':             ['Power A', 'Power B'],
   }
 
   return splitMap[trainingSplit] || ['Full Body']

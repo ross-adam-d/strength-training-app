@@ -120,6 +120,31 @@ const WORKOUT_TYPES: Record<string, WorkoutType> = {
       { label: 'Triceps (Isolation)', exerciseName: 'Tricep Pushdown',  equipment: ['cable'],           alternatives: [{ exerciseName: 'Skull Crushers', equipment: ['barbell'] }, { exerciseName: 'Tricep Kickback', equipment: ['dumbbell'] }, { exerciseName: 'Overhead Tricep Extension', equipment: ['dumbbell'] }],            isCompound: false, buildSets: 3, buildReps: '10-12', recoverySets: 2, recoveryReps: '12-15', restPeriod: 60  },
     ],
   },
+
+  // ── Power sessions — Olympic lift focused ─────────────────────────────
+  // Power A: Clean-led session — floor pull + front squat + overhead push
+  'Power A': {
+    name: 'Power A',
+    slots: [
+      { label: 'Olympic (Clean)',   exerciseName: 'Power Clean',          equipment: ['barbell'], alternatives: [{ exerciseName: 'Hang Power Clean', equipment: ['barbell'] }, { exerciseName: 'Clean High Pull', equipment: ['barbell'] }],                                        isCompound: true, buildSets: 5, buildReps: '2-4', recoverySets: 3, recoveryReps: '3', restPeriod: 240 },
+      { label: 'Posterior Pull',    exerciseName: 'Clean Pull',           equipment: ['barbell'], alternatives: [{ exerciseName: 'Snatch Grip Deadlift', equipment: ['barbell'] }, { exerciseName: 'Deadlift', equipment: ['barbell'] }, { exerciseName: 'Romanian Deadlift', equipment: ['barbell'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '3', restPeriod: 180 },
+      { label: 'Squat',             exerciseName: 'Front Squat',          equipment: ['barbell', 'rack'], alternatives: [{ exerciseName: 'Barbell Squat', equipment: ['barbell', 'rack'] }, { exerciseName: 'Hack Squat', equipment: ['machine'] }, { exerciseName: 'Leg Press', equipment: ['machine'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '5', restPeriod: 180 },
+      { label: 'Overhead',          exerciseName: 'Push Press',           equipment: ['barbell'], alternatives: [{ exerciseName: 'Push Jerk', equipment: ['barbell'] }, { exerciseName: 'Overhead Press', equipment: ['barbell', 'rack'] }, { exerciseName: 'Dumbbell Shoulder Press', equipment: ['dumbbell'] }], isCompound: true, buildSets: 4, buildReps: '3-6', recoverySets: 2, recoveryReps: '5', restPeriod: 150 },
+      { label: 'Core',              exerciseName: 'Plank',                equipment: ['bodyweight'], alternatives: [{ exerciseName: 'Ab Wheel Rollout', equipment: ['bodyweight'] }, { exerciseName: 'Hanging Leg Raise', equipment: ['pull-up-bar'] }],                           isCompound: false, buildSets: 3, buildReps: '45s', recoverySets: 2, recoveryReps: '30s', restPeriod: 60 },
+    ],
+  },
+
+  // Power B: Snatch-led session — wide pull + overhead squat + horizontal back
+  'Power B': {
+    name: 'Power B',
+    slots: [
+      { label: 'Olympic (Snatch)',  exerciseName: 'Power Snatch',         equipment: ['barbell'], alternatives: [{ exerciseName: 'Hang Power Snatch', equipment: ['barbell'] }, { exerciseName: 'Snatch High Pull', equipment: ['barbell'] }, { exerciseName: 'Clean High Pull', equipment: ['barbell'] }], isCompound: true, buildSets: 5, buildReps: '2-3', recoverySets: 3, recoveryReps: '2', restPeriod: 240 },
+      { label: 'Snatch Pull',       exerciseName: 'Snatch Pull',          equipment: ['barbell'], alternatives: [{ exerciseName: 'Snatch High Pull', equipment: ['barbell'] }, { exerciseName: 'Snatch Grip Deadlift', equipment: ['barbell'] }, { exerciseName: 'Romanian Deadlift', equipment: ['barbell'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '3', restPeriod: 180 },
+      { label: 'Overhead Squat',    exerciseName: 'Overhead Squat',       equipment: ['barbell'], alternatives: [{ exerciseName: 'Front Squat', equipment: ['barbell', 'rack'] }, { exerciseName: 'Barbell Squat', equipment: ['barbell', 'rack'] }, { exerciseName: 'Leg Press', equipment: ['machine'] }], isCompound: true, buildSets: 4, buildReps: '3-5', recoverySets: 2, recoveryReps: '5', restPeriod: 180 },
+      { label: 'Back (Horizontal)', exerciseName: 'Barbell Row',          equipment: ['barbell'], alternatives: [{ exerciseName: 'Pendlay Row', equipment: ['barbell'] }, { exerciseName: 'T-Bar Row', equipment: ['barbell'] }, { exerciseName: 'Single-Arm Dumbbell Row', equipment: ['dumbbell'] }], isCompound: true, buildSets: 4, buildReps: '4-6', recoverySets: 2, recoveryReps: '6', restPeriod: 150 },
+      { label: 'Core',              exerciseName: 'Hanging Leg Raise',    equipment: ['pull-up-bar'], alternatives: [{ exerciseName: 'Plank', equipment: ['bodyweight'] }, { exerciseName: 'Ab Wheel Rollout', equipment: ['bodyweight'] }],                                      isCompound: false, buildSets: 3, buildReps: '8-12', recoverySets: 2, recoveryReps: '8', restPeriod: 60 },
+    ],
+  },
 }
 
 export function getWorkoutType(name: string): WorkoutType {
@@ -137,6 +162,8 @@ export const SPLIT_CONFIGS: SplitConfig[] = [
   { key: 'brosplit',   label: 'Bro Split',            workoutTypes: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],                                   minDays: 5 },
   { key: '4u3l',       label: '4×Upper + 3×Lower',   workoutTypes: ['Upper', 'Upper', 'Upper', 'Upper', 'Lower', 'Lower', 'Lower'],                   allowedDays: [7] },
   { key: '4l3u',       label: '4×Lower + 3×Upper',   workoutTypes: ['Lower', 'Lower', 'Lower', 'Lower', 'Upper', 'Upper', 'Upper'],                   allowedDays: [7] },
+  // Olympic / Power split — alternates Power A (clean) and Power B (snatch) sessions
+  { key: 'power',      label: 'Power',                workoutTypes: ['Power A', 'Power B'],                                                            minDays: 2 },
 ]
 
 export function getSplitsForDays(days: number): SplitConfig[] {

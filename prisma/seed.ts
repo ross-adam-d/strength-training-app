@@ -461,6 +461,152 @@ async function main() {
       equipment: ['barbell'],
       isPublic: true,
     },
+
+    // ── Olympic Lifting — Clean variants ──────────────────────────────────
+    {
+      name: 'Power Clean',
+      description: 'Explosive barbell pull from the floor caught above parallel — the most widely used Olympic derivative for developing whole-body power',
+      muscleGroups: ['glutes', 'hamstrings', 'back', 'traps', 'quads', 'shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Hang Power Clean',
+      description: 'Power clean initiated from a hang position (mid-thigh or knee) — eliminates the floor pull and emphasises rate of force development',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'back', 'shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Hang Clean',
+      description: 'Full squat clean from a hang position — develops explosive hip extension and a strong receiving position',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'back', 'quads'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Squat Clean',
+      description: 'Full Olympic clean caught in a deep front squat — highest technical demand of the clean variants; requires excellent mobility and positional strength',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'back', 'quads'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Clean Pull',
+      description: 'Clean without the catch — bar pulled to hip height with maximal triple extension; allows heavy loading of the posterior chain pulling pattern',
+      muscleGroups: ['glutes', 'hamstrings', 'back', 'traps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Hang Clean Pull',
+      description: 'Clean pull initiated from a hang position — loads the hip extension pattern without floor mechanics',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'back'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Clean High Pull',
+      description: 'Clean pull continued to elbow-high position — more accessible than the full clean while building trap and upper-back pulling strength',
+      muscleGroups: ['traps', 'back', 'glutes', 'hamstrings', 'shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Muscle Clean',
+      description: 'Clean with no re-bend in the receiving position — continuous pull demanding strong deltoid and trap engagement; primarily a technique builder',
+      muscleGroups: ['traps', 'shoulders', 'back', 'glutes'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+
+    // ── Olympic Lifting — Snatch variants ─────────────────────────────────
+    {
+      name: 'Power Snatch',
+      description: 'Explosive wide-grip pull from the floor caught above parallel — develops full-body power with significant shoulder stability demand',
+      muscleGroups: ['glutes', 'hamstrings', 'back', 'traps', 'shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Hang Power Snatch',
+      description: 'Power snatch from a hang position — removes the floor pull to focus on the explosive extension and overhead receiving position',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'shoulders', 'back'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Hang Snatch',
+      description: 'Full squat snatch from a hang position — combines explosive hip drive with a deep overhead squat catch',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'shoulders', 'quads'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Squat Snatch',
+      description: 'Full Olympic snatch caught in a deep overhead squat — the most technical Olympic lift; maximum power and mobility demands',
+      muscleGroups: ['glutes', 'hamstrings', 'traps', 'shoulders', 'quads', 'core'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Snatch Pull',
+      description: 'Snatch-grip pull from the floor without the catch — heavily loads the posterior chain with wide-grip bar path mechanics',
+      muscleGroups: ['glutes', 'hamstrings', 'back', 'traps'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Snatch High Pull',
+      description: 'Snatch pull continued to elbow-high position — accessible entry to Olympic pulling patterns with no overhead catch required',
+      muscleGroups: ['traps', 'back', 'glutes', 'hamstrings', 'shoulders'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Overhead Squat',
+      description: 'Barbell squat with the bar locked out overhead — builds the shoulder stability, thoracic mobility, and positional strength required for the snatch',
+      muscleGroups: ['quads', 'glutes', 'core', 'shoulders', 'back'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Snatch Grip Deadlift',
+      description: 'Conventional deadlift with a wide snatch grip — builds snatch-specific pulling strength and lat engagement at a heavier load than the full snatch',
+      muscleGroups: ['glutes', 'hamstrings', 'back', 'traps', 'core'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Snatch Balance',
+      description: 'Dip-drive-drop drill for the snatch receiving position — develops footwork, overhead stability, and confidence under the bar',
+      muscleGroups: ['shoulders', 'quads', 'core'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+
+    // ── Olympic Lifting — Jerk variants ───────────────────────────────────
+    {
+      name: 'Push Press',
+      description: 'Overhead press with a leg drive initiation — bridges the gap between strict press and the jerk; strong power output driver',
+      muscleGroups: ['shoulders', 'triceps', 'glutes', 'quads'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Push Jerk',
+      description: 'Overhead drive with a dip-and-drive then re-bend under the bar — higher power output than push press; feet remain in place',
+      muscleGroups: ['shoulders', 'triceps', 'quads', 'core'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Split Jerk',
+      description: 'Competition jerk with a split-stance receiving position — highest overhead loading potential; requires footwork and positional practice',
+      muscleGroups: ['shoulders', 'triceps', 'quads', 'core'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
   ]
 
   for (const exercise of exercises) {
