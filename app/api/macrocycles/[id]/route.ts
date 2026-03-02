@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyCoachBlockAccess } from '@/lib/coachAccess'
 import { z } from 'zod'
 
 const macrocycleSchema = z.object({
@@ -25,12 +26,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Try user ownership first; fall back to coach block access
+    let whereId: any = { id, userId: session.user.id }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachBlockAccess(session.user.id, id)
+      if (coachAccess) whereId = { id }
+    }
+
     // Optimized: Use select instead of include, only fetch needed fields
     const macrocycle = await prisma.macrocycle.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
-      },
+      where: whereId,
       select: {
         id: true,
         name: true,
@@ -108,21 +113,35 @@ export async function PATCH(
     const body = await request.json()
     const data = macrocycleSchema.parse(body)
 
-    // Validate: Only one active training block allowed
+    // Determine ownership: user or coach creator
+    const isCoach = session.user.role === 'COACH'
+    let coachHasAccess = false
+    if (isCoach) {
+      coachHasAccess = await verifyCoachBlockAccess(session.user.id, id)
+    }
+
+    // Validate: Only one active training block allowed (check against the block owner)
     if (data.status === 'active') {
+      // Find owner userId for this block
+      const blockOwner = await prisma.macrocycle.findFirst({
+        where: isCoach && coachHasAccess
+          ? { id }
+          : { id, userId: session.user.id },
+        select: { userId: true },
+      })
+      if (!blockOwner) {
+        return NextResponse.json({ error: 'Macrocycle not found' }, { status: 404 })
+      }
       const existingActive = await prisma.macrocycle.findFirst({
         where: {
-          userId: session.user.id,
+          userId: blockOwner.userId,
           status: 'active',
-          NOT: {
-            id, // Exclude the current macrocycle being updated
-          },
+          NOT: { id },
         },
       })
-
       if (existingActive) {
         return NextResponse.json(
-          { error: 'You already have an active training block. Please set it to completed or paused before activating another.' },
+          { error: 'There is already an active training block. Please set it to completed or paused before activating another.' },
           { status: 400 }
         )
       }
@@ -132,11 +151,12 @@ export async function PATCH(
     if (data.startDate) updateData.startDate = new Date(data.startDate)
     if (data.endDate) updateData.endDate = new Date(data.endDate)
 
+    const whereClause = isCoach && coachHasAccess
+      ? { id }
+      : { id, userId: session.user.id }
+
     const macrocycle = await prisma.macrocycle.updateMany({
-      where: {
-        id,
-        userId: session.user.id,
-      },
+      where: whereClause,
       data: updateData,
     })
 
@@ -180,11 +200,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    let deleteWhere: any = { id, userId: session.user.id }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachBlockAccess(session.user.id, id)
+      if (coachAccess) deleteWhere = { id }
+    }
+
     const deleted = await prisma.macrocycle.deleteMany({
-      where: {
-        id,
-        userId: session.user.id,
-      },
+      where: deleteWhere,
     })
 
     if (deleted.count === 0) {

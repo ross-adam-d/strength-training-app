@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,7 @@ function getSplitOptions(days: number | null) {
 export default function MacrocycleDetailPage() {
   const router = useRouter()
   const params = useParams()
+  const { data: authSession } = useSession()
   const [macrocycle, setMacrocycle] = useState<MacrocycleData | null>(null)
   const [loading, setLoading] = useState(true)
   const [editingName, setEditingName] = useState(false)
@@ -340,6 +342,9 @@ export default function MacrocycleDetailPage() {
 
   const duration = calculateDuration(macrocycle.startDate, macrocycle.endDate)
   const isCoachCreated = !!macrocycle.createdByCoachId
+  // Coach who created this block should have full edit access; client gets read-only view
+  const isViewingAsCoach = isCoachCreated && macrocycle.createdByCoachId === authSession?.user?.id
+  const isReadOnly = isCoachCreated && !isViewingAsCoach
 
   return (
     <div>
@@ -349,7 +354,7 @@ export default function MacrocycleDetailPage() {
         </Link>
       </div>
 
-      {isCoachCreated && (
+      {isReadOnly && (
         <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3.5 flex items-start gap-3">
           <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -363,7 +368,7 @@ export default function MacrocycleDetailPage() {
       <Card className="mb-8">
         <CardBody>
           {/* Title row */}
-          {!isCoachCreated && editingName ? (
+          {!isReadOnly && editingName ? (
             <div className="flex items-center gap-2 mb-2">
               <Input
                 value={editedName}
@@ -379,7 +384,7 @@ export default function MacrocycleDetailPage() {
           ) : (
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-2xl font-bold text-gray-900 flex-1">{macrocycle.name}</h1>
-              {!isCoachCreated && (
+              {!isReadOnly && (
                 <button
                   onClick={() => setEditingName(true)}
                   className="text-gray-400 hover:text-primary-600 text-lg leading-none"
@@ -392,7 +397,7 @@ export default function MacrocycleDetailPage() {
           )}
 
           {/* Dates row */}
-          {!isCoachCreated && editingDates ? (
+          {!isReadOnly && editingDates ? (
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <input
                 type="date"
@@ -420,7 +425,7 @@ export default function MacrocycleDetailPage() {
                 {new Date(macrocycle.startDate).toLocaleDateString()} –{' '}
                 {new Date(macrocycle.endDate).toLocaleDateString()} ({duration} weeks)
               </p>
-              {!isCoachCreated && (
+              {!isReadOnly && (
                 <button
                   onClick={() => setEditingDates(true)}
                   className="text-gray-400 hover:text-primary-600 text-lg leading-none"
@@ -444,7 +449,7 @@ export default function MacrocycleDetailPage() {
               value={macrocycle.status}
               onChange={(e) => handleStatusChange(e.target.value as 'planned' | 'active' | 'paused' | 'completed')}
             />
-            {!isCoachCreated && (
+            {!isReadOnly && (
               <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
                 Delete
               </Button>
@@ -522,7 +527,7 @@ export default function MacrocycleDetailPage() {
 
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t space-y-4">
-                      {isLocked && !isCoachCreated && (
+                      {isLocked && !isReadOnly && (
                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                           Phase has started — configuration is locked.
                         </p>
@@ -537,7 +542,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Goal
                           </label>
-                          {isLocked || isCoachCreated ? (
+                          {isLocked || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">{phase.goal || '—'}</p>
                           ) : (
                             <Select
@@ -551,7 +556,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Days Per Week
                           </label>
-                          {isLocked || isCoachCreated ? (
+                          {isLocked || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">
                               {phase.trainingDaysPerWeek ? `${phase.trainingDaysPerWeek} days/week` : '—'}
                             </p>
@@ -575,7 +580,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Split
                           </label>
-                          {isLocked || isCoachCreated ? (
+                          {isLocked || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">{phase.trainingSplit || '—'}</p>
                           ) : (
                             <Select

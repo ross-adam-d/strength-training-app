@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyCoachMesocycleAccess } from '@/lib/coachAccess'
 import { getWorkoutType, getDaysOfWeek } from '@/lib/splitTemplates'
 
 // Map training split labels to workout type rotations
@@ -52,21 +53,23 @@ export async function POST(
     const body = await request.json()
     const { mode, regenerate } = body // mode: 'default' | 'manual' | 'repeat-previous'; regenerate: bool
 
+    // Determine ownership: user or coach creator
+    let genWhere: any = { id, macrocycle: { userId: session.user.id } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachMesocycleAccess(session.user.id, id)
+      if (coachAccess) genWhere = { id }
+    }
+
     // Fetch mesocycle with ownership verification
     const mesocycle = await prisma.mesocycle.findFirst({
-      where: {
-        id,
-        macrocycle: {
-          userId: session.user.id,
-        },
-      },
+      where: genWhere,
       select: {
         id: true,
         trainingDaysPerWeek: true,
         trainingSplit: true,
         goal: true,
         macrocycle: {
-          select: { id: true, availableEquipment: true },
+          select: { id: true, userId: true, availableEquipment: true },
         },
         microcycles: {
           orderBy: {
@@ -221,12 +224,14 @@ export async function POST(
     // Count occurrences of each workout type to add A, B, C suffixes
     const workoutTypeCounts = new Map<string, number>()
 
-    // Fetch all exercises to resolve names to IDs
+    // Fetch all exercises to resolve names to IDs (include coach + client custom exercises)
+    const blockOwnerId = mesocycle.macrocycle?.userId ?? session.user.id
     const exercises = await prisma.exercise.findMany({
       where: {
         OR: [
           { isPublic: true },
           { createdById: session.user.id },
+          ...(blockOwnerId !== session.user.id ? [{ createdById: blockOwnerId }] : []),
         ],
       },
       select: {

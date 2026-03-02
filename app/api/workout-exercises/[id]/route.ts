@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyCoachBlockAccess } from '@/lib/coachAccess'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -34,6 +35,16 @@ async function verifyOwnership(id: string, userId: string) {
   })
 }
 
+async function verifyCoachExerciseAccess(coachId: string, workoutExerciseId: string): Promise<boolean> {
+  const we = await prisma.workoutExercise.findFirst({
+    where: { id: workoutExerciseId },
+    select: { workout: { select: { microcycle: { select: { mesocycle: { select: { macrocycle: { select: { id: true } } } } } } } } },
+  })
+  const macrocycleId = we?.workout?.microcycle?.mesocycle?.macrocycle?.id
+  if (!macrocycleId) return false
+  return verifyCoachBlockAccess(coachId, macrocycleId)
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -45,7 +56,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const existing = await verifyOwnership(id, session.user.id)
+    const isCoach = session.user.role === 'COACH'
+    const existing = isCoach
+      ? (await verifyCoachExerciseAccess(session.user.id, id) ? true : null)
+      : await verifyOwnership(id, session.user.id)
     if (!existing) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
@@ -256,8 +270,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const existing = await verifyOwnership(id, session.user.id)
-    if (!existing) {
+    const isCoachDelete = session.user.role === 'COACH'
+    const existingDelete = isCoachDelete
+      ? (await verifyCoachExerciseAccess(session.user.id, id) ? true : null)
+      : await verifyOwnership(id, session.user.id)
+    if (!existingDelete) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 

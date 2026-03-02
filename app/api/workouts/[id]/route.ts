@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyCoachBlockAccess } from '@/lib/coachAccess'
+
+/** Returns true if coachId created the block containing this workout with an active client relationship */
+async function verifyCoachWorkoutAccess(coachId: string, workoutId: string): Promise<boolean> {
+  const w = await prisma.workout.findFirst({
+    where: { id: workoutId },
+    select: { microcycle: { select: { mesocycle: { select: { macrocycle: { select: { id: true } } } } } } },
+  })
+  const macrocycleId = w?.microcycle?.mesocycle?.macrocycle?.id
+  if (!macrocycleId) return false
+  return verifyCoachBlockAccess(coachId, macrocycleId)
+}
 
 export async function GET(
   request: Request,
@@ -15,18 +27,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Try user ownership; fall back to coach access
+    let getWhere: any = { id, microcycle: { mesocycle: { macrocycle: { userId: session.user.id } } } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachWorkoutAccess(session.user.id, id)
+      if (coachAccess) getWhere = { id }
+    }
+
     // Optimized: Use select instead of include, only fetch needed fields
     const workout = await prisma.workout.findFirst({
-      where: {
-        id,
-        microcycle: {
-          mesocycle: {
-            macrocycle: {
-              userId: session.user.id,
-            },
-          },
-        },
-      },
+      where: getWhere,
       select: {
         id: true,
         name: true,
@@ -47,6 +57,7 @@ export async function GET(
                   select: {
                     id: true,
                     name: true,
+                    userId: true,
                   },
                 },
               },
@@ -95,6 +106,9 @@ export async function GET(
     // so progressive overload suggestions work from week 2 onwards, not just for repeat completions.
     const exerciseIds = workout.workoutExercises.map((we) => we.exercise.id)
 
+    // Use block owner's userId for logs lookup (handles both regular users and coach-viewed blocks)
+    const blockOwnerUserId = workout.microcycle.mesocycle.macrocycle.userId ?? session.user.id
+
     const allRecentLogs = await prisma.exerciseLog.findMany({
       where: {
         exerciseId: { in: exerciseIds },
@@ -103,7 +117,7 @@ export async function GET(
           workout: {
             microcycle: {
               mesocycle: {
-                macrocycle: { userId: session.user.id },
+                macrocycle: { userId: blockOwnerUserId },
               },
             },
           },
@@ -184,18 +198,15 @@ export async function PATCH(
     const body = await request.json()
     const { name, dayOfWeek, estimatedDuration, warmupNotes, applyToRestOfPhase } = body
 
-    // Verify ownership before updating
+    // Verify ownership before updating (user or coach creator)
+    let patchWhere: any = { id, microcycle: { mesocycle: { macrocycle: { userId: session.user.id } } } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachWorkoutAccess(session.user.id, id)
+      if (coachAccess) patchWhere = { id }
+    }
+
     const workout = await prisma.workout.findFirst({
-      where: {
-        id,
-        microcycle: {
-          mesocycle: {
-            macrocycle: {
-              userId: session.user.id,
-            },
-          },
-        },
-      },
+      where: patchWhere,
       include: {
         microcycle: {
           include: {
@@ -330,17 +341,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    let deleteWhere: any = { id, microcycle: { mesocycle: { macrocycle: { userId: session.user.id } } } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachWorkoutAccess(session.user.id, id)
+      if (coachAccess) deleteWhere = { id }
+    }
+
     const deleted = await prisma.workout.deleteMany({
-      where: {
-        id,
-        microcycle: {
-          mesocycle: {
-            macrocycle: {
-              userId: session.user.id,
-            },
-          },
-        },
-      },
+      where: deleteWhere,
     })
 
     if (deleted.count === 0) {

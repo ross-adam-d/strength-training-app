@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyCoachMesocycleAccess } from '@/lib/coachAccess'
 import { z } from 'zod'
 
 const updateMesocycleSchema = z.object({
@@ -28,14 +29,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Try user ownership first; fall back to coach access
+    let getWhere: any = { id, macrocycle: { userId: session.user.id } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachMesocycleAccess(session.user.id, id)
+      if (coachAccess) getWhere = { id }
+    }
+
     // Optimized: Reduced nesting depth, only select needed fields
     const mesocycle = await prisma.mesocycle.findFirst({
-      where: {
-        id,
-        macrocycle: {
-          userId: session.user.id,
-        },
-      },
+      where: getWhere,
       select: {
         id: true,
         name: true,
@@ -144,16 +147,14 @@ export async function PATCH(
     const body = await request.json()
     const data = updateMesocycleSchema.parse(body)
 
-    // Verify ownership
-    const existing = await prisma.mesocycle.findFirst({
-      where: {
-        id,
-        macrocycle: {
-          userId: session.user.id,
-        },
-      },
-    })
+    // Verify ownership (user or coach creator)
+    const isCoach = session.user.role === 'COACH'
+    const coachAccess = isCoach ? await verifyCoachMesocycleAccess(session.user.id, id) : false
+    const patchWhere = isCoach && coachAccess
+      ? { id }
+      : { id, macrocycle: { userId: session.user.id } }
 
+    const existing = await prisma.mesocycle.findFirst({ where: patchWhere })
     if (!existing) {
       return NextResponse.json(
         { error: 'Mesocycle not found' },
@@ -199,13 +200,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    let deleteWhere: any = { id, macrocycle: { userId: session.user.id } }
+    if (session.user.role === 'COACH') {
+      const coachAccess = await verifyCoachMesocycleAccess(session.user.id, id)
+      if (coachAccess) deleteWhere = { id }
+    }
+
     const deleted = await prisma.mesocycle.deleteMany({
-      where: {
-        id,
-        macrocycle: {
-          userId: session.user.id,
-        },
-      },
+      where: deleteWhere,
     })
 
     if (deleted.count === 0) {
