@@ -113,9 +113,13 @@ interface SortableExerciseProps {
   supersetGroup: number | null  // SS1, SS2, etc. or null if not in superset
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onMoveUp: (id: string) => void
+  onMoveDown: (id: string) => void
+  isFirst: boolean
+  isLast: boolean
 }
 
-function SortableExercise({ exercise, supersetGroup, onEdit, onDelete }: SortableExerciseProps) {
+function SortableExercise({ exercise, supersetGroup, onEdit, onDelete, onMoveUp, onMoveDown, isFirst, isLast }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: exercise.id,
   })
@@ -133,14 +137,32 @@ function SortableExercise({ exercise, supersetGroup, onEdit, onDelete }: Sortabl
       <Card className={isInSuperset ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''}>
         <CardBody className="py-4">
           <div className="flex items-start gap-3">
-            {/* Drag Handle */}
-            <button
-              {...attributes}
-              {...listeners}
-              className="mt-1 cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded text-gray-500"
-            >
-              ⋮⋮
-            </button>
+            {/* Drag Handle + Arrow Buttons */}
+            <div className="flex flex-col items-center mt-1 gap-0">
+              <button
+                onClick={() => onMoveUp(exercise.id)}
+                disabled={isFirst}
+                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 rounded transition-colors leading-none"
+                aria-label="Move up"
+              >
+                ▲
+              </button>
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded text-gray-500"
+              >
+                ⋮⋮
+              </button>
+              <button
+                onClick={() => onMoveDown(exercise.id)}
+                disabled={isLast}
+                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 rounded transition-colors leading-none"
+                aria-label="Move down"
+              >
+                ▼
+              </button>
+            </div>
 
             {/* Exercise Info */}
             <div className="flex-1">
@@ -282,6 +304,29 @@ export default function EditWorkoutPage() {
     setExercises(reordered)
 
     // Update orderIndex in database
+    try {
+      await Promise.all(
+        reordered.map((ex, index) =>
+          fetch(`/api/workout-exercises/${ex.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderIndex: index }),
+          })
+        )
+      )
+    } catch (error) {
+      console.error('Error reordering exercises:', error)
+    }
+  }
+
+  async function handleMoveExercise(exerciseId: string, direction: 'up' | 'down') {
+    const idx = exercises.findIndex((e) => e.id === exerciseId)
+    if (direction === 'up' && idx === 0) return
+    if (direction === 'down' && idx === exercises.length - 1) return
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    const reordered = [...exercises]
+    ;[reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]]
+    setExercises(reordered)
     try {
       await Promise.all(
         reordered.map((ex, index) =>
@@ -692,13 +737,17 @@ export default function EditWorkoutPage() {
               <div className="space-y-3">
                 {(() => {
                   const supersetGroups = calculateSupersetGroups(exercises)
-                  return exercises.map((exercise) => (
+                  return exercises.map((exercise, index) => (
                     <SortableExercise
                       key={exercise.id}
                       exercise={exercise}
                       supersetGroup={supersetGroups.get(exercise.id) ?? null}
                       onEdit={handleEditExercise}
                       onDelete={(id) => setExerciseToDelete(id)}
+                      onMoveUp={(id) => handleMoveExercise(id, 'up')}
+                      onMoveDown={(id) => handleMoveExercise(id, 'down')}
+                      isFirst={index === 0}
+                      isLast={index === exercises.length - 1}
                     />
                   ))
                 })()}

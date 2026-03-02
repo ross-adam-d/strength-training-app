@@ -112,19 +112,33 @@ function formatTimer(s: number) {
   return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`
 }
 
+function formatWorkoutTimer(s: number) {
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
 function playBeep() {
   const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-  osc.type = 'sine'
-  osc.frequency.setValueAtTime(880, ctx.currentTime)
-  gain.gain.setValueAtTime(0.3, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-  osc.start(ctx.currentTime)
-  osc.stop(ctx.currentTime + 0.4)
-  setTimeout(() => ctx.close(), 500)
+  const tone = (freq: number, start: number, dur: number) => {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + start)
+    gain.gain.setValueAtTime(0.8, ctx.currentTime + start)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
+    osc.start(ctx.currentTime + start)
+    osc.stop(ctx.currentTime + start + dur)
+  }
+  tone(880, 0, 0.15)
+  tone(880, 0.2, 0.15)
+  tone(1047, 0.4, 0.35)
+  setTimeout(() => ctx.close(), 1200)
+  if ('vibrate' in navigator) navigator.vibrate([150, 100, 150, 100, 300])
 }
 
 export default function WorkoutLogPage() {
@@ -175,6 +189,20 @@ export default function WorkoutLogPage() {
   const [timedTimerSeconds, setTimedTimerSeconds] = useState(0)
   const [timedTimerFlashing, setTimedTimerFlashing] = useState(false)
   const timedTimerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Wake lock (prevent screen sleep during workout)
+  const wakeLockRef = useRef<any>(null)
+
+  // Workout stopwatch
+  const [workoutElapsed, setWorkoutElapsed] = useState(0)
+  const [workoutTimerRunning, setWorkoutTimerRunning] = useState(true)
+  const workoutTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Invalid field highlighting (populated when completeExercise fails validation)
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+
+  // Exercise display order (local reorder during log session; IDs of WorkoutExercise)
+  const [exerciseDisplayOrder, setExerciseDisplayOrder] = useState<string[]>([])
 
   // Draft state
   const [showDraftModal, setShowDraftModal] = useState(false)
@@ -292,6 +320,7 @@ export default function WorkoutLogPage() {
           }))
         )
         setExerciseLogs(prepopulated)
+        setExerciseDisplayOrder(data.workoutExercises.map((we: WorkoutExercise) => we.id))
 
         // Fetch all-time PR bests for PR detection
         const exerciseIds = data.workoutExercises.map((we: WorkoutExercise) => we.exercise.id)
@@ -428,6 +457,31 @@ export default function WorkoutLogPage() {
       }
     }
   }, [activeTimedTimerKey])
+
+  // Wake lock — keep screen awake while logging
+  useEffect(() => {
+    if ('wakeLock' in navigator) {
+      ;(navigator as any).wakeLock.request('screen').then((lock: any) => {
+        wakeLockRef.current = lock
+      }).catch(() => {})
+    }
+    return () => {
+      wakeLockRef.current?.release()
+      wakeLockRef.current = null
+    }
+  }, [])
+
+  // Workout stopwatch tick
+  useEffect(() => {
+    if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
+    if (!workoutTimerRunning) return
+    workoutTimerRef.current = setInterval(() => {
+      setWorkoutElapsed((prev) => prev + 1)
+    }, 1000)
+    return () => {
+      if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
+    }
+  }, [workoutTimerRunning])
 
   // Auto-save draft with debouncing
   useEffect(() => {
@@ -713,39 +767,42 @@ export default function WorkoutLogPage() {
   }
 
   function completeExercise(exerciseId: string) {
-    // Find the exercise to check if it's unilateral
     const workoutExercise = workout?.workoutExercises.find((we) => we.exercise.id === exerciseId)
     if (!workoutExercise) return
 
-    // Validate that all sets are either completed or skipped
     const exerciseSets = exerciseLogs.filter((log) => log.exerciseId === exerciseId)
+    const newInvalid = new Set<string>()
 
-    const incompleteSets = exerciseSets.filter((log) => {
-      if (log.skipped) return false
+    for (const log of exerciseSets) {
+      if (log.skipped) continue
 
-      // Check weight (common to all exercises)
-      const weightEmpty = log.weight === '' || log.weight === undefined || log.weight === null
-      if (weightEmpty) return true
-
-      // Check reps based on exercise type
-      if (workoutExercise.exercise.isUnilateral) {
-        // For unilateral: check repsLeft and repsRight
-        const leftEmpty = log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null
-        const rightEmpty = log.repsRight === '' || log.repsRight === undefined || log.repsRight === null
-        return leftEmpty || rightEmpty
-      } else {
-        // For regular: check reps
-        const repsEmpty = log.reps === '' || log.reps === undefined || log.reps === null
-        return repsEmpty
+      if (log.weight === '' || log.weight === undefined || log.weight === null) {
+        newInvalid.add(`${exerciseId}-${log.setNumber}-weight`)
       }
-    })
 
-    if (incompleteSets.length > 0) {
-      alert(`Please complete or skip all sets before marking this exercise as done (${incompleteSets.length} incomplete sets)`)
+      if (workoutExercise.exercise.isUnilateral) {
+        if (log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null) {
+          newInvalid.add(`${exerciseId}-${log.setNumber}-repsLeft`)
+        }
+        if (log.repsRight === '' || log.repsRight === undefined || log.repsRight === null) {
+          newInvalid.add(`${exerciseId}-${log.setNumber}-repsRight`)
+        }
+      } else if (workoutExercise.exercise.isTimed) {
+        if (log.duration === '' || log.duration === undefined || log.duration === null) {
+          newInvalid.add(`${exerciseId}-${log.setNumber}-duration`)
+        }
+      } else {
+        if (log.reps === '' || log.reps === undefined || log.reps === null) {
+          newInvalid.add(`${exerciseId}-${log.setNumber}-reps`)
+        }
+      }
+    }
+
+    if (newInvalid.size > 0) {
+      setInvalidFields((prev) => new Set([...prev, ...newInvalid]))
       return
     }
 
-    // Mark exercise as complete
     setCompletedExercises(new Set([...completedExercises, exerciseId]))
   }
 
@@ -757,6 +814,14 @@ export default function WorkoutLogPage() {
           : log
       )
     )
+    // Clear invalid marker for this field as the user types
+    const fieldKey = `${exerciseId}-${setNumber}-${field}`
+    setInvalidFields((prev) => {
+      if (!prev.has(fieldKey)) return prev
+      const next = new Set(prev)
+      next.delete(fieldKey)
+      return next
+    })
   }
 
   function removeSet(exerciseId: string, setNumber: number) {
@@ -775,6 +840,18 @@ export default function WorkoutLogPage() {
           return log
         })
     )
+  }
+
+  function moveExercise(weId: string, direction: 'up' | 'down') {
+    setExerciseDisplayOrder((prev) => {
+      const idx = prev.indexOf(weId)
+      if (direction === 'up' && idx === 0) return prev
+      if (direction === 'down' && idx === prev.length - 1) return prev
+      const next = [...prev]
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+      ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
+      return next
+    })
   }
 
   function cleanOnBlur(exerciseId: string, setNumber: number, field: string, value: number | string | undefined) {
@@ -1058,10 +1135,22 @@ export default function WorkoutLogPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{workout.name}</h1>
-                <div className="flex items-center gap-3 mt-1">
-                  <p className="text-xs md:text-sm text-gray-600">
-                    Started {startTime.toLocaleTimeString()}
-                  </p>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <span className="font-mono text-base font-bold text-gray-900 tabular-nums">
+                    {formatWorkoutTimer(workoutElapsed)}
+                  </span>
+                  <button
+                    onClick={() => setWorkoutTimerRunning((r) => !r)}
+                    className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                  >
+                    {workoutTimerRunning ? '⏸' : '▶'}
+                  </button>
+                  <button
+                    onClick={() => { setWorkoutElapsed(0); setWorkoutTimerRunning(true) }}
+                    className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                  >
+                    ↺
+                  </button>
                   {lastSavedAt && (
                     <p className="text-xs text-green-600 font-medium">
                       ✓ In progress
@@ -1102,9 +1191,12 @@ export default function WorkoutLogPage() {
 
       {/* Vertical exercise cards */}
       {(() => {
-        const supersetGroups = calculateSupersetGroups(workout.workoutExercises)
+        const orderedExercises = exerciseDisplayOrder.length > 0
+          ? exerciseDisplayOrder.map((id) => workout.workoutExercises.find((we) => we.id === id)!).filter(Boolean)
+          : workout.workoutExercises
+        const supersetGroups = calculateSupersetGroups(orderedExercises)
 
-        return workout.workoutExercises.map((we, index) => {
+        return orderedExercises.map((we, index) => {
           const setsForExercise = exerciseLogs.filter(
             (log) => log.exerciseId === we.exercise.id
           )
@@ -1145,7 +1237,25 @@ export default function WorkoutLogPage() {
                       Target: {we.targetSets} sets × {we.targetReps} reps
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-1">
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => moveExercise(we.id, 'up')}
+                        disabled={index === 0}
+                        className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none"
+                        aria-label="Move exercise up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveExercise(we.id, 'down')}
+                        disabled={index === orderedExercises.length - 1}
+                        className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none"
+                        aria-label="Move exercise down"
+                      >
+                        ▼
+                      </button>
+                    </div>
                     <button
                       onClick={() => handleSwapExercise(we.id, we.exercise.id, we.exercise.name)}
                       className="text-xl hover:opacity-70 transition"
@@ -1251,7 +1361,11 @@ export default function WorkoutLogPage() {
                           value={log.weight}
                           onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
                           onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                          className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                          className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
+                            completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
+                            invalidFields.has(`${log.exerciseId}-${log.setNumber}-weight`) ? 'border-red-400 bg-red-50' :
+                            'border-gray-300'
+                          }`}
                         />
                         {we.exercise.isUnilateral ? (
                           <>
@@ -1263,7 +1377,11 @@ export default function WorkoutLogPage() {
                               value={log.repsLeft ?? ''}
                               onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
-                              className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                              className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                                completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
+                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsLeft`) ? 'border-red-400 bg-red-50' :
+                                'border-gray-300'
+                              }`}
                             />
                             <input
                               type="text"
@@ -1273,7 +1391,11 @@ export default function WorkoutLogPage() {
                               value={log.repsRight ?? ''}
                               onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
                               onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
-                              className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                              className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                                completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
+                                invalidFields.has(`${log.exerciseId}-${log.setNumber}-repsRight`) ? 'border-red-400 bg-red-50' :
+                                'border-gray-300'
+                              }`}
                             />
                           </>
                         ) : we.exercise.isTimed ? (
@@ -1285,7 +1407,11 @@ export default function WorkoutLogPage() {
                             value={log.duration ?? ''}
                             onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'duration', e.target.value)}
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'duration', log.duration ?? '')}
-                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                            className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
+                              completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
+                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-duration`) ? 'border-red-400 bg-red-50' :
+                              'border-gray-300'
+                            }`}
                           />
                         ) : (
                           <input
@@ -1296,7 +1422,11 @@ export default function WorkoutLogPage() {
                             value={log.reps}
                             onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
                             onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
-                            className={`w-full px-3 py-3 md:py-2 border border-gray-300 rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60' : ''}`}
+                            className={`w-full px-3 py-3 md:py-2 border rounded-md text-center text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 ${
+                              completedExercises.has(we.exercise.id) ? 'bg-gray-100 opacity-60 border-gray-300' :
+                              invalidFields.has(`${log.exerciseId}-${log.setNumber}-reps`) ? 'border-red-400 bg-red-50' :
+                              'border-gray-300'
+                            }`}
                           />
                         )}
                         <input
