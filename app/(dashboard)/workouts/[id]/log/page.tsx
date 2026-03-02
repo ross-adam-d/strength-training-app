@@ -1736,7 +1736,7 @@ export default function WorkoutLogPage() {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            {exerciseIncompleteCount} {exerciseIncompleteCount === 1 ? 'set is' : 'sets are'} missing weight or reps — highlighted in red below.
+            {exerciseIncompleteCount} {exerciseIncompleteCount === 1 ? 'set is' : 'sets are'} missing weight or reps.
           </p>
           <p className="text-gray-700">
             Fill them in, or complete the exercise and log 0 for any empty fields.
