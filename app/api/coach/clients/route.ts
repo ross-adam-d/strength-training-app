@@ -50,15 +50,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
   }
 
-  // Check seat limit (relationships + pending unaccepted invites)
-  const [coachProfile, relationshipCount, pendingInviteCount] = await Promise.all([
+  // Check seat limit (active relationships only — pending invites don't consume seats until accepted)
+  const [coachProfile, relationshipCount] = await Promise.all([
     prisma.coachProfile.findUnique({ where: { userId: session.user.id }, select: { maxClients: true } }),
     prisma.coachClientRelationship.count({ where: { coachId: session.user.id, status: { in: ['ACTIVE', 'PENDING'] } } }),
-    prisma.coachInvite.count({ where: { coachId: session.user.id, acceptedAt: null, expiresAt: { gt: new Date() } } }),
   ])
 
   const maxClients = coachProfile?.maxClients ?? 5
-  if (relationshipCount + pendingInviteCount >= maxClients) {
+  if (relationshipCount >= maxClients) {
     return NextResponse.json({ error: `You have reached your client limit of ${maxClients}.` }, { status: 400 })
   }
 
