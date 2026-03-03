@@ -1,0 +1,11 @@
+<svg viewBox="-6 -6 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background — matches manifest background_color -->
+  <rect x="-6" y="-6" width="60" height="60" fill="#1a1a1a"/>
+  <!-- pbX mark — three clockwise arrow segments, orange #FF8000 -->
+  <!-- Seg 1: Plan — outer 10°→110°, tip 120° -->
+  <path d="M 44.68 27.65 A 21 21 0 0 1 16.82 43.73 L 16.50 37.00 L 20.50 30.06 A 7 7 0 0 0 30.89 25.22 Z" fill="#FF8000"/>
+  <!-- Seg 2: Build — outer 130°→230°, tip 240° -->
+  <path d="M 10.50 40.09 A 21 21 0 0 1 10.50 7.91 L 16.50 11.01 L 20.50 17.94 A 7 7 0 0 0 19.50 29.36 Z" fill="#FF8000"/>
+  <!-- Seg 3: Execute — outer 250°→350°, tip 0° -->
+  <path d="M 16.82 4.27 A 21 21 0 0 1 44.68 20.36 L 39.00 24.00 L 31.00 24.00 A 7 7 0 0 0 21.61 17.42 Z" fill="#FF8000"/>
+</svg>

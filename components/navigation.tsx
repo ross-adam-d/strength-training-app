@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -18,6 +18,23 @@ export function Navigation({
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    function handler(e: Event) {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function installApp() {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setInstallPrompt(null)
+  }
 
   async function manageBilling() {
     setBillingLoading(true)
@@ -77,6 +94,14 @@ export function Navigation({
 
           <div className="flex items-center space-x-4">
             <span className="hidden md:inline text-sm text-gray-600">{email}</span>
+            {installPrompt && (
+              <button
+                onClick={installApp}
+                className="hidden md:inline px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition"
+              >
+                Install App
+              </button>
+            )}
             {showBillingButton && (
               <button
                 onClick={manageBilling}
@@ -143,6 +168,14 @@ export function Navigation({
                   Sign Out
                 </button>
               </div>
+              {installPrompt && (
+                <button
+                  onClick={installApp}
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition"
+                >
+                  Install App
+                </button>
+              )}
               {showBillingButton && (
                 <button
                   onClick={manageBilling}
