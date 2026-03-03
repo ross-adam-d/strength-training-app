@@ -44,7 +44,8 @@ function RegisterForm() {
 
     const formData = new FormData(event.currentTarget)
     const name = formData.get('name') as string
-    const email = formData.get('email') as string
+    // Use invite email from state — don't trust the locked DOM input which may not update after async load
+    const email = invite?.email ?? (formData.get('email') as string)
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
 
@@ -64,7 +65,8 @@ function RegisterForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Registration failed')
+        const detail = data.details?.[0]?.message
+        setError(detail || data.error || 'Registration failed')
         setLoading(false)
         return
       }
