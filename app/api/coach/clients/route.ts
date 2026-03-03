@@ -50,39 +50,49 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
   }
 
-  // Check seat limit
-  const [coachProfile, activeCount] = await Promise.all([
+  // Check seat limit (relationships + pending unaccepted invites)
+  const [coachProfile, relationshipCount, pendingInviteCount] = await Promise.all([
     prisma.coachProfile.findUnique({ where: { userId: session.user.id }, select: { maxClients: true } }),
     prisma.coachClientRelationship.count({ where: { coachId: session.user.id, status: { in: ['ACTIVE', 'PENDING'] } } }),
+    prisma.coachInvite.count({ where: { coachId: session.user.id, acceptedAt: null, expiresAt: { gt: new Date() } } }),
   ])
 
   const maxClients = coachProfile?.maxClients ?? 5
-  if (activeCount >= maxClients) {
+  if (relationshipCount + pendingInviteCount >= maxClients) {
     return NextResponse.json({ error: `You have reached your client limit of ${maxClients}.` }, { status: 400 })
   }
 
-  // Look up or note the target user (they may not have an account yet)
-  const targetUser = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
-    select: { id: true, name: true },
-  })
-
-  if (!targetUser) {
-    return NextResponse.json({ error: 'No pbX account found with that email address. The user must register first.' }, { status: 404 })
-  }
+  const normalizedEmail = email.toLowerCase().trim()
 
   // Don't invite yourself
-  if (targetUser.id === session.user.id) {
+  if (session.user.email?.toLowerCase() === normalizedEmail) {
     return NextResponse.json({ error: 'You cannot invite yourself.' }, { status: 400 })
   }
 
-  // Check for existing relationship
-  const existing = await prisma.coachClientRelationship.findUnique({
-    where: { coachId_clientId: { coachId: session.user.id, clientId: targetUser.id } },
+  // Check for existing pending invite to this email
+  const existingInvite = await prisma.coachInvite.findFirst({
+    where: { coachId: session.user.id, email: normalizedEmail, acceptedAt: null, expiresAt: { gt: new Date() } },
+  })
+  if (existingInvite) {
+    return NextResponse.json({ error: 'A pending invite already exists for this email.' }, { status: 400 })
+  }
+
+  // If user already has an account, check for existing relationship
+  const targetUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, name: true },
   })
 
-  if (existing) {
-    return NextResponse.json({ error: 'A relationship with this client already exists.' }, { status: 400 })
+  if (targetUser) {
+    if (targetUser.id === session.user.id) {
+      return NextResponse.json({ error: 'You cannot invite yourself.' }, { status: 400 })
+    }
+    const existingRelationship = await prisma.coachClientRelationship.findUnique({
+      where: { coachId_clientId: { coachId: session.user.id, clientId: targetUser.id } },
+    })
+    if (existingRelationship) {
+      return NextResponse.json({ error: 'A relationship with this client already exists.' }, { status: 400 })
+    }
   }
 
   // Create invite token
@@ -90,7 +100,7 @@ export async function POST(request: Request) {
   const invite = await prisma.coachInvite.create({
     data: {
       coachId: session.user.id,
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       expiresAt,
     },
   })

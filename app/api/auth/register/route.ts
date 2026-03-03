@@ -7,12 +7,13 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  inviteToken: z.string().optional(),
 })
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, name } = registerSchema.parse(body)
+    const { email, password, name, inviteToken } = registerSchema.parse(body)
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -28,6 +29,23 @@ export async function POST(request: Request) {
 
     // Hash password
     const hashedPassword = await hash(password, 12)
+
+    // Validate invite token before creating the user (fail fast on bad token)
+    let validInvite: { token: string; coachId: string } | null = null
+    if (inviteToken) {
+      const invite = await prisma.coachInvite.findUnique({
+        where: { token: inviteToken },
+        select: { token: true, coachId: true, email: true, expiresAt: true, acceptedAt: true },
+      })
+      if (
+        invite &&
+        !invite.acceptedAt &&
+        invite.expiresAt > new Date() &&
+        invite.email.toLowerCase() === email.toLowerCase()
+      ) {
+        validInvite = { token: invite.token, coachId: invite.coachId }
+      }
+    }
 
     // Create user, profile, and trial subscription
     const trialEndsAt = new Date()
@@ -55,8 +73,25 @@ export async function POST(request: Request) {
       },
     })
 
+    // Accept invite and create coaching relationship if token was valid
+    if (validInvite) {
+      await prisma.$transaction([
+        prisma.coachInvite.update({
+          where: { token: validInvite.token },
+          data: { acceptedAt: new Date() },
+        }),
+        prisma.coachClientRelationship.create({
+          data: {
+            coachId: validInvite.coachId,
+            clientId: user.id,
+            status: 'ACTIVE',
+          },
+        }),
+      ])
+    }
+
     return NextResponse.json(
-      { message: 'User created successfully', user },
+      { message: 'User created successfully', user, inviteAccepted: !!validInvite },
       { status: 201 }
     )
   } catch (error) {

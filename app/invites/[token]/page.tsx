@@ -127,7 +127,7 @@ export default function InviteAcceptPage() {
 
         {status === 'unauthenticated' && (
           <p className="text-sm text-center text-gray-500 mb-4">
-            You&apos;ll need to log in (or register) to accept this invite.
+            Create a free account to accept this invitation.
           </p>
         )}
 
@@ -144,30 +144,38 @@ export default function InviteAcceptPage() {
           <p className="text-sm text-red-600 mb-4 text-center">{actionError}</p>
         )}
 
-        <div className="flex gap-3">
-          <button
-            onClick={() => handleAction('decline')}
-            disabled={acting}
-            className="flex-1 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition"
-          >
-            Decline
-          </button>
-          <button
-            onClick={() => handleAction('accept')}
-            disabled={acting}
-            className="flex-1 py-2.5 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition"
-          >
-            {status === 'unauthenticated' ? 'Log in to accept' : acting ? 'Accepting…' : 'Accept'}
-          </button>
-        </div>
-
-        {status === 'unauthenticated' && (
-          <p className="text-xs text-gray-400 text-center mt-4">
-            Don&apos;t have an account?{' '}
-            <a href={`/register?callbackUrl=/invites/${token}`} className="text-primary-600 hover:underline">
-              Register here
+        {status === 'unauthenticated' ? (
+          <div className="space-y-3">
+            <a
+              href={`/register?invite=${token}`}
+              className="block w-full py-2.5 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-center"
+            >
+              Create account &amp; accept
             </a>
-          </p>
+            <button
+              onClick={() => signIn(undefined, { callbackUrl: `/invites/${token}` })}
+              className="w-full py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+            >
+              I already have an account
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleAction('decline')}
+              disabled={acting}
+              className="flex-1 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition"
+            >
+              Decline
+            </button>
+            <button
+              onClick={() => handleAction('accept')}
+              disabled={acting}
+              className="flex-1 py-2.5 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition"
+            >
+              {acting ? 'Accepting…' : 'Accept'}
+            </button>
+          </div>
         )}
       </div>
     </div>

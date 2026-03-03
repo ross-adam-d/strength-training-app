@@ -1,13 +1,41 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 
-export default function RegisterPage() {
-  const router = useRouter()
+type InviteInfo = {
+  coachName: string
+  email: string
+}
+
+function RegisterForm() {
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get('invite')
+
+  const [invite, setInvite] = useState<InviteInfo | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!inviteToken) return
+    fetch(`/api/invites/${inviteToken}`)
+      .then(async (r) => {
+        if (!r.ok) {
+          const d = await r.json()
+          setInviteError(d.error ?? 'This invite link is invalid or has expired.')
+        } else {
+          const d = await r.json()
+          setInvite({
+            coachName: d.coach.name ?? d.coach.email,
+            email: d.email,
+          })
+        }
+      })
+      .catch(() => setInviteError('Failed to load invite details.'))
+  }, [inviteToken])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,19 +58,33 @@ export default function RegisterPage() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, ...(inviteToken ? { inviteToken } : {}) }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         setError(data.error || 'Registration failed')
-      } else {
-        router.push('/login?registered=true')
+        setLoading(false)
+        return
       }
-    } catch (error) {
+
+      // Auto sign in after registration
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.ok) {
+        // Invite was accepted during registration — go straight to My Coach
+        window.location.assign(data.inviteAccepted ? '/my-coach' : '/dashboard')
+      } else {
+        // Sign-in failed unexpectedly — fall back to login page
+        window.location.assign(inviteToken ? `/login?registered=true&invite=${inviteToken}` : '/login?registered=true')
+      }
+    } catch {
       setError('An error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
@@ -52,8 +94,23 @@ export default function RegisterPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-          <p className="text-gray-600 mt-2">Start training with pbX</p>
+          <p className="text-gray-600 mt-2">
+            {invite ? `Join pbX and connect with ${invite.coachName}` : 'Start training with pbX'}
+          </p>
         </div>
+
+        {inviteToken && inviteError && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 text-center">
+            {inviteError}
+          </div>
+        )}
+
+        {invite && (
+          <div className="mb-4 p-4 bg-primary-50 border border-primary-200 rounded-lg text-sm text-primary-800 text-center">
+            <strong>{invite.coachName}</strong> has invited you to train together on pbX.
+            Creating your account will automatically connect you as their client.
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-md p-8">
           <form onSubmit={onSubmit} className="space-y-6">
@@ -88,9 +145,16 @@ export default function RegisterPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
+                readOnly={!!invite}
+                defaultValue={invite?.email ?? ''}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base ${
+                  invite ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed' : 'border-gray-300'
+                }`}
                 placeholder="you@example.com"
               />
+              {invite && (
+                <p className="text-xs text-gray-400 mt-1">Email locked to match your invite.</p>
+              )}
             </div>
 
             <div>
@@ -128,19 +192,22 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!!inviteToken && !invite && !inviteError)}
               className="w-full py-2 px-4 bg-primary-600 text-white rounded-md font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? 'Creating account…' : invite ? 'Create Account & Connect' : 'Create Account'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              <a
+                href={inviteToken ? `/login?callbackUrl=/invites/${inviteToken}` : '/login'}
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
                 Sign in
-              </Link>
+              </a>
             </p>
           </div>
         </div>
@@ -152,5 +219,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }
