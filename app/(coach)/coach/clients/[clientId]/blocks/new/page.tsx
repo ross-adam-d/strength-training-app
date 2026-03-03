@@ -1,0 +1,313 @@
+'use client'
+
+import { useState } from 'react'
+import { useParams } from 'next/navigation'
+import { addWeeks, format, parseISO } from 'date-fns'
+
+const EQUIPMENT_OPTIONS = [
+  { key: 'barbell',    label: 'Barbell' },
+  { key: 'rack',       label: 'Rack' },
+  { key: 'bench',      label: 'Bench' },
+  { key: 'dumbbell',   label: 'Dumbbells' },
+  { key: 'cable',      label: 'Cable Machine' },
+  { key: 'machine',    label: 'Machines' },
+  { key: 'bodyweight', label: 'Bodyweight' },
+]
+
+export default function NewClientBlockPage() {
+  const { clientId } = useParams<{ clientId: string }>()
+
+  const [blockName, setBlockName] = useState('')
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [totalWeeks, setTotalWeeks] = useState(12)
+  const [activeWeeks, setActiveWeeks] = useState(3)
+  const [recoveryWeeks, setRecoveryWeeks] = useState(1)
+  const [availableEquipment, setAvailableEquipment] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const phaseLength = activeWeeks + recoveryWeeks
+  const estimatedPhases = Math.ceil(totalWeeks / phaseLength)
+
+  function toggleEquipment(key: string) {
+    setAvailableEquipment((prev) =>
+      prev.includes(key) ? prev.filter((e) => e !== key) : [...prev, key]
+    )
+  }
+
+  function generatePlan() {
+    const start = parseISO(startDate)
+    const end = addWeeks(start, totalWeeks)
+    const name = blockName.trim() || `${totalWeeks}-Week Training Block`
+
+    const mesocycles = []
+    let currentWeek = 0
+    let phaseNum = 1
+
+    while (currentWeek < totalWeeks) {
+      const phaseWeeks = Math.min(phaseLength, totalWeeks - currentWeek)
+      const phaseStart = addWeeks(start, currentWeek)
+      const phaseEnd = addWeeks(phaseStart, phaseWeeks)
+
+      const microcycles = []
+      for (let w = 0; w < phaseWeeks; w++) {
+        const weekStart = addWeeks(phaseStart, w)
+        const weekEnd = addWeeks(weekStart, 1)
+        const isRecovery = recoveryWeeks > 0 && w >= activeWeeks
+        microcycles.push({
+          name: `Week ${currentWeek + w + 1}${isRecovery ? ' (Recovery)' : ''}`,
+          weekNumber: currentWeek + w + 1,
+          startDate: format(weekStart, 'yyyy-MM-dd'),
+          endDate: format(weekEnd, 'yyyy-MM-dd'),
+          isRecovery,
+        })
+      }
+
+      mesocycles.push({
+        name: `Phase ${phaseNum}`,
+        startDate: format(phaseStart, 'yyyy-MM-dd'),
+        endDate: format(phaseEnd, 'yyyy-MM-dd'),
+        microcycles,
+      })
+
+      currentWeek += phaseWeeks
+      phaseNum++
+    }
+
+    return {
+      name,
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd'),
+      status: 'active' as const,
+      availableEquipment,
+      mesocycles,
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (totalWeeks < 4 || totalWeeks > 52) {
+      setError('Duration must be between 4 and 52 weeks')
+      return
+    }
+    if (phaseLength < 1 || phaseLength > 12) {
+      setError('Phase length must be between 1 and 12 weeks')
+      return
+    }
+    setSubmitting(true)
+    setError('')
+    try {
+      const plan = generatePlan()
+      const res = await fetch(`/api/coach/clients/${clientId}/macrocycles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plan),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Unknown error' }))
+        setError(data.error || 'Failed to create training block')
+        setSubmitting(false)
+        return
+      }
+      const { id } = await res.json()
+      window.location.assign(`/macrocycles/${id}`)
+    } catch {
+      setError('Network error. Please try again.')
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <a
+          href={`/coach/clients/${clientId}/blocks`}
+          className="text-primary-600 hover:text-primary-700 text-sm"
+        >
+          ← Back to Blocks
+        </a>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="p-6 border-b">
+          <h1 className="text-2xl font-bold text-gray-900">Create Training Block</h1>
+          <p className="text-gray-600 mt-2">
+            Build a new block for your client. Configure phases and workouts on the next page.
+          </p>
+        </div>
+
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Block name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Training Block Name (optional)
+              </label>
+              <input
+                type="text"
+                value={blockName}
+                onChange={(e) => setBlockName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder={`${totalWeeks}-Week Training Block`}
+              />
+              <p className="text-sm text-gray-500 mt-1">Leave blank to use default name</p>
+            </div>
+
+            {/* Start date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+
+            {/* Total duration */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Duration: <span className="text-primary-600 font-bold">{totalWeeks} weeks</span>
+              </label>
+              <input
+                type="range"
+                value={totalWeeks}
+                onChange={(e) => setTotalWeeks(parseInt(e.target.value))}
+                min={4}
+                max={52}
+                step={1}
+                className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>4 weeks</span>
+                <span>52 weeks</span>
+              </div>
+            </div>
+
+            {/* Phase structure */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-gray-900">Phase Structure</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Active Training Weeks:{' '}
+                  <span className="text-primary-600 font-bold">
+                    {activeWeeks} {activeWeeks === 1 ? 'week' : 'weeks'}
+                  </span>
+                </label>
+                <input
+                  type="range"
+                  value={activeWeeks}
+                  onChange={(e) => setActiveWeeks(parseInt(e.target.value))}
+                  min={1}
+                  max={8}
+                  step={1}
+                  className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>1 week</span>
+                  <span>8 weeks</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Weeks of progressive training before recovery</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Recovery/Deload Weeks:{' '}
+                  <span className="text-primary-600 font-bold">
+                    {recoveryWeeks} {recoveryWeeks === 1 ? 'week' : 'weeks'}
+                  </span>
+                </label>
+                <input
+                  type="range"
+                  value={recoveryWeeks}
+                  onChange={(e) => setRecoveryWeeks(parseInt(e.target.value))}
+                  min={0}
+                  max={3}
+                  step={1}
+                  className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0 weeks</span>
+                  <span>3 weeks</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Lighter weeks for recovery between phases</p>
+              </div>
+
+              <div className="pt-2 border-t border-gray-300">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Phase Length:</span>
+                  <span className="text-lg font-bold text-primary-600">{phaseLength} weeks</span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm text-gray-600">Estimated Phases:</span>
+                  <span className="text-sm font-semibold text-gray-900">{estimatedPhases} phases</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  ({activeWeeks} active + {recoveryWeeks} recovery = {phaseLength} weeks per phase)
+                </p>
+              </div>
+            </div>
+
+            {/* Equipment */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-1">Available Equipment</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                Select the equipment your client has access to. Leave all unselected to use all equipment.
+              </p>
+              <div className="space-y-2">
+                {EQUIPMENT_OPTIONS.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={availableEquipment.includes(key)}
+                      onChange={() => toggleEquipment(key)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-700">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-medium text-blue-900 mb-2">Next Steps</h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Configure focus and training split for each phase</li>
+                <li>• Set training days per week</li>
+                <li>• Add workouts and exercises to the schedule</li>
+              </ul>
+              <p className="text-xs text-blue-700 mt-2">
+                This block will be activated immediately for your client.
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 py-2 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-60 transition"
+              >
+                {submitting ? 'Creating...' : 'Create Training Block'}
+              </button>
+              <a
+                href={`/coach/clients/${clientId}/blocks`}
+                className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-center"
+              >
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

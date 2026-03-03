@@ -5,11 +5,28 @@ import { prisma } from '@/lib/prisma'
 import { verifyCoachClientAccess } from '@/lib/coachAccess'
 import { z } from 'zod'
 
+const microcycleSchema = z.object({
+  name: z.string(),
+  weekNumber: z.number().int(),
+  startDate: z.string(),
+  endDate: z.string(),
+  isRecovery: z.boolean().optional().default(false),
+})
+
+const mesocycleSchema = z.object({
+  name: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  microcycles: z.array(microcycleSchema),
+})
+
 const createBlockSchema = z.object({
   name: z.string().min(1),
   startDate: z.string(),
   endDate: z.string(),
-  status: z.enum(['planned', 'active']).default('planned'),
+  status: z.enum(['planned', 'active']).default('active'),
+  availableEquipment: z.array(z.string()).default([]),
+  mesocycles: z.array(mesocycleSchema),
 })
 
 export async function GET(
@@ -75,44 +92,42 @@ export async function POST(
       return NextResponse.json({ error: 'End date must be after start date' }, { status: 400 })
     }
 
+    // Create macrocycle for client (coach-owned)
     const macrocycle = await prisma.macrocycle.create({
       data: {
         name: data.name,
         startDate: start,
         endDate: end,
         status: data.status,
+        availableEquipment: data.availableEquipment,
         userId: clientId,
         createdByCoachId: session.user.id,
       },
     })
 
-    // Create one default phase spanning the full range
-    const mesocycle = await prisma.mesocycle.create({
-      data: {
-        name: 'Phase 1',
-        startDate: start,
-        endDate: end,
-        macrocycleId: macrocycle.id,
-      },
-    })
-
-    // Create one microcycle per week
-    const msPerWeek = 7 * 24 * 60 * 60 * 1000
-    const totalMs = end.getTime() - start.getTime()
-    const weeks = Math.max(1, Math.ceil(totalMs / msPerWeek))
-
-    for (let week = 1; week <= weeks; week++) {
-      const weekStart = new Date(start.getTime() + (week - 1) * msPerWeek)
-      const weekEnd = new Date(Math.min(weekStart.getTime() + msPerWeek, end.getTime()))
-      await prisma.microcycle.create({
+    // Create mesocycles and microcycles (sequential — PgBouncer compatible)
+    for (const mesoData of data.mesocycles) {
+      const meso = await prisma.mesocycle.create({
         data: {
-          name: `Week ${week}`,
-          weekNumber: week,
-          startDate: weekStart,
-          endDate: weekEnd,
-          mesocycleId: mesocycle.id,
+          name: mesoData.name,
+          startDate: new Date(mesoData.startDate),
+          endDate: new Date(mesoData.endDate),
+          macrocycleId: macrocycle.id,
         },
       })
+
+      for (const microData of mesoData.microcycles) {
+        await prisma.microcycle.create({
+          data: {
+            name: microData.name,
+            weekNumber: microData.weekNumber,
+            startDate: new Date(microData.startDate),
+            endDate: new Date(microData.endDate),
+            isRecovery: microData.isRecovery ?? false,
+            mesocycleId: meso.id,
+          },
+        })
+      }
     }
 
     return NextResponse.json({ id: macrocycle.id }, { status: 201 })

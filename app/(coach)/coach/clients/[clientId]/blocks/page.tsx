@@ -27,10 +27,6 @@ export default function ClientBlocksPage() {
   const clientId = params.clientId as string
   const [macrocycles, setMacrocycles] = useState<Macrocycle[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState('')
-  const [form, setForm] = useState({ name: '', startDate: '', endDate: '', status: 'planned' as 'planned' | 'active' })
 
   const loadBlocks = useCallback(() => {
     setLoading(true)
@@ -45,35 +41,6 @@ export default function ClientBlocksPage() {
     loadBlocks()
   }, [loadBlocks])
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    setCreateError('')
-    if (!form.name.trim() || !form.startDate || !form.endDate) {
-      setCreateError('Please fill in all fields.')
-      return
-    }
-    setCreating(true)
-    try {
-      const res = await fetch(`/api/coach/clients/${clientId}/macrocycles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setCreateError(data.error || 'Failed to create block')
-        return
-      }
-      setShowCreateModal(false)
-      setForm({ name: '', startDate: '', endDate: '', status: 'planned' })
-      loadBlocks()
-    } catch {
-      setCreateError('Failed to create block')
-    } finally {
-      setCreating(false)
-    }
-  }
-
   if (loading) {
     return <div className="text-sm text-gray-400 py-4">Loading blocks...</div>
   }
@@ -82,12 +49,12 @@ export default function ClientBlocksPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{macrocycles.length} block{macrocycles.length !== 1 ? 's' : ''}</p>
-        <button
-          onClick={() => setShowCreateModal(true)}
+        <a
+          href={`/coach/clients/${clientId}/blocks/new`}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition"
         >
           + Create Block
-        </button>
+        </a>
       </div>
 
       {macrocycles.length === 0 ? (
@@ -173,83 +140,6 @@ export default function ClientBlocksPage() {
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Create Block Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="p-5 border-b">
-              <h2 className="text-lg font-bold text-gray-900">Create Training Block</h2>
-              <p className="text-sm text-gray-500 mt-1">Build a new block for this client</p>
-            </div>
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Block Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Summer Hypertrophy Block"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    value={form.startDate}
-                    onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    value={form.endDate}
-                    onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as 'planned' | 'active' }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="planned">Planned</option>
-                  <option value="active">Active</option>
-                </select>
-              </div>
-              {createError && (
-                <p className="text-sm text-red-600">{createError}</p>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateModal(false); setCreateError('') }}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition disabled:opacity-60"
-                >
-                  {creating ? 'Creating...' : 'Create Block'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
