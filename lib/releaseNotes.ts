@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-02-28'
+export const CURRENT_RELEASE_ID = '2026-03-03'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-03',
+    date: 'March 3, 2026',
+    title: 'Coach Feature + Olympic Lifts',
+    changes: [
+      'Coaches can now invite clients by email — clients receive a link to register or log in and are automatically connected',
+      'Coaches can build full training blocks for their clients, including phase structure, active and recovery weeks, and equipment selection',
+      'Clients can view their coach-assigned training plan and log workouts directly from it',
+      'New messaging system between coaches and clients, accessible from the My Coach page',
+      'Olympic Lifts training split added — alternates clean-focused (A) and snatch-focused (B) sessions, with 25 new exercises including power clean, hang snatch, split jerk, and overhead squat variants',
+    ],
+  },
   {
     id: '2026-02-28',
     date: 'February 28, 2026',

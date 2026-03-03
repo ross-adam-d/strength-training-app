@@ -265,7 +265,9 @@ export async function POST(
         workoutTypeCounts.set(workoutTypeName, currentCount)
 
         const total = workoutTypeTotal.get(workoutTypeName) || 1
-        const workoutName = total > 1
+        // Suppress suffix if the type name already ends in a letter designation (e.g. 'Olympic A')
+        const alreadyHasSuffix = /\s[A-Z]$/.test(workoutTypeName)
+        const workoutName = (!alreadyHasSuffix && total > 1)
           ? `${workoutTypeName} ${String.fromCharCode(64 + currentCount)}`
           : workoutTypeName
 

@@ -11,6 +11,15 @@ export async function GET(request: NextRequest) {
   const period = searchParams.get('period') ?? '3m'
 
   const now = new Date()
+
+  // Truncate to the end of the last fully completed calendar week (Mon–Sun).
+  // If we're mid-week, the current partial week is excluded so averages aren't deflated.
+  const startOfCurrentWeek = new Date(now)
+  const dow = now.getDay() // 0=Sun, 1=Mon … 6=Sat
+  const daysToMonday = dow === 0 ? 6 : dow - 1
+  startOfCurrentWeek.setDate(now.getDate() - daysToMonday)
+  startOfCurrentWeek.setHours(0, 0, 0, 0)
+
   let since: Date | null = null
   if (period === '4w') {
     since = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
@@ -22,7 +31,10 @@ export async function GET(request: NextRequest) {
     where: {
       workoutLog: {
         userId: session.user.id,
-        ...(since ? { completedAt: { gte: since } } : {}),
+        completedAt: {
+          ...(since ? { gte: since } : {}),
+          lt: startOfCurrentWeek,
+        },
       },
       skipped: false,
     },
@@ -34,14 +46,12 @@ export async function GET(request: NextRequest) {
 
   if (logs.length === 0) return NextResponse.json([])
 
-  // Derive weeks from the earliest log in the result — never hardcode the period length.
-  // Logs are already filtered by `since`, so earliest will never exceed the period boundary.
-  // This correctly handles users who have less history than the selected period.
+  // Derive completed weeks from the earliest log to the start of the current week.
   const earliest = logs.reduce(
     (min, l) => (l.workoutLog.completedAt < min ? l.workoutLog.completedAt : min),
     logs[0].workoutLog.completedAt
   )
-  const weeksInPeriod = Math.max(1, Math.round((now.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
+  const weeksInPeriod = Math.max(1, Math.round((startOfCurrentWeek.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
 
   // Count sets per muscle group — each log counts once per muscle group on the exercise
   const counts: Record<string, number> = {}
