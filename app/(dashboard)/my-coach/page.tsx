@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 
 export default async function MyCoachPage() {
   const session = await getServerSession(authOptions)
@@ -27,6 +28,12 @@ export default async function MyCoachPage() {
     },
     orderBy: { createdAt: 'desc' },
   })
+
+  const unreadCount = relationship?.status === 'ACTIVE'
+    ? await prisma.coachMessage.count({
+        where: { relationshipId: relationship.id, senderRole: 'COACH', readAt: null },
+      })
+    : 0
 
   if (!relationship) {
     return (
@@ -90,13 +97,31 @@ export default async function MyCoachPage() {
           </span>
         </div>
 
-        <div className="mt-5 pt-5 border-t border-gray-100 text-sm text-gray-500">
-          Connected since{' '}
-          {new Date(relationship.createdAt).toLocaleDateString('en-AU', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
+        <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Connected since{' '}
+            {new Date(relationship.createdAt).toLocaleDateString('en-AU', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </p>
+          {!isPending && (
+            <Link
+              href="/my-coach/messages"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              Messages
+              {unreadCount > 0 && (
+                <span className="bg-white text-primary-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
         </div>
       </div>
 

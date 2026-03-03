@@ -9,6 +9,7 @@ const tabs = [
   { label: 'Blocks', href: '/blocks' },
   { label: 'History', href: '/history' },
   { label: 'Progress', href: '/progress' },
+  { label: 'Messages', href: '/messages' },
 ]
 
 export default async function ClientDetailLayout({
