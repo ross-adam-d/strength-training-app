@@ -6,6 +6,8 @@ export default function CoachInvitePage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [emailSent, setEmailSent] = useState(true)
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -20,6 +22,9 @@ export default function CoachInvitePage() {
     })
 
     if (res.ok) {
+      const data = await res.json()
+      setEmailSent(data.emailSent ?? true)
+      setInviteUrl(data.inviteUrl ?? null)
       setSuccess(true)
     } else {
       const data = await res.json()
@@ -33,10 +38,23 @@ export default function CoachInvitePage() {
       <div className="max-w-md">
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
           <div className="text-4xl mb-4">✅</div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Invite sent!</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            An email has been sent to <strong>{email}</strong> with a link to accept your invitation.
-          </p>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Invite created!</h2>
+          {emailSent ? (
+            <p className="text-gray-500 text-sm mb-6">
+              An email has been sent to <strong>{email}</strong> with a link to accept your invitation.
+            </p>
+          ) : (
+            <div className="mb-6 text-left">
+              <p className="text-gray-500 text-sm mb-3">
+                Email delivery isn&apos;t configured yet. Share this link directly with <strong>{email}</strong>:
+              </p>
+              {inviteUrl && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 break-all select-all font-mono">
+                  {inviteUrl}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-3 justify-center">
             <a
               href="/coach"

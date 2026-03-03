@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 interface Message {
@@ -22,7 +22,7 @@ export default function CoachMessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/coach/messages?clientId=${clientId}`)
       if (!res.ok) return
@@ -33,13 +33,13 @@ export default function CoachMessagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [clientId])
 
   useEffect(() => {
     fetchMessages()
     const interval = setInterval(fetchMessages, 30_000)
     return () => clearInterval(interval)
-  }, [clientId])
+  }, [fetchMessages])
 
   // Scroll to bottom when messages update
   useEffect(() => {

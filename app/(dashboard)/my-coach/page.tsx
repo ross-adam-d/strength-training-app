@@ -2,8 +2,6 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
-
 export default async function MyCoachPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
@@ -107,7 +105,7 @@ export default async function MyCoachPage() {
             })}
           </p>
           {!isPending && (
-            <Link
+            <a
               href="/my-coach/messages"
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition"
             >
@@ -120,7 +118,7 @@ export default async function MyCoachPage() {
                   {unreadCount}
                 </span>
               )}
-            </Link>
+            </a>
           )}
         </div>
       </div>

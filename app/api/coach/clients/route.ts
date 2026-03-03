@@ -95,7 +95,6 @@ export async function POST(request: Request) {
     },
   })
 
-  // Send email
   const coach = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { name: true, email: true },
@@ -104,11 +103,18 @@ export async function POST(request: Request) {
   const baseUrl = process.env.NEXTAUTH_URL ?? 'https://strength-training-app.vercel.app'
   const inviteUrl = `${baseUrl}/invites/${invite.token}`
 
-  await sendCoachInvite({
-    toEmail: email,
-    coachName: coach?.name ?? coach?.email ?? 'Your coach',
-    inviteUrl,
-  })
+  // Send email — non-fatal: invite is already created, return URL for manual sharing if email fails
+  let emailSent = true
+  try {
+    await sendCoachInvite({
+      toEmail: email,
+      coachName: coach?.name ?? coach?.email ?? 'Your coach',
+      inviteUrl,
+    })
+  } catch (err) {
+    console.error('Failed to send invite email:', err)
+    emailSent = false
+  }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, inviteUrl, emailSent })
 }

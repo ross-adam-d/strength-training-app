@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface Message {
   id: string
@@ -21,7 +21,7 @@ export default function MyCoachMessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch('/api/coach/messages')
       if (!res.ok) return
@@ -36,13 +36,13 @@ export default function MyCoachMessagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchMessages()
     const interval = setInterval(fetchMessages, 30_000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
