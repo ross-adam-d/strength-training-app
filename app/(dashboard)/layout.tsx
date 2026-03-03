@@ -17,10 +17,6 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  if (session.user?.role === 'COACH') {
-    redirect('/coach')
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
