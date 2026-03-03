@@ -140,6 +140,7 @@ function RegisterForm() {
                 Email
               </label>
               <input
+                key={invite?.email ?? 'email'}
                 id="email"
                 name="email"
                 type="email"
