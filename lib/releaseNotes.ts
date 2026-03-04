@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-04'
+export const CURRENT_RELEASE_ID = '2026-03-04b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-04b',
+    date: 'March 4, 2026',
+    title: 'Bug Fixes',
+    changes: [
+      'Fixed unilateral exercises (e.g. dumbbell curls logged left/right) not counting reps toward personal records and progressive overload suggestions',
+      'Fixed dashboard showing incorrect workout completion date for users outside UTC — dates now display in your local timezone',
+      'Dashboard now shows actual workout duration for all completed workouts, and the day it was completed rather than its scheduled day',
+    ],
+  },
   {
     id: '2026-03-04',
     date: 'March 4, 2026',
