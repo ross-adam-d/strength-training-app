@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-03'
+export const CURRENT_RELEASE_ID = '2026-03-04'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-04',
+    date: 'March 4, 2026',
+    title: 'Email Verification + New Domain',
+    changes: [
+      'New accounts now require email verification before accessing the app — check your inbox after registering',
+      'Existing beta users are automatically verified — no action needed',
+      'App is moving to pbxstrength.com.au — you will be redirected automatically',
+    ],
+  },
   {
     id: '2026-03-03',
     date: 'March 3, 2026',
