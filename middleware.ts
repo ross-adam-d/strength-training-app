@@ -60,6 +60,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
+    pathname.startsWith('/verify-email') ||
     pathname.startsWith('/subscribe') ||
     pathname.startsWith('/terms') ||
     pathname.startsWith('/privacy') ||
@@ -78,6 +79,27 @@ export async function middleware(request: NextRequest) {
   // COACH users: redirect from /dashboard to /coach
   if (token.role === 'COACH' && pathname === '/dashboard') {
     return NextResponse.redirect(new URL('/coach', request.url))
+  }
+
+  // Email verification gate — skip for ADMIN and COACH
+  if (
+    token.emailVerified === false &&
+    token.role !== 'ADMIN' &&
+    token.role !== 'COACH'
+  ) {
+    const isProtectedApi =
+      pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')
+    const isDashboard = !pathname.startsWith('/api/') && !pathname.startsWith('/admin') && !pathname.startsWith('/coach')
+
+    if (isProtectedApi && WRITE_METHODS.has(method)) {
+      return NextResponse.json(
+        { error: 'Please verify your email address.' },
+        { status: 403 }
+      )
+    }
+    if (isDashboard) {
+      return NextResponse.redirect(new URL('/verify-email', request.url))
+    }
   }
 
   // Only enforce on protected API routes (not /api/auth/*)

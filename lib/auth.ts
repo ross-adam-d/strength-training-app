@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from './prisma'
+import { sendVerificationEmail } from './email'
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -48,6 +49,7 @@ export const authOptions: NextAuthOptions = {
             name: true,
             password: true,
             role: true,
+            emailVerified: true,
             subscription: {
               select: {
                 status: true,
@@ -75,11 +77,32 @@ export const authOptions: NextAuthOptions = {
         const totalTime = Date.now() - startTime
         console.log(`[Auth Performance] Total: ${totalTime}ms | DB: ${dbTime}ms | bcrypt: ${bcryptTime}ms`)
 
+        // If email not verified, ensure a valid verification token exists and (re-)send email
+        if (!user.emailVerified && user.role !== 'ADMIN' && user.role !== 'COACH') {
+          const now = new Date()
+          const existingToken = await prisma.emailVerificationToken.findFirst({
+            where: {
+              userId: user.id,
+              usedAt: null,
+              expiresAt: { gt: now },
+            },
+          })
+          if (!existingToken) {
+            const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            const newToken = await prisma.emailVerificationToken.create({
+              data: { userId: user.id, expiresAt },
+            })
+            const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${newToken.token}`
+            sendVerificationEmail({ toEmail: user.email, name: user.name, verifyUrl }).catch(() => {})
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          emailVerified: !!user.emailVerified,
           subscriptionStatus: user.subscription?.status ?? null,
           tier: user.subscription?.tier ?? 'PREMIERE',
           trialEndsAt: user.subscription?.trialEndsAt?.toISOString() ?? null,
@@ -89,14 +112,24 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.emailVerified = (user as any).emailVerified
         token.subscriptionStatus = (user as any).subscriptionStatus
         token.tier = (user as any).tier
         token.trialEndsAt = (user as any).trialEndsAt
         token.manualAccessGrantedUntil = (user as any).manualAccessGrantedUntil
+      }
+      if (trigger === 'update') {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { emailVerified: true },
+        })
+        if (dbUser) {
+          token.emailVerified = !!dbUser.emailVerified
+        }
       }
       return token
     },
@@ -104,6 +137,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role
+        session.user.emailVerified = token.emailVerified as boolean | undefined
         session.user.tier = token.tier ?? 'PREMIERE'
         session.user.subscriptionStatus = token.subscriptionStatus ?? null
         session.user.trialEndsAt = token.trialEndsAt ?? null

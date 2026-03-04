@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { sendVerificationEmail } from '@/lib/email'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -51,11 +52,15 @@ export async function POST(request: Request) {
     const trialEndsAt = new Date()
     trialEndsAt.setDate(trialEndsAt.getDate() + 28)
 
+    // Invite registrations are auto-verified (email proven via invite link)
+    const emailVerifiedAt = validInvite ? new Date() : undefined
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
+        emailVerified: emailVerifiedAt,
         profile: {
           create: {},
         },
@@ -88,6 +93,16 @@ export async function POST(request: Request) {
           },
         }),
       ])
+    }
+
+    // Send verification email for regular (non-invite) registrations
+    if (!validInvite) {
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const verificationToken = await prisma.emailVerificationToken.create({
+        data: { userId: user.id, expiresAt },
+      })
+      const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken.token}`
+      sendVerificationEmail({ toEmail: user.email, name, verifyUrl }).catch(() => {})
     }
 
     return NextResponse.json(

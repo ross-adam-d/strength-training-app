@@ -7,6 +7,7 @@ declare module 'next-auth' {
       email: string
       name?: string | null
       role?: string
+      emailVerified?: boolean
       tier?: string
       subscriptionStatus?: string | null
       trialEndsAt?: string | null
@@ -18,6 +19,7 @@ declare module 'next-auth' {
     email: string
     name?: string | null
     role?: string
+    emailVerified?: boolean
   }
 }
 
@@ -25,6 +27,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role?: string
+    emailVerified?: boolean
     subscriptionStatus?: string | null
     tier?: string
     trialEndsAt?: string | null

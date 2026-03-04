@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const verified = searchParams.get('verified') === 'true'
+
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -45,6 +49,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-5">
+          {verified && (
+            <div className="p-3 bg-green-950 border border-green-800 text-green-300 rounded-md text-sm">
+              Email verified — please sign in.
+            </div>
+          )}
           {error && (
             <div className="p-3 bg-red-950 border border-red-800 text-red-300 rounded-md text-sm">
               {error}
@@ -103,5 +112,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
