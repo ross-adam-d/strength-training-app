@@ -12,13 +12,14 @@ export async function GET() {
     where: {
       workoutLog: { userId: session.user.id },
       skipped: false,
-      reps: { gt: 0 },
       weight: { gt: 0 },
+      OR: [{ reps: { gt: 0 } }, { repsLeft: { gt: 0 } }],
     },
     select: {
       exerciseId: true,
       weight: true,
       reps: true,
+      repsLeft: true,
       exercise: { select: { name: true } },
       workoutLog: { select: { completedAt: true } },
     },
@@ -31,7 +32,8 @@ export async function GET() {
   >()
 
   for (const log of logs) {
-    const est = estimate1RM(log.weight, log.reps)
+    const effectiveReps = log.reps > 0 ? log.reps : (log.repsLeft ?? 0)
+    const est = estimate1RM(log.weight, effectiveReps)
     const existing = byExercise.get(log.exerciseId)
     if (!existing) {
       byExercise.set(log.exerciseId, {

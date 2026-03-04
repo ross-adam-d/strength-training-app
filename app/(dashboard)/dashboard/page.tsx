@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { WelcomeChecklist } from '@/components/WelcomeChecklist'
 import { ReleaseNotesDialog } from '@/components/ReleaseNotesDialog'
+import { LocalDate } from '@/components/LocalDate'
 import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -80,7 +81,7 @@ export default async function DashboardPage({
       name: string
       dayOfWeek: number | null
       estimatedDuration: number | null
-      workoutLogs: { id: string }[]
+      workoutLogs: { id: string; completedAt: Date; duration: number | null }[]
     }[]
   } | null = null
 
@@ -114,7 +115,7 @@ export default async function DashboardPage({
             workoutLogs: {
               take: 1,
               orderBy: { completedAt: 'desc' },
-              select: { id: true },
+              select: { id: true, completedAt: true, duration: true },
             },
           },
         },
@@ -244,6 +245,8 @@ export default async function DashboardPage({
               const isCompleted = workout.workoutLogs.length > 0
               const isNext = workout.id === nextWorkoutId
               const logId = workout.workoutLogs[0]?.id
+              const completedAt = workout.workoutLogs[0]?.completedAt
+              const logDuration = workout.workoutLogs[0]?.duration
 
               return (
                 <div
@@ -264,10 +267,14 @@ export default async function DashboardPage({
                       </span>
                     </div>
                     <p className="text-sm text-gray-400 mt-0.5">
-                      {workout.dayOfWeek !== null
-                        ? DAY_NAMES_FULL[workout.dayOfWeek]
-                        : 'Unscheduled'}
-                      {workout.estimatedDuration && ` · ${workout.estimatedDuration} min`}
+                      {isCompleted && completedAt
+                        ? <><span>Completed </span><LocalDate date={completedAt} options={{ weekday: 'long', day: 'numeric', month: 'short' }} /></>
+                        : workout.dayOfWeek !== null
+                          ? DAY_NAMES_FULL[workout.dayOfWeek]
+                          : 'Unscheduled'}
+                      {isCompleted
+                        ? logDuration ? ` · ${logDuration} min` : null
+                        : workout.estimatedDuration ? ` · ${workout.estimatedDuration} min` : null}
                     </p>
                   </div>
 
@@ -310,7 +317,7 @@ export default async function DashboardPage({
               >
                 <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
                 <p className="text-sm text-gray-600">
-                  {new Date(log.completedAt).toLocaleDateString()}
+                  <LocalDate date={log.completedAt} />
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
                   {log.exerciseLogs.length} exercises{log.duration ? ` · ${log.duration} min` : ''}

@@ -30,7 +30,7 @@ export function calculateSuggestedReps(
 }
 
 export function getSuggestion(
-  lastSet: { weight: number; reps: number; rir?: number | null } | undefined,
+  lastSet: { weight: number; reps: number; repsLeft?: number | null; repsRight?: number | null; rir?: number | null } | undefined,
   targetReps: string | null | undefined,
   equipment: string[],
   isBodyweight: boolean
@@ -42,7 +42,9 @@ export function getSuggestion(
     return { weight: '', reps: String(repRange.min) }
   }
 
-  const { weight: lastWeight, reps: lastReps, rir } = lastSet
+  const { weight: lastWeight, rir } = lastSet
+  // For unilateral exercises reps is stored as 0; use repsLeft (per-side count) instead
+  const lastReps = lastSet.reps > 0 ? lastSet.reps : (lastSet.repsLeft || lastSet.repsRight || 0)
 
   // Determine eligibility for progression
   let eligible: boolean

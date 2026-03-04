@@ -16,20 +16,22 @@ export async function GET(request: Request) {
     where: {
       exerciseId: { in: ids },
       skipped: false,
-      reps: { gt: 0 },
       weight: { gt: 0 },
+      OR: [{ reps: { gt: 0 } }, { repsLeft: { gt: 0 } }],
       workoutLog: { userId: session.user.id },
     },
     select: {
       exerciseId: true,
       weight: true,
       reps: true,
+      repsLeft: true,
     },
   })
 
   const bests: Record<string, number> = {}
   for (const log of logs) {
-    const oneRM = estimate1RM(log.weight, log.reps)
+    const effectiveReps = log.reps > 0 ? log.reps : (log.repsLeft ?? 0)
+    const oneRM = estimate1RM(log.weight, effectiveReps)
     if (!bests[log.exerciseId] || oneRM > bests[log.exerciseId]) {
       bests[log.exerciseId] = oneRM
     }
