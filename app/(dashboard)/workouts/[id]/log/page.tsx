@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { LiftHistoryModal } from '@/components/LiftHistoryModal'
-import { getSuggestion, estimate1RM } from '@/lib/progressiveOverload'
+import { getSuggestion, estimate1RM, calculateSuggestedReps, parseRepRange } from '@/lib/progressiveOverload'
 
 interface WorkoutExercise {
   id: string
@@ -290,24 +290,28 @@ export default function WorkoutLogPage() {
         setExerciseRpes(lastExerciseRpes)
 
         // Compute progressive overload suggestions per exercise × set
+        // Use set 1 as the representative for all sets — ensures consistent weight/reps shown across sets
         const newSuggestions = new Map<string, Map<number, { weight: string; reps: string; duration?: string }>>()
         for (const we of data.workoutExercises) {
           const setMap = new Map<number, { weight: string; reps: string; duration?: string }>()
+          const exerciseSets = lastLogSets.get(we.exercise.id) ?? []
+          const representativeSet = exerciseSets.find((s) => s.setNumber === 1) ?? exerciseSets[0]
+
           for (let i = 0; i < we.targetSets; i++) {
-            const lastSet = lastLogSets.get(we.exercise.id)?.find((s) => s.setNumber === i + 1)
             if (we.exercise.isTimed) {
+              const lastSet = exerciseSets.find((s) => s.setNumber === i + 1)
               setMap.set(i + 1, {
-                weight: lastSet?.weight ? String(lastSet.weight) : '',
+                weight: representativeSet?.weight ? String(representativeSet.weight) : '',
                 reps: '',
                 duration: lastSet?.duration ? String(lastSet.duration) : '',
               })
             } else {
-              // For unilateral exercises, use repsLeft as the effective rep count for suggestions
-              const effectiveLastSet = lastSet && we.exercise.isUnilateral && lastSet.repsLeft
-                ? { ...lastSet, reps: lastSet.repsLeft }
-                : lastSet
+              // For unilateral exercises, use repsLeft as the effective rep count
+              const effectiveSet = representativeSet && we.exercise.isUnilateral && representativeSet.repsLeft
+                ? { ...representativeSet, reps: representativeSet.repsLeft }
+                : representativeSet
               const suggestion = getSuggestion(
-                effectiveLastSet,
+                effectiveSet,
                 we.targetReps,
                 we.exercise.equipment ?? [],
                 we.exercise.isBodyweight
@@ -934,6 +938,30 @@ export default function WorkoutLogPage() {
         return log
       })
     )
+
+    // When weight changes: recalculate rep suggestion for all sets of this exercise
+    if (field === 'weight') {
+      const weightVal = parseFloat(cleanedValue)
+      if (!isNaN(weightVal) && weightVal > 0) {
+        const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
+        if (we && !we.exercise.isBodyweight && !we.exercise.isTimed) {
+          const oneRM = allTimeBests[exerciseId]
+          if (oneRM && oneRM > 0) {
+            const repRange = parseRepRange(we.targetReps)
+            const suggestedReps = calculateSuggestedReps(oneRM, weightVal, repRange)
+            setSuggestions((prev) => {
+              const exerciseMap = new Map(prev.get(exerciseId) ?? [])
+              exerciseMap.forEach((val, key) => {
+                exerciseMap.set(key, { ...val, weight: cleanedValue, reps: String(suggestedReps) })
+              })
+              const next = new Map(prev)
+              next.set(exerciseId, exerciseMap)
+              return next
+            })
+          }
+        }
+      }
+    }
   }
 
   async function handleComplete() {
