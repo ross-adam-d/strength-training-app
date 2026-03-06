@@ -188,12 +188,14 @@ export default function WorkoutLogPage() {
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0)
   const [timerFlashing, setTimerFlashing] = useState(false)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerEndTimeRef = useRef<number>(0)
 
   // Timed exercise timer state (counts DOWN from target duration)
   const [activeTimedTimerKey, setActiveTimedTimerKey] = useState<string | null>(null)
   const [timedTimerSeconds, setTimedTimerSeconds] = useState(0)
   const [timedTimerFlashing, setTimedTimerFlashing] = useState(false)
   const timedTimerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timedTimerEndTimeRef = useRef<number>(0)
 
   // Wake lock (prevent screen sleep during workout)
   const wakeLockRef = useRef<any>(null)
@@ -394,7 +396,7 @@ export default function WorkoutLogPage() {
     fetchExercises()
   }, [fetchWorkout, fetchExercises])
 
-  // Rest timer tick effect — keyed on activeTimerKey only
+  // Rest timer tick effect — keyed on activeTimerKey only; uses wall clock to survive backgrounding
   useEffect(() => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current)
@@ -404,22 +406,22 @@ export default function WorkoutLogPage() {
     if (activeTimerKey === null) return
 
     timerIntervalRef.current = setInterval(() => {
-      setTimerSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerIntervalRef.current!)
-          timerIntervalRef.current = null
-          playBeep()
-          setTimerFlashing(true)
-          setTimeout(() => {
-            setTimerFlashing(false)
-            setActiveTimerKey(null)
-            setTimerSecondsLeft(0)
-          }, 2000)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+      const remaining = Math.max(0, Math.ceil((timerEndTimeRef.current - Date.now()) / 1000))
+      if (remaining <= 0) {
+        clearInterval(timerIntervalRef.current!)
+        timerIntervalRef.current = null
+        playBeep()
+        setTimerFlashing(true)
+        setTimeout(() => {
+          setTimerFlashing(false)
+          setActiveTimerKey(null)
+          setTimerSecondsLeft(0)
+        }, 2000)
+        setTimerSecondsLeft(0)
+        return
+      }
+      setTimerSecondsLeft(remaining)
+    }, 500)
 
     return () => {
       if (timerIntervalRef.current) {
@@ -429,7 +431,7 @@ export default function WorkoutLogPage() {
     }
   }, [activeTimerKey])
 
-  // Timed exercise timer tick effect (counts DOWN from target duration)
+  // Timed exercise timer tick effect — uses wall clock to survive backgrounding
   useEffect(() => {
     if (timedTimerIntervalRef.current) {
       clearInterval(timedTimerIntervalRef.current)
@@ -439,22 +441,22 @@ export default function WorkoutLogPage() {
     if (activeTimedTimerKey === null) return
 
     timedTimerIntervalRef.current = setInterval(() => {
-      setTimedTimerSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(timedTimerIntervalRef.current!)
-          timedTimerIntervalRef.current = null
-          playBeep()
-          setTimedTimerFlashing(true)
-          setTimeout(() => {
-            setTimedTimerFlashing(false)
-            setActiveTimedTimerKey(null)
-            setTimedTimerSeconds(0)
-          }, 2000)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+      const remaining = Math.max(0, Math.ceil((timedTimerEndTimeRef.current - Date.now()) / 1000))
+      if (remaining <= 0) {
+        clearInterval(timedTimerIntervalRef.current!)
+        timedTimerIntervalRef.current = null
+        playBeep()
+        setTimedTimerFlashing(true)
+        setTimeout(() => {
+          setTimedTimerFlashing(false)
+          setActiveTimedTimerKey(null)
+          setTimedTimerSeconds(0)
+        }, 2000)
+        setTimedTimerSeconds(0)
+        return
+      }
+      setTimedTimerSeconds(remaining)
+    }, 500)
 
     return () => {
       if (timedTimerIntervalRef.current) {
@@ -464,30 +466,37 @@ export default function WorkoutLogPage() {
     }
   }, [activeTimedTimerKey])
 
-  // Wake lock — keep screen awake while logging
+  // Wake lock — keep screen awake while logging; re-acquire after screen unlock
   useEffect(() => {
-    if ('wakeLock' in navigator) {
-      ;(navigator as any).wakeLock.request('screen').then((lock: any) => {
-        wakeLockRef.current = lock
-      }).catch(() => {})
+    if (!('wakeLock' in navigator)) return
+    const requestWakeLock = async () => {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      } catch {}
     }
+    requestWakeLock()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') requestWakeLock()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       wakeLockRef.current?.release()
       wakeLockRef.current = null
     }
   }, [])
 
-  // Workout stopwatch tick
+  // Workout stopwatch — uses wall clock so it stays accurate after backgrounding/lock
   useEffect(() => {
     if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
     if (!workoutTimerRunning) return
     workoutTimerRef.current = setInterval(() => {
-      setWorkoutElapsed((prev) => prev + 1)
+      setWorkoutElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000))
     }, 1000)
     return () => {
       if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
     }
-  }, [workoutTimerRunning])
+  }, [workoutTimerRunning, startTime])
 
   // Auto-save draft with debouncing
   useEffect(() => {
@@ -646,6 +655,8 @@ export default function WorkoutLogPage() {
         if (!prev) return prev
         return { ...prev, workoutExercises: [...prev.workoutExercises, newWorkoutExercise] }
       })
+      // Add to display order so the new exercise renders immediately
+      setExerciseDisplayOrder(prev => [...prev, newWorkoutExercise.id])
 
       // Create empty sets for the new exercise
       const newSets = Array.from({ length: parseInt(addExerciseForm.targetSets) }, (_, i) => ({
@@ -704,6 +715,7 @@ export default function WorkoutLogPage() {
       setTimerFlashing(false)
       return
     }
+    timerEndTimeRef.current = Date.now() + restPeriod * 1000
     setActiveTimerKey(key)
     setTimerSecondsLeft(restPeriod)
     setTimerFlashing(false)
@@ -727,6 +739,7 @@ export default function WorkoutLogPage() {
       return
     }
 
+    timedTimerEndTimeRef.current = Date.now() + targetDuration * 1000
     setTimedTimerSeconds(targetDuration)
     setActiveTimedTimerKey(key)
   }

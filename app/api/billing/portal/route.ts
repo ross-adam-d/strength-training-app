@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No billing account found' }, { status: 404 })
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+  const baseUrl = (process.env.NEXTAUTH_URL ?? 'http://localhost:3000').trim()
 
   const portalSession = await getStripe().billingPortal.sessions.create({
     customer: subscription.stripeCustomerId,

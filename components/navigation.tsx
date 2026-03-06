@@ -44,6 +44,10 @@ export function Navigation({
         window.location.assign('/subscribe')
         return
       }
+      if (!res.ok) {
+        alert('Unable to open billing portal. Please try again.')
+        return
+      }
       const data = await res.json()
       if (data.url) {
         window.location.assign(data.url)
