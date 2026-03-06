@@ -126,10 +126,26 @@ export const authOptions: NextAuthOptions = {
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { emailVerified: true },
+          select: {
+            emailVerified: true,
+            subscription: {
+              select: {
+                status: true,
+                tier: true,
+                trialEndsAt: true,
+                manualAccessGrantedUntil: true,
+              },
+            },
+          },
         })
         if (dbUser) {
           token.emailVerified = !!dbUser.emailVerified
+          if (dbUser.subscription) {
+            token.subscriptionStatus = dbUser.subscription.status
+            token.tier = dbUser.subscription.tier
+            token.trialEndsAt = dbUser.subscription.trialEndsAt?.toISOString() ?? null
+            token.manualAccessGrantedUntil = dbUser.subscription.manualAccessGrantedUntil?.toISOString() ?? null
+          }
         }
       }
       return token

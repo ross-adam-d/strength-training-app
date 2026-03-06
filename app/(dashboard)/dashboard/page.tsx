@@ -8,6 +8,7 @@ import { ReleaseNotesDialog } from '@/components/ReleaseNotesDialog'
 import { LocalDate } from '@/components/LocalDate'
 import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 import { syncCheckoutSession } from '@/lib/billing'
+import { BillingSuccessRefresher } from '@/components/BillingSuccessRefresher'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -206,9 +207,12 @@ export default async function DashboardPage({
 
       {/* Billing return banners */}
       {billing === 'success' && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800">
-          <span className="font-semibold">Subscription activated!</span> Welcome aboard — your plan is now active.
-        </div>
+        <>
+          <BillingSuccessRefresher />
+          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800">
+            <span className="font-semibold">Subscription activated!</span> Welcome aboard — your plan is now active.
+          </div>
+        </>
       )}
       {billing === 'cancelled' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">

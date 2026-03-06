@@ -116,11 +116,13 @@ export async function middleware(request: NextRequest) {
   const { canWrite, isExpired } = canAccess(token)
 
   // Fully expired user on a page → redirect to subscribe
+  // Exception: returning from Stripe checkout — let through so syncCheckoutSession can run
   if (isExpired && isDashboardPage) {
-    const subscribeUrl = new URL('/subscribe', request.url)
-    // Avoid redirect loop
-    if (pathname !== '/subscribe') {
-      return NextResponse.redirect(subscribeUrl)
+    const isStripeReturn =
+      request.nextUrl.searchParams.get('billing') === 'success' &&
+      request.nextUrl.searchParams.has('session_id')
+    if (!isStripeReturn && pathname !== '/subscribe') {
+      return NextResponse.redirect(new URL('/subscribe', request.url))
     }
   }
 

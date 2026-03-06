@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-06'
+export const CURRENT_RELEASE_ID = '2026-03-07'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-07',
+    date: 'March 7, 2026',
+    title: 'Subscription Checkout Fix',
+    changes: [
+      'Fixed checkout flow redirecting to login page after returning from Stripe — expired trial users can now complete checkout without losing their session',
+      'Fixed subscription banners still showing after checkout — subscription status now updates immediately in the current session without requiring a re-login',
+    ],
+  },
   {
     id: '2026-03-06',
     date: 'March 6, 2026',
