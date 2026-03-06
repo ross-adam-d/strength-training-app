@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
         const totalTime = Date.now() - startTime
         console.log(`[Auth Performance] Total: ${totalTime}ms | DB: ${dbTime}ms | bcrypt: ${bcryptTime}ms`)
 
-        // If email not verified, ensure a valid verification token exists and (re-)send email
+        // If email not verified, ensure a valid verification token exists, (re-)send email, and block login
         if (!user.emailVerified && user.role !== 'ADMIN' && user.role !== 'COACH') {
           const now = new Date()
           const existingToken = await prisma.emailVerificationToken.findFirst({
@@ -95,6 +95,7 @@ export const authOptions: NextAuthOptions = {
             const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${newToken.token}`
             sendVerificationEmail({ toEmail: user.email, name: user.name, verifyUrl }).catch(() => {})
           }
+          throw new Error('EMAIL_NOT_VERIFIED')
         }
 
         return {

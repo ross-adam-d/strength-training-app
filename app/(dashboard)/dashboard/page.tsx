@@ -1,4 +1,5 @@
 import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -6,6 +7,7 @@ import { WelcomeChecklist } from '@/components/WelcomeChecklist'
 import { ReleaseNotesDialog } from '@/components/ReleaseNotesDialog'
 import { LocalDate } from '@/components/LocalDate'
 import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
+import { syncCheckoutSession } from '@/lib/billing'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -27,11 +29,23 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ billing?: string }>
+  searchParams: Promise<{ billing?: string; uid?: string; session_id?: string }>
 }) {
-  const { billing } = await searchParams
+  const { billing, uid, session_id } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return null
+
+  // Wrong account: Stripe redirected to a browser logged in as a different user
+  if (uid && uid !== session.user.id) {
+    const callbackUrl = encodeURIComponent('/dashboard?billing=success')
+    redirect(`/login?reason=wrong_account&callbackUrl=${callbackUrl}`)
+  }
+
+  // Sync subscription from Stripe immediately — webhook may not have fired yet
+  if (billing === 'success' && session_id) {
+    await syncCheckoutSession(session_id, session.user.id)
+    redirect('/dashboard?billing=success')
+  }
 
   const now = new Date()
 
@@ -41,7 +55,7 @@ export default async function DashboardPage({
       where: { userId: session.user.id },
     }),
     prisma.macrocycle.findFirst({
-      where: { userId: session.user.id, status: 'active' },
+      where: { userId: session.user.id, status: { in: ['active', 'planned'] } },
       orderBy: { startDate: 'desc' },
       select: { id: true, name: true },
     }),

@@ -52,22 +52,28 @@ export async function POST(request: Request) {
     })
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+  const baseUrl = (process.env.NEXTAUTH_URL ?? 'http://localhost:3000').trim()
 
-  const checkoutSession = await getStripe().checkout.sessions.create({
-    customer: stripeCustomerId,
-    mode: 'subscription',
-    payment_method_collection: 'always',
-    allow_promotion_codes: true,
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: 14,
+  let checkoutSession
+  try {
+    checkoutSession = await getStripe().checkout.sessions.create({
+      customer: stripeCustomerId,
+      mode: 'subscription',
+      payment_method_collection: 'always',
+      allow_promotion_codes: true,
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: { userId },
+      },
+      success_url: `${baseUrl}/dashboard?billing=success&uid=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/dashboard?billing=cancelled`,
       metadata: { userId },
-    },
-    success_url: `${baseUrl}/dashboard?billing=success`,
-    cancel_url: `${baseUrl}/dashboard?billing=cancelled`,
-    metadata: { userId },
-  })
+    })
+  } catch (err: any) {
+    console.error('[checkout] Stripe error:', err?.message)
+    return NextResponse.json({ error: err?.message ?? 'Stripe error' }, { status: 500 })
+  }
 
   return NextResponse.json({ url: checkoutSession.url })
 }

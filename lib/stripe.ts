@@ -14,20 +14,21 @@ export function getStripe(): Stripe {
 
 // Product IDs (public identifiers — not secret)
 export const STRIPE_PRODUCTS = {
-  CORE:  'prod_U2NH3sMFv9sdOn',  // PBX core  (Basic)
-  ELITE: 'prod_U2NTjm8x7TMHTt',  // PBX elite (Premiere)
+  CORE:  'prod_U5W29cC5tl8XF9',  // PBX core  (Basic)  — live
+  ELITE: 'prod_U5W2Wfy0lV24sb',  // PBX elite (Premiere) — live
 } as const
 
 // Price IDs — loaded from env vars so sandbox/production stay separate
+// Env var names match stripe-copy-to-live.ts script output (PERIOD_CURRENCY order)
 export const STRIPE_PRICES = {
-  CORE_AUD_MONTHLY:  process.env.STRIPE_PRICE_CORE_AUD_MONTHLY!,
-  CORE_AUD_ANNUAL:   process.env.STRIPE_PRICE_CORE_AUD_ANNUAL!,
-  CORE_USD_MONTHLY:  process.env.STRIPE_PRICE_CORE_USD_MONTHLY!,
-  CORE_USD_ANNUAL:   process.env.STRIPE_PRICE_CORE_USD_ANNUAL!,
-  ELITE_AUD_MONTHLY: process.env.STRIPE_PRICE_ELITE_AUD_MONTHLY!,
-  ELITE_AUD_ANNUAL:  process.env.STRIPE_PRICE_ELITE_AUD_ANNUAL!,
-  ELITE_USD_MONTHLY: process.env.STRIPE_PRICE_ELITE_USD_MONTHLY!,
-  ELITE_USD_ANNUAL:  process.env.STRIPE_PRICE_ELITE_USD_ANNUAL!,
+  CORE_AUD_MONTHLY:  process.env.STRIPE_PRICE_CORE_MONTHLY_AUD!,
+  CORE_AUD_ANNUAL:   process.env.STRIPE_PRICE_CORE_ANNUAL_AUD!,
+  CORE_USD_MONTHLY:  process.env.STRIPE_PRICE_CORE_MONTHLY_USD!,
+  CORE_USD_ANNUAL:   process.env.STRIPE_PRICE_CORE_ANNUAL_USD!,
+  ELITE_AUD_MONTHLY: process.env.STRIPE_PRICE_ELITE_MONTHLY_AUD!,
+  ELITE_AUD_ANNUAL:  process.env.STRIPE_PRICE_ELITE_ANNUAL_AUD!,
+  ELITE_USD_MONTHLY: process.env.STRIPE_PRICE_ELITE_MONTHLY_USD!,
+  ELITE_USD_ANNUAL:  process.env.STRIPE_PRICE_ELITE_ANNUAL_USD!,
 } as const
 
 export function tierFromProductId(productId: string): SubscriptionTier {

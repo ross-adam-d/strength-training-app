@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-04b'
+export const CURRENT_RELEASE_ID = '2026-03-06'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,27 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-06',
+    date: 'March 6, 2026',
+    title: 'Bug Fixes',
+    changes: [
+      'Fixed dashboard showing blank for users who have set up a training block but not yet logged their first workout',
+      'Fixed subscription banner still showing immediately after completing checkout — subscription status now updates instantly',
+      'Fixed "Manage Billing" silently failing for accounts that have not yet completed checkout — now redirects to the subscription page',
+      'Fixed workout exercise list briefly showing the wrong workout\'s exercises when navigating quickly between workout edit pages',
+      'Checkout now detects if you are signed in to a different account than the one you subscribed with and prompts you to sign in to the correct account',
+    ],
+  },
+  {
+    id: '2026-03-05',
+    date: 'March 5, 2026',
+    title: 'Subscription & Account Improvements',
+    changes: [
+      'Email verification is now required before signing in — unverified accounts will be prompted to check their inbox',
+      'Stripe subscription is now live — you can subscribe directly from the app',
+    ],
+  },
   {
     id: '2026-03-04b',
     date: 'March 4, 2026',

@@ -1,12 +1,19 @@
 # Strength Training App - Project Plan
 
-## 📍 Current Status (Updated: Mar 1, 2026 - Session 43)
+## 📍 Current Status (Updated: Mar 5, 2026 - Session 51)
 
-**Production App**: https://strength-training-app.vercel.app
+**Production App**: https://pbxstrength.com.au
 **Repository**: https://github.com/ross-adam-d/strength-training-app.git
-**Branch**: `feature/stripe-integration` (active development) | `master`: `ffa2cca`
-**Latest Commit**: `e178ae5` - pbX copy/UX updates
-**Status**: Coach extension in progress (Session 43). Blocked on live Stripe setup before merging feature branch.
+**Branch**: `feature/coach-extension` (current production branch)
+**Latest Commit**: `17bcaab` — bug fixes (Session 50)
+**Status**: Live on pbxstrength.com.au. Stripe live keys set. Email verification block fix pending deploy.
+
+### 🔜 Immediate Next Steps
+1. Smoke test Stripe webhook end-to-end — complete checkout, confirm status → ACTIVE, cancel, confirm revert
+2. Smoke test email verification — register new account, verify flow end-to-end
+3. Beta migration (BETA30 coupon for existing users)
+4. Privacy policy page (required before public launch)
+5. Remove domain changeover banner when ready
 
 ---
 
@@ -456,5 +463,5 @@ model ExerciseLog {
 
 ---
 
-**Last Updated**: Mar 1, 2026 (Session 43)
-**Next Session**: Continue Coach Extension — Phase 2 (client visibility API + pages)
+**Last Updated**: Mar 5, 2026 (Session 51)
+**Next Session**: Smoke test Stripe webhook end-to-end → smoke test email verification → beta migration

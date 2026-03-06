@@ -30,9 +30,15 @@ export async function SubscriptionBanner({
   // DB query only for: trialing ≤7 days, manual override cases, or unknown status
   const { canWrite, isExpired, daysUntilExpiry, status } = await getUserSubscriptionStatus(userId)
 
-  // Fully expired — banner shown on the /subscribe page itself, not here
+  // Fully expired — show plan selection inline on dashboard
   if (isExpired) {
-    return null
+    return (
+      <div className="bg-amber-50 border-b border-amber-200">
+        <div className="container mx-auto px-4 py-4">
+          <PlanSelectionUI priceIds={STRIPE_PRICES} />
+        </div>
+      </div>
+    )
   }
 
   // Active subscription with no trial end — no banner

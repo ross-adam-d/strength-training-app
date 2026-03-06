@@ -8,9 +8,11 @@ export default async function SubscribePage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
 
-  // Active/trialing users don't need to be here
+  // Active users don't need to be here; trialing users only if trial hasn't expired
   const status = session.user.subscriptionStatus
-  if (status === 'ACTIVE' || status === 'TRIALING') redirect('/dashboard')
+  const trialEndsAt = session.user.trialEndsAt
+  if (status === 'ACTIVE') redirect('/dashboard')
+  if (status === 'TRIALING' && trialEndsAt && new Date(trialEndsAt) > new Date()) redirect('/dashboard')
 
   return (
     <div className="max-w-2xl mx-auto py-8">

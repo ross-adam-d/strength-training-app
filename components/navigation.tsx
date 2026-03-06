@@ -40,6 +40,10 @@ export function Navigation({
     setBillingLoading(true)
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' })
+      if (res.status === 404) {
+        window.location.assign('/subscribe')
+        return
+      }
       const data = await res.json()
       if (data.url) {
         window.location.assign(data.url)

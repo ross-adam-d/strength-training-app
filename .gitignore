@@ -45,3 +45,5 @@ prisma/migrations
 
 .vercel
 .env*.local
+
+.env*.local

@@ -8,6 +8,8 @@ import { useSearchParams } from 'next/navigation'
 function LoginContent() {
   const searchParams = useSearchParams()
   const verified = searchParams.get('verified') === 'true'
+  const wrongAccount = searchParams.get('reason') === 'wrong_account'
+  const callbackUrl = searchParams.get('callbackUrl')
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,10 +30,13 @@ function LoginContent() {
         redirect: false,
       })
 
-      if (result?.error) {
+      if (result?.error === 'EMAIL_NOT_VERIFIED') {
+        setError('Please verify your email before signing in. Check your inbox for a verification link.')
+      } else if (result?.error) {
         setError('Invalid email or password')
       } else {
-        window.location.assign('/dashboard')
+        const destination = callbackUrl && callbackUrl.startsWith('/') ? callbackUrl : '/dashboard'
+        window.location.assign(destination)
       }
     } catch (error) {
       setError('An error occurred. Please try again.')
@@ -52,6 +57,11 @@ function LoginContent() {
           {verified && (
             <div className="p-3 bg-green-950 border border-green-800 text-green-300 rounded-md text-sm">
               Email verified — please sign in.
+            </div>
+          )}
+          {wrongAccount && (
+            <div className="p-3 bg-amber-950 border border-amber-800 text-amber-300 rounded-md text-sm">
+              Please sign in with the account you used to subscribe.
             </div>
           )}
           {error && (

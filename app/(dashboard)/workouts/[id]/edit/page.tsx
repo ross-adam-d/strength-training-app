@@ -263,6 +263,8 @@ export default function EditWorkoutPage() {
   const sensors = useSensors(useSensor(PointerSensor))
 
   useEffect(() => {
+    setLoading(true)
+    setExercises([])
     async function fetchData() {
       try {
         const [workoutRes, exercisesRes] = await Promise.all([

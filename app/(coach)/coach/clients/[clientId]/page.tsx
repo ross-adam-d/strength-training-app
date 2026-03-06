@@ -38,7 +38,7 @@ export default async function ClientOverviewPage({
           },
         },
         macrocycles: {
-          where: { status: 'active' },
+          where: { status: { in: ['active', 'planned'] } },
           take: 1,
           select: {
             id: true,
