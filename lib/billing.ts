@@ -22,10 +22,14 @@ export async function syncCheckoutSession(sessionId: string, expectedUserId: str
     const product = price?.product as Stripe.Product | undefined
     const tier = product ? tierFromProductId(product.id) : 'PREMIERE'
     const status = mapStripeStatus(sub.status)
+    const customerId = typeof checkoutSession.customer === 'string'
+      ? checkoutSession.customer
+      : (checkoutSession.customer as Stripe.Customer | null)?.id ?? null
 
     await prisma.subscription.update({
       where: { userId },
       data: {
+        stripeCustomerId: customerId,
         stripeSubscriptionId: sub.id,
         status,
         tier,

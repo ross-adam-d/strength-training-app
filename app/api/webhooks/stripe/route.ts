@@ -68,10 +68,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const product = price?.product as Stripe.Product | undefined
   const tier = product ? tierFromProductId(product.id) : 'PREMIERE'
   const status = mapStripeStatus(stripeSubscription.status)
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : (session.customer as Stripe.Customer | null)?.id ?? null
 
   await prisma.subscription.update({
     where: { userId },
     data: {
+      stripeCustomerId: customerId,
       stripeSubscriptionId: stripeSubscription.id,
       status,
       tier,

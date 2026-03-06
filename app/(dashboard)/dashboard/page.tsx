@@ -55,7 +55,7 @@ export default async function DashboardPage({
       where: { userId: session.user.id },
     }),
     prisma.macrocycle.findFirst({
-      where: { userId: session.user.id, status: { in: ['active', 'planned'] } },
+      where: { userId: session.user.id, status: 'active' },
       orderBy: { startDate: 'desc' },
       select: { id: true, name: true },
     }),
