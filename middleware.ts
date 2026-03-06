@@ -127,7 +127,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Read-only user attempting a write API call → 403
-  if (!canWrite && isProtectedApiRoute && WRITE_METHODS.has(method)) {
+  // Billing routes are always accessible so users can resubscribe/manage payment
+  const isBillingRoute = pathname.startsWith('/api/billing/')
+  if (!canWrite && isProtectedApiRoute && WRITE_METHODS.has(method) && !isBillingRoute) {
     return NextResponse.json(
       { error: 'Your trial has ended. Please contact us to continue.' },
       { status: 403 }

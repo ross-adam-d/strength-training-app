@@ -41,6 +41,8 @@ export function Navigation({
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' })
       if (res.status === 404) {
+        // No Stripe billing account yet — send to subscribe to set one up
+        alert('No billing account found. Please subscribe to a plan to set up billing.')
         window.location.assign('/subscribe')
         return
       }
@@ -57,7 +59,7 @@ export function Navigation({
     }
   }
 
-  const showBillingButton = subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'PAST_DUE' || subscriptionStatus === 'TRIALING'
+  const showBillingButton = subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'PAST_DUE' || subscriptionStatus === 'TRIALING' || subscriptionStatus === 'CANCELLED'
 
   const links = [
     { href: '/dashboard', label: 'Dashboard', hardNav: true },
