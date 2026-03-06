@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     select: {
       email: true,
       name: true,
-      subscription: { select: { stripeCustomerId: true } },
+      subscription: { select: { stripeCustomerId: true, trialEndsAt: true } },
     },
   })
 
@@ -54,6 +54,21 @@ export async function POST(request: Request) {
 
   const baseUrl = (process.env.NEXTAUTH_URL ?? 'http://localhost:3000').trim()
 
+  // Determine trial eligibility:
+  // - trialEndsAt not set → brand new user, grant 14-day trial
+  // - trialEndsAt in the future → mid-trial, honour existing end date
+  // - trialEndsAt in the past → already trialed, no trial on new subscription
+  const trialEndsAt = user.subscription?.trialEndsAt
+  const now = new Date()
+  let trialData: { trial_period_days: number } | { trial_end: number } | Record<string, never>
+  if (!trialEndsAt) {
+    trialData = { trial_period_days: 14 }
+  } else if (trialEndsAt > now) {
+    trialData = { trial_end: Math.floor(trialEndsAt.getTime() / 1000) }
+  } else {
+    trialData = {}
+  }
+
   let checkoutSession
   try {
     checkoutSession = await getStripe().checkout.sessions.create({
@@ -63,7 +78,7 @@ export async function POST(request: Request) {
       allow_promotion_codes: true,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: 14,
+        ...trialData,
         metadata: { userId },
       },
       success_url: `${baseUrl}/dashboard?billing=success&uid=${userId}&session_id={CHECKOUT_SESSION_ID}`,
