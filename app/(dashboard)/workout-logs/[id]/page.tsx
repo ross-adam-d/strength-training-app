@@ -37,7 +37,7 @@ export default async function WorkoutLogDetailPage({
       },
       exerciseLogs: {
         include: {
-          exercise: { select: { id: true, name: true } },
+          exercise: { select: { id: true, name: true, isUnilateral: true } },
         },
       },
     },
@@ -110,6 +110,7 @@ export default async function WorkoutLogDetailPage({
           const skippedCount = sets.filter((s) => s.skipped).length
           const completedSets = sets.filter((s) => !s.skipped)
           const exerciseRpe = sets[0]?.exerciseRpe
+          const isUnilateral = sets[0]?.exercise.isUnilateral ?? false
 
           return (
             <div key={exerciseId} className="bg-white rounded-lg border border-gray-200 p-4 mb-3">
@@ -122,10 +123,10 @@ export default async function WorkoutLogDetailPage({
                 )}
               </div>
 
-              <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-xs font-medium text-gray-500 mb-2">
+              <div className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-xs font-medium text-gray-500 mb-2`}>
                 <div className="text-center">#</div>
                 <div className="text-center">Weight</div>
-                <div className="text-center">Reps</div>
+                <div className="text-center">{isUnilateral ? 'Reps (L/R)' : 'Reps'}</div>
                 <div className="text-center">RIR</div>
               </div>
 
@@ -134,16 +135,20 @@ export default async function WorkoutLogDetailPage({
                   set.skipped ? (
                     <div
                       key={set.setNumber}
-                      className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5"
+                      className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5`}
                     >
                       <span className="text-sm text-gray-400 text-center line-through">{set.setNumber}</span>
                       <span className="col-span-3 text-sm text-yellow-700 text-center">⊘ Skipped</span>
                     </div>
                   ) : (
-                    <div key={set.setNumber} className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-sm">
+                    <div key={set.setNumber} className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-sm`}>
                       <span className="font-medium text-gray-700 text-center">{set.setNumber}</span>
                       <span className="text-center text-gray-900">{set.weight} kg</span>
-                      <span className="text-center text-gray-900">{set.reps}</span>
+                      <span className="text-center text-gray-900">
+                        {isUnilateral
+                          ? `${set.repsLeft ?? 0} / ${set.repsRight ?? 0}`
+                          : set.reps}
+                      </span>
                       <span className="text-center text-gray-600">{set.rir ?? '—'}</span>
                     </div>
                   )

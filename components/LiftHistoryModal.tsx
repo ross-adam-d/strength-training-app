@@ -6,6 +6,8 @@ interface ExerciseLog {
   id: string
   setNumber: number
   reps: number
+  repsLeft: number | null
+  repsRight: number | null
   weight: number
   rir: number | null
   skipped: boolean
@@ -159,7 +161,9 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
                                 {set.skipped ? '—' : `${set.weight} kg`}
                               </td>
                               <td className="px-3 py-2">
-                                {set.skipped ? '—' : set.reps}
+                                {set.skipped ? '—' : set.repsLeft != null
+                                  ? `${set.repsLeft} / ${set.repsRight ?? 0}`
+                                  : set.reps}
                               </td>
                               <td className="px-3 py-2">
                                 {set.skipped ? '—' : set.rir ?? '—'}
@@ -176,7 +180,12 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
                         <span>
                           <strong className="text-gray-900">Total Volume:</strong>{' '}
                           {completedSets
-                            .reduce((sum, set) => sum + set.weight * set.reps, 0)
+                            .reduce((sum, set) => {
+                              const effectiveReps = set.repsLeft != null
+                                ? (set.repsLeft + (set.repsRight ?? 0))
+                                : set.reps
+                              return sum + set.weight * effectiveReps
+                            }, 0)
                             .toLocaleString()}{' '}
                           kg
                         </span>

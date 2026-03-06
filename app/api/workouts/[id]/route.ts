@@ -132,6 +132,8 @@ export async function GET(
         setNumber: true,
         weight: true,
         reps: true,
+        repsLeft: true,
+        repsRight: true,
         rir: true,
         duration: true,
         notes: true,
@@ -147,6 +149,8 @@ export async function GET(
       setNumber: number
       weight: number | null
       reps: number | null
+      repsLeft: number | null
+      repsRight: number | null
       rir: number | null
       duration: number | null
       notes: string | null

@@ -99,42 +99,59 @@ export default async function DashboardPage({
     }[]
   } | null = null
 
+  const microSelect = {
+    id: true,
+    weekNumber: true,
+    mesocycle: {
+      select: {
+        id: true,
+        name: true,
+        focus: true,
+        microcycles: {
+          select: { id: true },
+          orderBy: { weekNumber: 'asc' as const },
+        },
+      },
+    },
+    workouts: {
+      select: {
+        id: true,
+        name: true,
+        dayOfWeek: true,
+        estimatedDuration: true,
+        workoutLogs: {
+          take: 1,
+          orderBy: { completedAt: 'desc' as const },
+          select: { id: true, completedAt: true, duration: true },
+        },
+      },
+    },
+  }
+
   if (activeBlock) {
+    // Prefer the earliest started week that still has incomplete workouts.
+    // This keeps a missed workout visible even after the calendar has moved on.
     currentMicro = await prisma.microcycle.findFirst({
       where: {
         startDate: { lte: now },
-        endDate: { gt: now },
         mesocycle: { macrocycleId: activeBlock.id },
+        workouts: { some: { workoutLogs: { none: {} } } },
       },
-      select: {
-        id: true,
-        weekNumber: true,
-        mesocycle: {
-          select: {
-            id: true,
-            name: true,
-            focus: true,
-            microcycles: {
-              select: { id: true },
-              orderBy: { weekNumber: 'asc' },
-            },
-          },
-        },
-        workouts: {
-          select: {
-            id: true,
-            name: true,
-            dayOfWeek: true,
-            estimatedDuration: true,
-            workoutLogs: {
-              take: 1,
-              orderBy: { completedAt: 'desc' },
-              select: { id: true, completedAt: true, duration: true },
-            },
-          },
-        },
-      },
+      orderBy: { weekNumber: 'asc' },
+      select: microSelect,
     })
+
+    // Fall back to the current calendar week when all started weeks are complete
+    if (!currentMicro) {
+      currentMicro = await prisma.microcycle.findFirst({
+        where: {
+          startDate: { lte: now },
+          endDate: { gt: now },
+          mesocycle: { macrocycleId: activeBlock.id },
+        },
+        select: microSelect,
+      })
+    }
   }
 
   // Phase stats — scoped to current mesocycle

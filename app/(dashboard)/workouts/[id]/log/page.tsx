@@ -266,7 +266,7 @@ export default function WorkoutLogPage() {
         }
 
         // Build lookup from most recent exercise logs (cross-week, by exercise ID)
-        const lastLogSets = new Map<string, { setNumber: number; reps: number; weight: number; rir?: number | null; duration?: number | null }[]>()
+        const lastLogSets = new Map<string, { setNumber: number; reps: number; repsLeft?: number | null; repsRight?: number | null; weight: number; rir?: number | null; duration?: number | null }[]>()
         const lastExerciseNotes: Record<string, string> = {}
         const lastExerciseRpes: Record<string, number> = {}
 
@@ -302,8 +302,12 @@ export default function WorkoutLogPage() {
                 duration: lastSet?.duration ? String(lastSet.duration) : '',
               })
             } else {
+              // For unilateral exercises, use repsLeft as the effective rep count for suggestions
+              const effectiveLastSet = lastSet && we.exercise.isUnilateral && lastSet.repsLeft
+                ? { ...lastSet, reps: lastSet.repsLeft }
+                : lastSet
               const suggestion = getSuggestion(
-                lastSet,
+                effectiveLastSet,
                 we.targetReps,
                 we.exercise.equipment ?? [],
                 we.exercise.isBodyweight
