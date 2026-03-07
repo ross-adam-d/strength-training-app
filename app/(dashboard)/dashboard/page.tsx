@@ -9,6 +9,7 @@ import { LocalDate } from '@/components/LocalDate'
 import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 import { syncCheckoutSession } from '@/lib/billing'
 import { BillingSuccessRefresher } from '@/components/BillingSuccessRefresher'
+import { StatsCarousel } from '@/components/StatsCarousel'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -17,15 +18,6 @@ function formatVolume(kg: number): string {
   return `${Math.round(kg).toLocaleString()}kg`
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 text-center">
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm font-medium text-gray-700 mt-1">{label}</p>
-      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
-    </div>
-  )
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -155,33 +147,79 @@ export default async function DashboardPage({
     }
   }
 
-  // Phase stats — scoped to current mesocycle
-  let phaseStats = { sessions: 0, totalMinutes: 0, totalVolumeKg: 0 }
-  if (currentMicro) {
-    const phaseLogs = await prisma.workoutLog.findMany({
-      where: {
-        userId: session.user.id,
-        workout: {
-          microcycle: { mesocycleId: currentMicro.mesocycle.id },
-        },
-      },
-      select: {
-        duration: true,
-        exerciseLogs: {
-          where: { skipped: false },
-          select: { weight: true, reps: true, repsLeft: true, repsRight: true },
-        },
-      },
-    })
+  // Stat views for carousel — only computed when there's an active phase
+  const LOG_SELECT = {
+    duration: true,
+    exerciseLogs: {
+      where: { skipped: false },
+      select: { weight: true, reps: true, repsLeft: true, repsRight: true },
+    },
+  } as const
 
-    phaseStats.sessions = phaseLogs.length
-    phaseStats.totalMinutes = phaseLogs.reduce((sum, log) => sum + (log.duration || 0), 0)
-    phaseStats.totalVolumeKg = phaseLogs.reduce((sum, log) =>
-      sum + log.exerciseLogs.reduce((exSum, ex) => {
-        const reps = ex.reps || ((ex.repsLeft || 0) + (ex.repsRight || 0))
-        return exSum + ex.weight * reps
-      }, 0)
-    , 0)
+  function sumLogs(logs: { duration: number | null; exerciseLogs: { weight: number; reps: number; repsLeft: number | null; repsRight: number | null }[] }[]) {
+    const sessions = logs.length
+    const totalMinutes = logs.reduce((s, l) => s + (l.duration ?? 0), 0)
+    const totalVolumeKg = logs.reduce((s, l) =>
+      s + l.exerciseLogs.reduce((es, ex) => {
+        const reps = ex.reps || ((ex.repsLeft ?? 0) + (ex.repsRight ?? 0))
+        return es + ex.weight * reps
+      }, 0), 0)
+    return { sessions, totalMinutes, totalVolumeKg }
+  }
+
+  let statViews: import('@/components/StatsCarousel').StatView[] = []
+
+  if (currentMicro) {
+    const [phaseLogs, weekLogs, allTimeLogs] = await Promise.all([
+      prisma.workoutLog.findMany({
+        where: { userId: session.user.id, workout: { microcycle: { mesocycleId: currentMicro.mesocycle.id } } },
+        select: LOG_SELECT,
+      }),
+      prisma.workoutLog.findMany({
+        where: { userId: session.user.id, workout: { microcycleId: currentMicro.id } },
+        select: LOG_SELECT,
+      }),
+      prisma.workoutLog.findMany({
+        where: { userId: session.user.id },
+        select: { completedAt: true, ...LOG_SELECT },
+      }),
+    ])
+
+    const phase = sumLogs(phaseLogs)
+    const week = sumLogs(weekLogs)
+
+    // All-time weekly averages
+    const totalWeeks = allTimeLogs.length === 0 ? 1 : Math.max(1, Math.round(
+      (now.getTime() - Math.min(...allTimeLogs.map(l => new Date(l.completedAt).getTime()))) / (7 * 24 * 60 * 60 * 1000)
+    ))
+    const allTime = sumLogs(allTimeLogs)
+    const avgSessions = (allTime.sessions / totalWeeks).toFixed(1)
+    const avgMinutes = allTime.totalMinutes / totalWeeks
+    const avgVolume = allTime.totalVolumeKg / totalWeeks
+
+    statViews = [
+      {
+        title: 'This Phase',
+        sub: 'this phase',
+        sessions: phase.sessions.toString(),
+        time: `${(phase.totalMinutes / 60).toFixed(1)}h`,
+        volume: formatVolume(phase.totalVolumeKg),
+      },
+      {
+        title: 'This Week',
+        sub: 'this week',
+        sessions: week.sessions.toString(),
+        time: week.totalMinutes > 0 ? `${(week.totalMinutes / 60).toFixed(1)}h` : '0h',
+        volume: formatVolume(week.totalVolumeKg),
+      },
+      {
+        title: 'All Time',
+        sub: 'avg / week',
+        sessions: avgSessions,
+        time: avgMinutes >= 60 ? `${(avgMinutes / 60).toFixed(1)}h` : `${Math.round(avgMinutes)}m`,
+        volume: formatVolume(avgVolume),
+      },
+    ]
   }
 
   const unseenNotes = getUnseenReleaseNotes(userData?.lastSeenReleaseId ?? null)
@@ -225,26 +263,8 @@ export default async function DashboardPage({
         <WelcomeChecklist name={session.user.name} />
       )}
 
-      {/* Stats row — only shown when there's an active phase */}
-      {currentMicro && (
-        <div className="grid grid-cols-3 gap-3 md:gap-4">
-          <StatCard
-            label="Sessions"
-            value={phaseStats.sessions.toString()}
-            sub="this phase"
-          />
-          <StatCard
-            label="Time"
-            value={`${(phaseStats.totalMinutes / 60).toFixed(1)}h`}
-            sub="this phase"
-          />
-          <StatCard
-            label="Volume"
-            value={formatVolume(phaseStats.totalVolumeKg)}
-            sub="this phase"
-          />
-        </div>
-      )}
+      {/* Stats carousel — only shown when there's an active phase */}
+      {statViews.length > 0 && <StatsCarousel views={statViews} />}
 
       {/* Current week */}
       {currentMicro && (
