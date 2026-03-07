@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-07b'
+export const CURRENT_RELEASE_ID = '2026-03-07c'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-07c',
+    date: 'March 7, 2026',
+    title: 'Coach UI Polish',
+    changes: [
+      'Coach client pages are now fully mobile-optimised — tab navigation scrolls horizontally on small screens instead of overflowing',
+      'Client overview stats and phase details display cleanly on all screen sizes',
+      'All internal navigation now uses fast client-side routing throughout the coach area',
+    ],
+  },
   {
     id: '2026-03-07b',
     date: 'March 7, 2026',

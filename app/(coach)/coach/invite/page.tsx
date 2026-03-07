@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function CoachInvitePage() {
   const [email, setEmail] = useState('')
@@ -35,7 +36,7 @@ export default function CoachInvitePage() {
 
   if (success) {
     return (
-      <div className="max-w-md">
+      <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
           <div className="text-4xl mb-4">✅</div>
           <h2 className="text-lg font-bold text-gray-900 mb-2">Invite created!</h2>
@@ -55,19 +56,19 @@ export default function CoachInvitePage() {
               )}
             </div>
           )}
-          <div className="flex gap-3 justify-center">
-            <a
-              href="/coach"
-              className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-            >
-              Back to clients
-            </a>
+          <div className="space-y-3 pt-2">
             <button
               onClick={() => { setSuccess(false); setEmail('') }}
-              className="px-4 py-2 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+              className="w-full py-2.5 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
             >
               Invite another
             </button>
+            <Link
+              href="/coach"
+              className="block w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-center"
+            >
+              Back to clients
+            </Link>
           </div>
         </div>
       </div>
@@ -75,21 +76,22 @@ export default function CoachInvitePage() {
   }
 
   return (
-    <div className="max-w-md">
-      <a href="/coach" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6 transition">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to clients
-      </a>
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <Link href="/coach" className="text-primary-600 hover:text-primary-700 text-sm">
+          ← Back to Clients
+        </Link>
+      </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Invite a client</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Enter their email address. They&apos;ll receive a link to accept the invitation.
-        </p>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="p-6 border-b">
+          <h1 className="text-2xl font-bold text-gray-900">Invite a Client</h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            Enter their email address. They&apos;ll receive a link to accept the invitation.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Client email
@@ -104,7 +106,11 @@ export default function CoachInvitePage() {
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
@@ -118,3 +124,4 @@ export default function CoachInvitePage() {
     </div>
   )
 }
+

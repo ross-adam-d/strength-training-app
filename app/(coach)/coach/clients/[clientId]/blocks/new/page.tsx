@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { addWeeks, format, parseISO } from 'date-fns'
+import Link from 'next/link'
 
 const EQUIPMENT_OPTIONS = [
   { key: 'barbell',    label: 'Barbell' },
@@ -120,12 +121,12 @@ export default function NewClientBlockPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <a
+        <Link
           href={`/coach/clients/${clientId}/blocks`}
           className="text-primary-600 hover:text-primary-700 text-sm"
         >
           ← Back to Blocks
-        </a>
+        </Link>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -290,20 +291,20 @@ export default function NewClientBlockPage() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
+            <div className="space-y-3 pt-2">
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 py-2 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-60 transition"
+                className="w-full py-2.5 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-60 transition"
               >
                 {submitting ? 'Creating...' : 'Create Training Block'}
               </button>
-              <a
+              <Link
                 href={`/coach/clients/${clientId}/blocks`}
-                className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-center"
+                className="block w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-center"
               >
                 Cancel
-              </a>
+              </Link>
             </div>
           </form>
         </div>

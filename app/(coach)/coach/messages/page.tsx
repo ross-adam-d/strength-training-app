@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 
 export default async function CoachMessagesPage() {
   const session = await getServerSession(authOptions)
@@ -35,12 +36,12 @@ export default async function CoachMessagesPage() {
           <p className="text-sm text-gray-400 mt-1 mb-6">
             Invite your clients to start messaging.
           </p>
-          <a
+          <Link
             href="/coach/invite"
             className="inline-block px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition"
           >
             Invite a client
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -56,7 +57,7 @@ export default async function CoachMessagesPage() {
           const displayName = rel.client.name ?? rel.client.email
           const unread = rel.messages.length
           return (
-            <a
+            <Link
               key={rel.id}
               href={`/coach/clients/${rel.client.id}/messages`}
               className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-primary-300 hover:shadow-sm transition"
@@ -77,7 +78,7 @@ export default async function CoachMessagesPage() {
                   {unread}
                 </span>
               )}
-            </a>
+            </Link>
           )
         })}
       </div>

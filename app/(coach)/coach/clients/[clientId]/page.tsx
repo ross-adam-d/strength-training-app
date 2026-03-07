@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { verifyCoachClientAccess } from '@/lib/coachAccess'
+import Link from 'next/link'
 
 export default async function ClientOverviewPage({
   params,
@@ -76,25 +77,25 @@ export default async function ClientOverviewPage({
   return (
     <div className="space-y-5">
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Total workouts</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{client._count.workoutLogs}</p>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium leading-tight">Workouts</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{client._count.workoutLogs}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Training blocks</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{client._count.macrocycles}</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium leading-tight">Blocks</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{client._count.macrocycles}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last workout</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium leading-tight">Last workout</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
             {daysSinceLastWorkout === null
               ? '—'
               : daysSinceLastWorkout === 0
               ? 'Today'
               : daysSinceLastWorkout === 1
-              ? '1d ago'
-              : `${daysSinceLastWorkout}d ago`}
+              ? '1d'
+              : `${daysSinceLastWorkout}d`}
           </p>
         </div>
       </div>
@@ -104,31 +105,33 @@ export default async function ClientOverviewPage({
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Active training block</h3>
         {activeBlock ? (
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="font-semibold text-gray-900">{activeBlock.name}</p>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-gray-900">{activeBlock.name}</p>
+                  {activeBlock.createdByCoachId === session.user.id && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700 flex-shrink-0">
+                      Created by you
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 mt-0.5">
                   {new Date(activeBlock.startDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                   {' – '}
                   {new Date(activeBlock.endDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  {activeBlock.createdByCoachId === session.user.id && (
-                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700">
-                      Created by you
-                    </span>
-                  )}
                 </p>
               </div>
-              <a
+              <Link
                 href={`/coach/clients/${clientId}/blocks`}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex-shrink-0"
               >
                 View all
-              </a>
+              </Link>
             </div>
             {activeBlock.mesocycles.length > 0 && (
               <div className="space-y-1.5">
                 {activeBlock.mesocycles.map((meso) => (
-                  <div key={meso.id} className="flex items-center gap-3 text-sm">
+                  <div key={meso.id} className="flex items-center gap-2 text-sm min-w-0">
                     <span
                       className={`w-2 h-2 rounded-full flex-shrink-0 ${
                         meso.status === 'active'
@@ -138,10 +141,9 @@ export default async function ClientOverviewPage({
                           : 'bg-gray-300'
                       }`}
                     />
-                    <span className="text-gray-700">{meso.name}</span>
-                    {meso.goal && <span className="text-gray-400">· {meso.goal}</span>}
+                    <span className="text-gray-700 truncate flex-1 min-w-0">{meso.name}</span>
                     <span
-                      className={`ml-auto text-xs px-1.5 py-0.5 rounded ${
+                      className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded ${
                         meso.status === 'active'
                           ? 'bg-green-100 text-green-700'
                           : meso.status === 'completed'
@@ -165,12 +167,12 @@ export default async function ClientOverviewPage({
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">Recent workouts</h3>
-          <a
+          <Link
             href={`/coach/clients/${clientId}/history`}
             className="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             View all
-          </a>
+          </Link>
         </div>
         {recentLogs.length === 0 ? (
           <p className="text-sm text-gray-400">No workouts logged yet</p>
