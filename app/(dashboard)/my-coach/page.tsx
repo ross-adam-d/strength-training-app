@@ -21,7 +21,7 @@ export default async function MyCoachPage() {
           id: true,
           name: true,
           email: true,
-          coachProfile: { select: { bio: true } },
+          coachProfile: { select: { bio: true, contactPhone: true, officeHours: true } },
         },
       },
     },
@@ -83,6 +83,22 @@ export default async function MyCoachPage() {
             <p className="text-sm text-gray-500">{coach.email}</p>
             {coach.coachProfile?.bio && (
               <p className="text-sm text-gray-600 mt-3">{coach.coachProfile.bio}</p>
+            )}
+            {(coach.coachProfile?.contactPhone || coach.coachProfile?.officeHours) && (
+              <div className="mt-3 space-y-1">
+                {coach.coachProfile.contactPhone && (
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">Phone:</span>{' '}
+                    {coach.coachProfile.contactPhone}
+                  </p>
+                )}
+                {coach.coachProfile.officeHours && (
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">Hours:</span>{' '}
+                    {coach.coachProfile.officeHours}
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <span
