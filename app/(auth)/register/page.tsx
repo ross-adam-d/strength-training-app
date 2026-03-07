@@ -197,6 +197,14 @@ function RegisterForm() {
               />
             </div>
 
+            <p className="text-xs text-gray-500 text-center">
+              By creating an account you agree to our{' '}
+              <a href="/privacy" className="text-primary-600 hover:text-primary-700 underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+
             <button
               type="submit"
               disabled={loading || (!!inviteToken && !invite && !inviteError)}
