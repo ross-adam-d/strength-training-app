@@ -14,4 +14,5 @@ export const MEV: Record<string, number> = {
   adductors: 6,
   abductors: 6,
   forearms: 8,
+  calves: 8,
 }

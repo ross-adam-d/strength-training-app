@@ -16,9 +16,9 @@ export default async function CoachDashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
 
-  const [relationships, coachProfile, templates] = await Promise.all([
+  const [relationships, pendingInvites, coachProfile, templates] = await Promise.all([
     prisma.coachClientRelationship.findMany({
-      where: { coachId: session.user.id, status: { in: ['ACTIVE', 'PENDING'] } },
+      where: { coachId: session.user.id, status: 'ACTIVE' },
       include: {
         client: {
           select: {
@@ -44,6 +44,11 @@ export default async function CoachDashboardPage() {
       },
       orderBy: { createdAt: 'asc' },
     }),
+    prisma.coachInvite.findMany({
+      where: { coachId: session.user.id, acceptedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true, email: true, expiresAt: true },
+      orderBy: { createdAt: 'desc' },
+    }),
     prisma.coachProfile.findUnique({
       where: { userId: session.user.id },
       select: { maxClients: true },
@@ -64,11 +69,10 @@ export default async function CoachDashboardPage() {
     }),
   ])
 
-  const activeClients = relationships.filter((r) => r.status === 'ACTIVE')
-  const pendingInvites = relationships.filter((r) => r.status === 'PENDING')
+  const activeClients = relationships
   const maxClients = coachProfile?.maxClients ?? 5
-  const totalUnread = relationships.reduce((sum, r) => sum + r.messages.length, 0)
-  const clientsWithMessages = relationships.filter((r) => r.messages.length > 0)
+  const totalUnread = activeClients.reduce((sum, r) => sum + r.messages.length, 0)
+  const clientsWithMessages = activeClients.filter((r) => r.messages.length > 0)
 
   return (
     <div className="max-w-4xl space-y-10">
@@ -133,11 +137,13 @@ export default async function CoachDashboardPage() {
                 </div>
               )
             })}
-            {pendingInvites.map((rel) => (
-              <div key={rel.id} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between gap-4 opacity-60">
+            {pendingInvites.map((inv) => (
+              <div key={inv.id} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between gap-4 opacity-60">
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{rel.client.name ?? rel.client.email}</p>
-                  {rel.client.name && <p className="text-sm text-gray-500 truncate">{rel.client.email}</p>}
+                  <p className="font-semibold text-gray-900 truncate">{inv.email}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Expires {new Date(inv.expiresAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                  </p>
                 </div>
                 <span className="flex-shrink-0 px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
                   Invite pending

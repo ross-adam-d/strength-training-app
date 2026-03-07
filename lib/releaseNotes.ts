@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-07d'
+export const CURRENT_RELEASE_ID = '2026-03-08'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,20 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-08',
+    date: 'March 8, 2026',
+    title: 'Analytics Improvements & Coach Fixes',
+    changes: [
+      'Training Readiness now factors in lift progression — rising RPE while your lifts improve is flagged as adaptation (amber), not high fatigue (red)',
+      'New "Recent Highlights" card shows your top performing exercises with weight and volume gains',
+      'Weekly volume averages for active training blocks are now calculated correctly — no longer deflated by future unelapsed weeks',
+      'Calves added to the Weak Point chart with a minimum effective volume target',
+      'Coach dashboard now shows pending invites correctly — invites appear immediately after sending, with expiry date',
+      'My Coach page now displays your coach\'s bio, phone number, and office hours',
+      'Phase template builder: week dot navigation added to the user phase page',
+    ],
+  },
   {
     id: '2026-03-07d',
     date: 'March 7, 2026',

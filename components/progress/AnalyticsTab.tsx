@@ -112,8 +112,6 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
   const untrainedMuscles = weakPointChartData.filter((d) => d.avgSetsPerWeek === 0)
 
   const tl = readiness ? TRAFFIC_LIGHT_CONFIG[readiness.trafficLight] : null
-  const showFatigueCallout =
-    readiness?.rpeTrend?.delta != null && readiness.rpeTrend.delta >= 0.5
 
   return (
     <div className="space-y-6">
@@ -201,20 +199,6 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
           )}
         </CardBody>
       </Card>
-
-      {/* Fatigue Callout — only shown when triggered */}
-      {showFatigueCallout && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-amber-800 mb-1">RPE Creep Detected</p>
-          <p className="text-sm text-amber-700">
-            Your avg RPE has risen from {readiness!.rpeTrend.prior!.toFixed(1)} to{' '}
-            {readiness!.rpeTrend.recent!.toFixed(1)} (
-            {readiness!.rpeTrend.delta! > 0 ? '+' : ''}
-            {readiness!.rpeTrend.delta!.toFixed(1)}) over the past 2 weeks. This signals
-            accumulating fatigue — consider reducing intensity or scheduling a deload week.
-          </p>
-        </div>
-      )}
 
       {/* Weak Point Identification */}
       <Card>
