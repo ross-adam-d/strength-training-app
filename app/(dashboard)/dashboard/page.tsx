@@ -323,7 +323,7 @@ export default async function DashboardPage({
                     </div>
                     <p className="text-sm text-gray-400 mt-0.5">
                       {isCompleted && completedAt
-                        ? <><span>Completed </span><LocalDate date={completedAt} options={{ weekday: 'long', day: 'numeric', month: 'short' }} /></>
+                        ? <LocalDate date={completedAt} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />
                         : workout.dayOfWeek !== null
                           ? DAY_NAMES_FULL[workout.dayOfWeek]
                           : 'Unscheduled'}
