@@ -62,6 +62,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') ?? 'blocks'
+    const now = new Date()
 
     // ── Weeks in active/latest phase ───────────────────────────────────────
     if (type === 'weeks') {
@@ -111,7 +112,6 @@ export async function GET(request: Request) {
 
       if (!meso) return NextResponse.json([])
 
-      const now = new Date()
       const result: ComparisonItem[] = meso.microcycles.map((micro) => {
         const allLogs = micro.workouts.flatMap((w) => w.workoutLogs)
         const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
@@ -174,7 +174,8 @@ export async function GET(request: Request) {
             .flatMap((micro) => micro.workouts)
             .flatMap((w) => w.workoutLogs)
           const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
-          const wk = weeksBetween(new Date(meso.startDate), new Date(meso.endDate))
+          const effectiveEnd = meso.status === 'active' ? new Date(Math.min(now.getTime(), new Date(meso.endDate).getTime())) : new Date(meso.endDate)
+          const wk = weeksBetween(new Date(meso.startDate), effectiveEnd)
           return {
             id: meso.id,
             name: meso.name,
@@ -229,7 +230,8 @@ export async function GET(request: Request) {
         .flatMap((micro) => micro.workouts)
         .flatMap((w) => w.workoutLogs)
       const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
-      const wk = weeksBetween(new Date(macro.startDate), new Date(macro.endDate))
+      const effectiveEnd = macro.status === 'active' ? new Date(Math.min(now.getTime(), new Date(macro.endDate).getTime())) : new Date(macro.endDate)
+      const wk = weeksBetween(new Date(macro.startDate), effectiveEnd)
       return {
         id: macro.id,
         name: macro.name,

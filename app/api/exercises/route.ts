@@ -7,7 +7,10 @@ import { z } from 'zod'
 const exerciseSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  muscleGroups: z.array(z.string()),
+  muscleGroups: z.array(z.enum([
+    'chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes',
+    'adductors', 'abductors', 'biceps', 'triceps', 'forearms', 'core', 'calves',
+  ])),
   equipment: z.array(z.string()),
   videoUrl: z.string().url().optional().or(z.literal('')),
   imageUrl: z.string().url().optional().or(z.literal('')),

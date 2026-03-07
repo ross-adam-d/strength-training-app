@@ -11,6 +11,8 @@ interface ReadinessData {
   rpeTrend: { recent: number | null; prior: number | null; delta: number | null }
   adherence: { completed: number; planned: number; percentage: number | null }
   recoveryCredit: boolean
+  progressionTrend: 'improving' | 'stable' | 'declining' | null
+  highlights: { exerciseName: string; change: string; direction: 'up' | 'down' }[]
   explanation: string
 }
 
@@ -139,37 +141,62 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-4 gap-3 bg-gray-50 rounded-lg p-4">
                 <div className="text-center">
                   <p className="text-xs text-gray-500 mb-1">Recent RPE</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {readiness.rpeTrend.recent != null
-                      ? readiness.rpeTrend.recent.toFixed(1)
-                      : '—'}
+                    {readiness.rpeTrend.recent != null ? readiness.rpeTrend.recent.toFixed(1) : '—'}
                   </p>
-                  <p className="text-xs text-gray-400">past 2 weeks</p>
+                  <p className="text-xs text-gray-400">past 2 wks</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500 mb-1">Prior RPE</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {readiness.rpeTrend.prior != null
-                      ? readiness.rpeTrend.prior.toFixed(1)
-                      : '—'}
+                    {readiness.rpeTrend.prior != null ? readiness.rpeTrend.prior.toFixed(1) : '—'}
                   </p>
-                  <p className="text-xs text-gray-400">prior 2 weeks</p>
+                  <p className="text-xs text-gray-400">prior 2 wks</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500 mb-1">Adherence</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {readiness.adherence.percentage != null
-                      ? `${readiness.adherence.percentage}%`
-                      : '—'}
+                    {readiness.adherence.percentage != null ? `${readiness.adherence.percentage}%` : '—'}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {readiness.adherence.completed}/{readiness.adherence.planned} workouts
+                    {readiness.adherence.completed}/{readiness.adherence.planned} done
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Lifts</p>
+                  <p className={`text-lg font-bold ${
+                    readiness.progressionTrend === 'improving' ? 'text-green-600' :
+                    readiness.progressionTrend === 'declining' ? 'text-red-500' :
+                    'text-gray-900'
+                  }`}>
+                    {readiness.progressionTrend === 'improving' ? '↑' :
+                     readiness.progressionTrend === 'declining' ? '↓' :
+                     readiness.progressionTrend === 'stable' ? '→' : '—'}
+                  </p>
+                  <p className="text-xs text-gray-400 capitalize">
+                    {readiness.progressionTrend ?? 'no data'}
                   </p>
                 </div>
               </div>
+
+              {readiness.highlights.length > 0 && (
+                <div className="bg-green-50 border border-green-100 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-green-700 mb-2">Recent Highlights</p>
+                  <div className="space-y-1">
+                    {readiness.highlights.map((h, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <p className="text-xs text-green-800 truncate">{h.exerciseName}</p>
+                        <span className={`text-xs font-semibold ml-2 flex-shrink-0 ${h.direction === 'up' ? 'text-green-700' : 'text-red-600'}`}>
+                          {h.direction === 'up' ? '↑' : '↓'} {h.change}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardBody>
