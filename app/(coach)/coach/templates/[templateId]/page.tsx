@@ -48,6 +48,11 @@ type Template = {
 
 type ExerciseOption = { id: string; name: string; muscleGroups: string[] }
 
+const MUSCLE_GROUP_OPTIONS = [
+  'chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes',
+  'triceps', 'biceps', 'core', 'forearms', 'adductors', 'abductors',
+]
+
 export default function TemplateDetailPage() {
   const { templateId } = useParams<{ templateId: string }>()
   const [template, setTemplate] = useState<Template | null>(null)
@@ -67,6 +72,12 @@ export default function TemplateDetailPage() {
   const [pickerWorkoutId, setPickerWorkoutId] = useState<string | null>(null)
   const [allExercises, setAllExercises] = useState<ExerciseOption[]>([])
   const [exerciseSearch, setExerciseSearch] = useState('')
+
+  // Create new exercise inline
+  const [creatingExercise, setCreatingExercise] = useState(false)
+  const [newExName, setNewExName] = useState('')
+  const [newExMuscles, setNewExMuscles] = useState<string[]>([])
+  const [savingNewEx, setSavingNewEx] = useState(false)
 
   // Fetch template
   const fetchTemplate = useCallback(async () => {
@@ -169,6 +180,40 @@ export default function TemplateDetailPage() {
     }
   }
 
+  async function createAndAddExercise(workoutId: string) {
+    if (!newExName.trim()) return
+    setSavingNewEx(true)
+    try {
+      // Create the exercise in the library
+      const createRes = await fetch('/api/exercises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newExName.trim(), muscleGroups: newExMuscles }),
+      })
+      if (!createRes.ok) {
+        const d = await createRes.json()
+        alert(d.error || 'Failed to create exercise')
+        setSavingNewEx(false)
+        return
+      }
+      const newEx: ExerciseOption = await createRes.json()
+      setAllExercises(prev => [...prev, newEx])
+
+      // Now add it to the template workout
+      await addExercise(workoutId, newEx.id)
+
+      // Reset
+      setNewExName('')
+      setNewExMuscles([])
+      setCreatingExercise(false)
+      setPickerWorkoutId(null)
+    } catch {
+      alert('Network error')
+    } finally {
+      setSavingNewEx(false)
+    }
+  }
+
   async function deleteExercise(workoutId: string, exerciseId: string) {
     await fetch(`/api/coach/templates/${templateId}/workouts/${workoutId}/exercises/${exerciseId}`, { method: 'DELETE' })
     setTemplate(prev => {
@@ -212,7 +257,7 @@ export default function TemplateDetailPage() {
 
   const filteredExercises = allExercises.filter(e =>
     e.name.toLowerCase().includes(exerciseSearch.toLowerCase())
-  ).slice(0, 20)
+  ).slice(0, 25)
 
   if (loading) return <div className="text-center py-20 text-gray-400">Loading…</div>
   if (error || !template) return <div className="text-center py-20 text-red-500">{error || 'Not found'}</div>
@@ -336,8 +381,15 @@ export default function TemplateDetailPage() {
                 className="flex-1 text-sm font-semibold text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-primary-300 rounded px-1"
               />
               <button
-                onClick={() => setPickerWorkoutId(pickerWorkoutId === workout.id ? null : workout.id)}
-                className="text-xs px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition font-medium"
+                onClick={() => {
+                  const next = pickerWorkoutId === workout.id ? null : workout.id
+                  setPickerWorkoutId(next)
+                  setExerciseSearch('')
+                  setCreatingExercise(false)
+                  setNewExName('')
+                  setNewExMuscles([])
+                }}
+                className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-medium"
               >
                 + Add Exercise
               </button>
@@ -355,30 +407,86 @@ export default function TemplateDetailPage() {
             {/* Exercise picker */}
             {pickerWorkoutId === workout.id && (
               <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Search exercises…"
-                  value={exerciseSearch}
-                  onChange={e => setExerciseSearch(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 mb-2"
-                />
-                {exerciseSearch.length > 0 && (
-                  <div className="max-h-48 overflow-y-auto space-y-1">
-                    {filteredExercises.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-2 text-center">No exercises found</p>
-                    ) : filteredExercises.map(ex => (
+                {!creatingExercise ? (
+                  <>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Search exercises…"
+                      value={exerciseSearch}
+                      onChange={e => setExerciseSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 mb-2"
+                    />
+                    <div className="max-h-52 overflow-y-auto space-y-0.5">
+                      {filteredExercises.length === 0 ? (
+                        <p className="text-xs text-gray-400 py-2 text-center">No exercises found</p>
+                      ) : filteredExercises.map(ex => (
+                        <button
+                          key={ex.id}
+                          onClick={() => { addExercise(workout.id, ex.id); setPickerWorkoutId(null); setExerciseSearch('') }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white hover:shadow-sm transition"
+                        >
+                          <span className="font-medium text-gray-800">{ex.name}</span>
+                          {ex.muscleGroups.length > 0 && (
+                            <span className="text-gray-400 text-xs ml-2">{ex.muscleGroups.join(', ')}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => { setCreatingExercise(true); setNewExName(exerciseSearch) }}
+                      className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm text-primary-700 hover:bg-primary-50 transition border border-dashed border-primary-300 font-medium"
+                    >
+                      + Create new exercise{exerciseSearch ? ` "${exerciseSearch}"` : ''}
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">New Exercise</p>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Exercise name"
+                      value={newExName}
+                      onChange={e => setNewExName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                    />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Muscle groups (optional)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {MUSCLE_GROUP_OPTIONS.map(mg => (
+                          <button
+                            key={mg}
+                            type="button"
+                            onClick={() => setNewExMuscles(prev =>
+                              prev.includes(mg) ? prev.filter(m => m !== mg) : [...prev, mg]
+                            )}
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                              newExMuscles.includes(mg)
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                            }`}
+                          >
+                            {mg}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
                       <button
-                        key={ex.id}
-                        onClick={() => { addExercise(workout.id, ex.id); setPickerWorkoutId(null) }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white hover:shadow-sm transition"
+                        onClick={() => createAndAddExercise(workout.id)}
+                        disabled={savingNewEx || !newExName.trim()}
+                        className="flex-1 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition"
                       >
-                        <span className="font-medium text-gray-800">{ex.name}</span>
-                        {ex.muscleGroups.length > 0 && (
-                          <span className="text-gray-400 text-xs ml-2">{ex.muscleGroups.join(', ')}</span>
-                        )}
+                        {savingNewEx ? 'Creating…' : 'Create & Add'}
                       </button>
-                    ))}
+                      <button
+                        onClick={() => { setCreatingExercise(false); setNewExName(''); setNewExMuscles([]) }}
+                        className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition"
+                      >
+                        Back
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
