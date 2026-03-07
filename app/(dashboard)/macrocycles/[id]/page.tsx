@@ -30,6 +30,7 @@ interface Mesocycle {
 
 interface MacrocycleData {
   id: string
+  userId: string
   name: string
   status: string
   startDate: string
@@ -368,8 +369,11 @@ export default function MacrocycleDetailPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/macrocycles" className="text-primary-600 hover:text-primary-700 text-sm">
-          ← Back to Training Blocks
+        <Link
+          href={isViewingAsCoach ? `/coach/clients/${macrocycle.userId}/blocks` : '/macrocycles'}
+          className="text-primary-600 hover:text-primary-700 text-sm"
+        >
+          {isViewingAsCoach ? '← Back to Client Blocks' : '← Back to Training Blocks'}
         </Link>
       </div>
 

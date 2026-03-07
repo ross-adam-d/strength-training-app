@@ -67,7 +67,7 @@ export default async function PhaseTemplatesPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((t) => (
-            <a
+            <Link
               key={t.id}
               href={`/coach/templates/${t.id}`}
               className="bg-white border border-gray-200 rounded-xl p-5 hover:border-primary-400 hover:shadow-sm transition block"
@@ -91,7 +91,7 @@ export default async function PhaseTemplatesPage() {
                 <span>{t.defaultWeeks} weeks</span>
                 <span>{t._count.workouts} workout{t._count.workouts !== 1 ? 's' : ''}</span>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}

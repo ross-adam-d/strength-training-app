@@ -32,8 +32,8 @@ export async function POST(
       _count: { select: { microcycles: true } },
       microcycles: {
         orderBy: { weekNumber: 'asc' },
-        take: 1,
         select: {
+          weekNumber: true,
           workouts: {
             orderBy: { orderIndex: 'asc' },
             select: {
@@ -48,7 +48,9 @@ export async function POST(
                   targetReps: true,
                   targetRpe: true,
                   targetRir: true,
+                  tempo: true,
                   restPeriod: true,
+                  supersetWithPrevious: true,
                   notes: true,
                 },
               },
@@ -63,8 +65,8 @@ export async function POST(
     return NextResponse.json({ error: 'Phase not found' }, { status: 404 })
   }
 
-  const week1 = mesocycle.microcycles[0]
-  if (!week1 || week1.workouts.length === 0) {
+  const hasAnyWorkouts = mesocycle.microcycles.some((mc) => mc.workouts.length > 0)
+  if (!hasAnyWorkouts) {
     return NextResponse.json(
       { error: 'Phase has no workouts to save as template' },
       { status: 400 }
@@ -80,8 +82,18 @@ export async function POST(
       trainingSplit: mesocycle.trainingSplit ?? undefined,
       daysPerWeek: mesocycle.trainingDaysPerWeek ?? undefined,
       defaultWeeks: mesocycle._count.microcycles,
-      workouts: {
-        create: week1.workouts.map((w, i) => ({
+    },
+    select: { id: true, name: true },
+  })
+
+  // Save all weeks' workouts (not just week 1) to preserve progressive structure
+  for (const microcycle of mesocycle.microcycles) {
+    for (let i = 0; i < microcycle.workouts.length; i++) {
+      const w = microcycle.workouts[i]
+      await prisma.coachPhaseTemplateWorkout.create({
+        data: {
+          templateId: template.id,
+          weekNumber: microcycle.weekNumber,
           name: w.name,
           orderIndex: w.orderIndex ?? i,
           exercises: {
@@ -92,15 +104,16 @@ export async function POST(
               targetReps: ex.targetReps ?? undefined,
               targetRpe: ex.targetRpe ?? undefined,
               targetRir: ex.targetRir ?? undefined,
+              tempo: ex.tempo ?? undefined,
               restPeriod: ex.restPeriod ?? undefined,
+              supersetWithPrevious: ex.supersetWithPrevious ?? false,
               notes: ex.notes ?? undefined,
             })),
           },
-        })),
-      },
-    },
-    select: { id: true, name: true },
-  })
+        },
+      })
+    }
+  }
 
   return NextResponse.json(template, { status: 201 })
 }

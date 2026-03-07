@@ -106,9 +106,9 @@ export default async function ClientOverviewPage({
         {activeBlock ? (
           <div>
             <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="min-w-0">
+              <Link href={`/macrocycles/${activeBlock.id}`} className="min-w-0 flex-1 group">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-gray-900">{activeBlock.name}</p>
+                  <p className="font-semibold text-gray-900 group-hover:text-primary-600 transition">{activeBlock.name}</p>
                   {activeBlock.createdByCoachId === session.user.id && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700 flex-shrink-0">
                       Created by you
@@ -120,7 +120,7 @@ export default async function ClientOverviewPage({
                   {' – '}
                   {new Date(activeBlock.endDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
-              </div>
+              </Link>
               <Link
                 href={`/coach/clients/${clientId}/blocks`}
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium flex-shrink-0"
@@ -131,7 +131,7 @@ export default async function ClientOverviewPage({
             {activeBlock.mesocycles.length > 0 && (
               <div className="space-y-1.5">
                 {activeBlock.mesocycles.map((meso) => (
-                  <div key={meso.id} className="flex items-center gap-2 text-sm min-w-0">
+                  <Link key={meso.id} href={`/mesocycles/${meso.id}`} className="flex items-center gap-2 text-sm min-w-0 hover:bg-gray-50 rounded-lg -mx-1 px-1 py-0.5 transition">
                     <span
                       className={`w-2 h-2 rounded-full flex-shrink-0 ${
                         meso.status === 'active'
@@ -153,7 +153,7 @@ export default async function ClientOverviewPage({
                     >
                       {meso.status}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

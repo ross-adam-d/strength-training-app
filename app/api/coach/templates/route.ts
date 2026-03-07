@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       const names = getWorkoutNamesForSplit(data.trainingSplit, data.daysPerWeek)
       for (let i = 0; i < names.length; i++) {
         await prisma.coachPhaseTemplateWorkout.create({
-          data: { templateId: template.id, name: names[i], orderIndex: i },
+          data: { templateId: template.id, weekNumber: 1, name: names[i], orderIndex: i },
         })
       }
     }

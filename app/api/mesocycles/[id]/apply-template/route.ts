@@ -30,6 +30,7 @@ export async function POST(
       workouts: {
         orderBy: { orderIndex: 'asc' },
         select: {
+          weekNumber: true,
           name: true,
           orderIndex: true,
           exercises: {
@@ -41,7 +42,9 @@ export async function POST(
               targetReps: true,
               targetRpe: true,
               targetRir: true,
+              tempo: true,
               restPeriod: true,
+              supersetWithPrevious: true,
               notes: true,
             },
           },
@@ -79,9 +82,19 @@ export async function POST(
   const microcycleIds = mesocycle.microcycles.map((m) => m.id)
   await prisma.workout.deleteMany({ where: { microcycleId: { in: microcycleIds } } })
 
+  // Group template workouts by weekNumber for week-specific application
+  const workoutsByWeek = new Map<number, typeof template.workouts>()
+  for (const w of template.workouts) {
+    const wn = w.weekNumber ?? 1
+    if (!workoutsByWeek.has(wn)) workoutsByWeek.set(wn, [])
+    workoutsByWeek.get(wn)!.push(w)
+  }
+  const fallbackWorkouts = workoutsByWeek.get(1) ?? template.workouts
+
   // Clone template workouts into each microcycle sequentially (PgBouncer safe)
   for (const microcycle of mesocycle.microcycles) {
-    for (const tWorkout of template.workouts) {
+    const weekWorkouts = workoutsByWeek.get(microcycle.weekNumber) ?? fallbackWorkouts
+    for (const tWorkout of weekWorkouts) {
       await prisma.workout.create({
         data: {
           name: tWorkout.name,
@@ -97,7 +110,9 @@ export async function POST(
               targetReps: tex.targetReps ?? undefined,
               targetRpe: tex.targetRpe ?? undefined,
               targetRir: tex.targetRir ?? undefined,
+              tempo: tex.tempo ?? undefined,
               restPeriod: tex.restPeriod ?? undefined,
+              supersetWithPrevious: tex.supersetWithPrevious ?? false,
               notes: tex.notes ?? undefined,
             })),
           },

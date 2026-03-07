@@ -38,6 +38,7 @@ export async function GET(
       where: whereId,
       select: {
         id: true,
+        userId: true,
         name: true,
         status: true,
         startDate: true,

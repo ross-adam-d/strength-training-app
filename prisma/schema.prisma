@@ -319,10 +319,12 @@ model CoachProfile {
   id         String   @id @default(cuid())
   userId     String   @unique
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  maxClients Int      @default(5)
-  bio        String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  maxClients   Int      @default(5)
+  bio          String?
+  contactPhone String?
+  officeHours  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("coach_profiles")
 }
@@ -394,6 +396,7 @@ model CoachPhaseTemplateWorkout {
   id          String             @id @default(cuid())
   templateId  String
   template    CoachPhaseTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  weekNumber  Int                @default(1)
   name        String
   orderIndex  Int                @default(0)
   dayOfWeek   Int?

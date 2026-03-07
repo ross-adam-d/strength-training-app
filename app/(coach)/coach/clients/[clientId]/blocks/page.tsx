@@ -49,12 +49,12 @@ export default function ClientBlocksPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{macrocycles.length} block{macrocycles.length !== 1 ? 's' : ''}</p>
-        <a
+        <Link
           href={`/coach/clients/${clientId}/blocks/new`}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition"
         >
           + Create Block
-        </a>
+        </Link>
       </div>
 
       {macrocycles.length === 0 ? (

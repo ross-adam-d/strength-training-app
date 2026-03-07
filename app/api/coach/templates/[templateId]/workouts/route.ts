@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 const createSchema = z.object({
   name: z.string().min(1),
+  weekNumber: z.number().int().min(1).default(1),
   orderIndex: z.number().int().default(0),
   dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
   warmupNotes: z.string().nullable().optional(),
@@ -39,6 +40,7 @@ export async function POST(
     const workout = await prisma.coachPhaseTemplateWorkout.create({
       data: {
         templateId,
+        weekNumber: data.weekNumber ?? 1,
         name: data.name,
         orderIndex: data.orderIndex ?? count,
         dayOfWeek: data.dayOfWeek ?? null,
