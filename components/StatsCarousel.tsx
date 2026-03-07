@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export type StatView = {
   title: string
@@ -12,7 +12,7 @@ export type StatView = {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 text-center">
+    <div className="bg-white rounded-lg shadow-md p-4 flex flex-col items-center justify-center text-center">
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm font-medium text-gray-700 mt-1">{label}</p>
       <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
@@ -22,11 +22,24 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
 
 export function StatsCarousel({ views }: { views: StatView[] }) {
   const [idx, setIdx] = useState(0)
+  const touchStartX = useRef<number | null>(null)
   const view = views[idx]
 
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.targetTouches[0].clientX
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return
+    const dist = touchStartX.current - e.changedTouches[0].clientX
+    if (dist > 50) setIdx((i) => Math.min(views.length - 1, i + 1))
+    if (dist < -50) setIdx((i) => Math.max(0, i - 1))
+    touchStartX.current = null
+  }
+
   return (
-    <div>
-      <div className="flex gap-1.5 mb-3">
+    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="flex justify-center gap-1.5 mb-3">
         {views.map((v, i) => (
           <button
             key={i}

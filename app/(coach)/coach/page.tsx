@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { PendingInvitesList } from '@/components/PendingInviteCard'
 
 const FOCUS_COLOURS: Record<string, string> = {
   hypertrophy: 'bg-blue-100 text-blue-700',
@@ -137,19 +138,13 @@ export default async function CoachDashboardPage() {
                 </div>
               )
             })}
-            {pendingInvites.map((inv) => (
-              <div key={inv.id} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between gap-4 opacity-60">
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{inv.email}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Expires {new Date(inv.expiresAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-                <span className="flex-shrink-0 px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
-                  Invite pending
-                </span>
-              </div>
-            ))}
+            <PendingInvitesList
+              invites={pendingInvites.map((inv) => ({
+                id: inv.id,
+                email: inv.email,
+                expiresAt: inv.expiresAt.toISOString(),
+              }))}
+            />
           </div>
         )}
       </section>
