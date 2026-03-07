@@ -71,7 +71,13 @@ function RegisterForm() {
         return
       }
 
-      // Auto sign in after registration
+      if (!data.inviteAccepted) {
+        // Regular registration — email verification required before sign-in
+        window.location.assign('/verify-email?email=' + encodeURIComponent(email))
+        return
+      }
+
+      // Invite registration — email auto-verified, sign in immediately
       const result = await signIn('credentials', {
         email,
         password,
@@ -79,11 +85,9 @@ function RegisterForm() {
       })
 
       if (result?.ok) {
-        // Invite was accepted during registration — go straight to My Coach
-        window.location.assign(data.inviteAccepted ? '/my-coach' : '/dashboard')
+        window.location.assign('/my-coach')
       } else {
-        // Sign-in failed unexpectedly — fall back to login page
-        window.location.assign(inviteToken ? `/login?registered=true&invite=${inviteToken}` : '/login?registered=true')
+        window.location.assign(`/login?registered=true&invite=${inviteToken}`)
       }
     } catch {
       setError('An error occurred. Please try again.')

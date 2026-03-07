@@ -4,21 +4,37 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  let user: { id: string; email: string; name: string | null; emailVerified: Date | null } | null = null
 
-  if (session.user.emailVerified) {
-    return NextResponse.json({ error: 'Email is already verified' }, { status: 400 })
+  if (session?.user?.id) {
+    // Authenticated path
+    if (session.user.emailVerified) {
+      return NextResponse.json({ error: 'Email is already verified' }, { status: 400 })
+    }
+    user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, name: true, emailVerified: true },
+    })
+  } else {
+    // Unauthenticated path — accept email in body (post-registration flow)
+    let email: string | undefined
+    try {
+      const body = await request.json()
+      email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : undefined
+    } catch {
+      // no body
+    }
+    if (!email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true, emailVerified: true },
+    })
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, name: true, emailVerified: true },
-  })
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })

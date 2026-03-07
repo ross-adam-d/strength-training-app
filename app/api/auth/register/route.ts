@@ -102,7 +102,9 @@ export async function POST(request: Request) {
         data: { userId: user.id, expiresAt },
       })
       const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken.token}`
-      sendVerificationEmail({ toEmail: user.email, name, verifyUrl }).catch(() => {})
+      sendVerificationEmail({ toEmail: user.email, name, verifyUrl }).catch((err) =>
+        console.error('Failed to send verification email:', err)
+      )
     }
 
     return NextResponse.json(
