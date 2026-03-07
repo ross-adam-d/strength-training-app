@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation'
 function LoginContent() {
   const searchParams = useSearchParams()
   const verified = searchParams.get('verified') === 'true'
+  const passwordReset = searchParams.get('reset') === 'true'
   const wrongAccount = searchParams.get('reason') === 'wrong_account'
   const callbackUrl = searchParams.get('callbackUrl')
 
@@ -59,6 +60,11 @@ function LoginContent() {
               Email verified — please sign in.
             </div>
           )}
+          {passwordReset && (
+            <div className="p-3 bg-green-950 border border-green-800 text-green-300 rounded-md text-sm">
+              Password updated — please sign in with your new password.
+            </div>
+          )}
           {wrongAccount && (
             <div className="p-3 bg-amber-950 border border-amber-800 text-amber-300 rounded-md text-sm">
               Please sign in with the account you used to subscribe.
@@ -98,6 +104,12 @@ function LoginContent() {
               className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
               placeholder="••••••••"
             />
+          </div>
+
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-400 transition">
+              Forgot password?
+            </Link>
           </div>
 
           <button

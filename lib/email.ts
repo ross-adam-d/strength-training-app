@@ -37,6 +37,40 @@ export async function sendVerificationEmail({
   })
 }
 
+export async function sendPasswordResetEmail({
+  toEmail,
+  name,
+  resetUrl,
+}: {
+  toEmail: string
+  name?: string | null
+  resetUrl: string
+}) {
+  await getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? 'noreply@pbx.app',
+    to: toEmail,
+    subject: 'Reset your password — pbX',
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="color: #FF8000; margin-bottom: 8px;">Reset your password</h2>
+        <p style="color: #374151; margin-bottom: 24px;">
+          ${name ? `Hi ${name}, we` : 'We'} received a request to reset your pbX password.
+          Click the button below to choose a new password.
+        </p>
+        <a
+          href="${resetUrl}"
+          style="display: inline-block; background: #FF8000; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;"
+        >
+          Reset password
+        </a>
+        <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">
+          This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email — your password won't change.
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendCoachInvite({
   toEmail,
   coachName,
