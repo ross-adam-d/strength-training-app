@@ -7,10 +7,12 @@ import { z } from 'zod'
 const createSchema = z.object({
   exerciseId: z.string().min(1),
   targetSets: z.number().int().min(1).default(3),
-  targetReps: z.string().optional(),
+  targetReps: z.string().nullable().optional(),
   targetRpe: z.number().min(1).max(10).nullable().optional(),
   targetRir: z.number().int().min(0).max(5).nullable().optional(),
+  tempo: z.string().nullable().optional(),
   restPeriod: z.number().int().min(0).nullable().optional(),
+  supersetWithPrevious: z.boolean().optional(),
   notes: z.string().nullable().optional(),
 })
 
@@ -47,7 +49,9 @@ export async function POST(
         targetReps: data.targetReps ?? null,
         targetRpe: data.targetRpe ?? null,
         targetRir: data.targetRir ?? null,
+        tempo: data.tempo ?? null,
         restPeriod: data.restPeriod ?? null,
+        supersetWithPrevious: data.supersetWithPrevious ?? false,
         notes: data.notes ?? null,
       },
       include: {

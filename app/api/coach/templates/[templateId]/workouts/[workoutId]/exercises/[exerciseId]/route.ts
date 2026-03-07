@@ -12,11 +12,14 @@ async function verifyExerciseOwnership(coachId: string, exerciseId: string) {
 }
 
 const patchSchema = z.object({
+  exerciseId: z.string().optional(),
   targetSets: z.number().int().min(1).optional(),
   targetReps: z.string().nullable().optional(),
   targetRpe: z.number().min(1).max(10).nullable().optional(),
   targetRir: z.number().int().min(0).max(5).nullable().optional(),
+  tempo: z.string().nullable().optional(),
   restPeriod: z.number().int().min(0).nullable().optional(),
+  supersetWithPrevious: z.boolean().optional(),
   notes: z.string().nullable().optional(),
   orderIndex: z.number().int().optional(),
 })

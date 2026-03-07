@@ -418,7 +418,9 @@ model CoachPhaseTemplateExercise {
   targetReps  String?
   targetRpe   Float?
   targetRir   Int?
+  tempo       String?
   restPeriod  Int?
+  supersetWithPrevious Boolean          @default(false)
   notes       String?
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
