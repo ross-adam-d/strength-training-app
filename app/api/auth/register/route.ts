@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       const verificationToken = await prisma.emailVerificationToken.create({
         data: { userId: user.id, expiresAt },
       })
-      const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken.token}`
+      const verifyUrl = `${(process.env.NEXTAUTH_URL ?? '').trim()}/api/auth/verify-email?token=${verificationToken.token}`
       sendVerificationEmail({ toEmail: user.email, name, verifyUrl }).catch((err) =>
         console.error('Failed to send verification email:', err)
       )

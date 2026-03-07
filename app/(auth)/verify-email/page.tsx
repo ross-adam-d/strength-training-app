@@ -43,7 +43,7 @@ function VerifyEmailContent() {
     setResendError('')
     setResendSuccess(false)
 
-    const displayEmail = session?.user?.email ?? emailParam ?? undefined
+    const displayEmail = emailParam ?? session?.user?.email ?? undefined
 
     try {
       const res = await fetch('/api/auth/resend-verification', {
@@ -123,7 +123,7 @@ function VerifyEmailContent() {
           <h1 className="text-2xl font-bold text-white mb-2">Check your inbox</h1>
           <p className="text-gray-400 text-sm">
             We sent a verification link to{' '}
-            <span className="text-white font-medium">{session?.user?.email ?? emailParam ?? 'your email'}</span>.
+            <span className="text-white font-medium">{emailParam ?? session?.user?.email ?? 'your email'}</span>.
             Click the link to activate your account.
           </p>
         </div>
