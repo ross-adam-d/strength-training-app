@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const resetToken = await prisma.passwordResetToken.findUnique({
       where: { token },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, emailVerified: true } } },
     })
 
     if (!resetToken) {
@@ -32,14 +32,20 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(password, 12)
 
+    const now = new Date()
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: resetToken.userId },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          // If email wasn't verified yet, completing a password reset proves ownership
+          emailVerified: resetToken.user.emailVerified ?? now,
+        },
       }),
       prisma.passwordResetToken.update({
         where: { token },
-        data: { usedAt: new Date() },
+        data: { usedAt: now },
       }),
     ])
 
