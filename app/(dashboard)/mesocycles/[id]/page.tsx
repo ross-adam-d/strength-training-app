@@ -430,10 +430,27 @@ export default function MesocycleDetailPage() {
           </button>
         </div>
 
-        {/* Swipe Hint */}
-        <p className="text-center text-xs text-gray-500 mt-2">
-          Swipe left/right to navigate weeks
-        </p>
+        {/* Week dots */}
+        <div className="flex justify-center gap-1.5 mt-3">
+          {mesocycle.microcycles.map((micro, index) => {
+            const allDone = micro.workouts.length > 0 && micro.workouts.every(w => w.workoutLogs.length > 0)
+            return (
+              <button
+                key={micro.id}
+                onClick={() => setCurrentWeekIndex(index)}
+                className={`w-6 h-6 rounded-full text-xs font-medium transition ${
+                  index === currentWeekIndex
+                    ? 'bg-primary-600 text-white'
+                    : allDone
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                }`}
+              >
+                {micro.weekNumber}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Compact Workout Grid */}
@@ -538,24 +555,6 @@ export default function MesocycleDetailPage() {
         </div>
       </div>
 
-      {/* Week Progress Indicator */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 pb-4">
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-2">
-          <div className="flex items-center justify-center gap-1.5">
-            {mesocycle.microcycles.map((_, index) => (
-              <div
-                key={index}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  index === currentWeekIndex ? 'bg-primary-600' : 'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
-          <p className="text-center text-xs text-gray-600 mt-1.5">
-            Week {currentWeekIndex + 1} of {mesocycle.microcycles.length}
-          </p>
-        </div>
-      </div>
     </div>
   )
 }

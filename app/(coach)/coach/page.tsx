@@ -205,17 +205,9 @@ export default async function CoachDashboardPage() {
             <h2 className="text-xl font-bold text-gray-900">Phase Templates</h2>
             <p className="text-sm text-gray-500 mt-0.5">Reusable workout structures</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/coach/templates" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              View all →
-            </Link>
-            <Link
-              href="/coach/templates/new"
-              className="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition"
-            >
-              + New
-            </Link>
-          </div>
+          <Link href="/coach/templates" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            View all →
+          </Link>
         </div>
 
         {templates.length === 0 ? (
@@ -230,6 +222,12 @@ export default async function CoachDashboardPage() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-3">
+            <Link
+              href="/coach/templates/new"
+              className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-primary-400 hover:text-primary-600 transition flex items-center justify-center text-sm font-medium text-gray-400 min-h-[80px]"
+            >
+              + New Template
+            </Link>
             {templates.map((t) => (
               <Link
                 key={t.id}

@@ -94,19 +94,22 @@ export async function POST(
   }
 
   // Accept: create relationship and mark invite consumed
-  await prisma.$transaction([
-    prisma.coachInvite.update({
-      where: { token },
-      data: { acceptedAt: new Date() },
-    }),
-    prisma.coachClientRelationship.create({
-      data: {
-        coachId: invite.coachId,
-        clientId: session.user.id,
-        status: 'ACTIVE',
-      },
-    }),
-  ])
+  try {
+    await prisma.$transaction([
+      prisma.coachInvite.update({
+        where: { token },
+        data: { acceptedAt: new Date() },
+      }),
+      prisma.coachClientRelationship.upsert({
+        where: { coachId_clientId: { coachId: invite.coachId, clientId: session.user.id } },
+        create: { coachId: invite.coachId, clientId: session.user.id, status: 'ACTIVE' },
+        update: { status: 'ACTIVE' },
+      }),
+    ])
+  } catch (err) {
+    console.error('Failed to accept invite:', err)
+    return NextResponse.json({ error: 'Failed to accept invite. Please try again.' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true, action: 'accepted' })
 }
