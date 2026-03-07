@@ -11,6 +11,31 @@ async function verifyWorkoutOwnership(coachId: string, templateId: string, worko
   return !!workout
 }
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ templateId: string; workoutId: string }> }
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id || session.user.role !== 'COACH') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  const { templateId, workoutId } = await params
+  const workout = await prisma.coachPhaseTemplateWorkout.findFirst({
+    where: { id: workoutId, templateId, template: { coachId: session.user.id } },
+    include: {
+      template: { select: { id: true, name: true } },
+      exercises: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          exercise: { select: { id: true, name: true, muscleGroups: true } },
+        },
+      },
+    },
+  })
+  if (!workout) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(workout)
+}
+
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   orderIndex: z.number().int().optional(),

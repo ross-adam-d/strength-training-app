@@ -4,6 +4,32 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+const SPLIT_WORKOUT_TYPES: Record<string, string[]> = {
+  'Full Body':      ['Full Body'],
+  'Upper/Lower':    ['Upper', 'Lower'],
+  'Push/Pull':      ['Push', 'Pull'],
+  'Push/Pull/Legs': ['Push', 'Pull', 'Legs'],
+  'Bro Split':      ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],
+  'Olympic Lifts':  ['Olympic A', 'Olympic B'],
+  'Custom':         ['Workout'],
+}
+
+function getWorkoutNamesForSplit(split: string, days: number): string[] {
+  const types = SPLIT_WORKOUT_TYPES[split] || ['Workout']
+  const raw: string[] = []
+  for (let i = 0; i < days; i++) raw.push(types[i % types.length])
+  const counts: Record<string, number> = {}
+  for (const t of raw) counts[t] = (counts[t] || 0) + 1
+  const indices: Record<string, number> = {}
+  return raw.map(t => {
+    if (counts[t] > 1 && !/\s[A-Z]$/.test(t)) {
+      indices[t] = (indices[t] || 0) + 1
+      return `${t} ${String.fromCharCode(64 + indices[t])}`
+    }
+    return t
+  })
+}
+
 const createSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -64,6 +90,16 @@ export async function POST(request: Request) {
         warmupNotes: data.warmupNotes,
       },
     })
+
+    // Auto-create workout shells based on split + days
+    if (data.trainingSplit && data.daysPerWeek) {
+      const names = getWorkoutNamesForSplit(data.trainingSplit, data.daysPerWeek)
+      for (let i = 0; i < names.length; i++) {
+        await prisma.coachPhaseTemplateWorkout.create({
+          data: { templateId: template.id, name: names[i], orderIndex: i },
+        })
+      }
+    }
 
     return NextResponse.json({ id: template.id }, { status: 201 })
   } catch (error) {
