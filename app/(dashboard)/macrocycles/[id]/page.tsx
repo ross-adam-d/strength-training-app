@@ -73,6 +73,25 @@ export default function MacrocycleDetailPage() {
   const [updatingStructure, setUpdatingStructure] = useState<string | null>(null)
   const [rebuildModal, setRebuildModal] = useState<Mesocycle | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [savedTemplates, setSavedTemplates] = useState<Record<string, { templateId: string; name: string } | 'saving' | 'error'>>({})
+
+  async function handleSaveAsTemplate(phaseId: string) {
+    setSavedTemplates((prev) => ({ ...prev, [phaseId]: 'saving' }))
+    try {
+      const res = await fetch(`/api/mesocycles/${phaseId}/save-as-template`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setSavedTemplates((prev) => ({ ...prev, [phaseId]: { templateId: data.id, name: data.name } }))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to save template')
+        setSavedTemplates((prev) => ({ ...prev, [phaseId]: 'error' }))
+      }
+    } catch {
+      alert('Network error')
+      setSavedTemplates((prev) => ({ ...prev, [phaseId]: 'error' }))
+    }
+  }
 
   // Refs for batching phase config saves
   const pendingPhaseUpdates = useRef<Map<string, Record<string, unknown>>>(new Map())
@@ -612,6 +631,31 @@ export default function MacrocycleDetailPage() {
                       >
                         View Phase Details →
                       </Link>
+
+                      {/* Save as Template — coach only, when phase has workouts */}
+                      {authSession?.user?.role === 'COACH' && phase.microcycles.some((mc) => mc.workouts.length > 0) && (() => {
+                        const ts = savedTemplates[phase.id]
+                        if (ts && ts !== 'saving' && ts !== 'error') {
+                          return (
+                            <p className="text-center text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg py-2">
+                              Saved as &ldquo;{ts.name}&rdquo;{' '}
+                              <a href={`/coach/templates/${ts.templateId}`} className="underline font-medium">
+                                View template →
+                              </a>
+                            </p>
+                          )
+                        }
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveAsTemplate(phase.id)}
+                            disabled={ts === 'saving'}
+                            className="block w-full text-center text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg py-2 transition disabled:opacity-50"
+                          >
+                            {ts === 'saving' ? 'Saving…' : '📋 Save Phase as Template'}
+                          </button>
+                        )
+                      })()}
                     </div>
                   )}
                 </CardBody>

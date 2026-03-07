@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,11 +37,14 @@ interface Mesocycle {
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+type PhaseTemplate = { id: string; name: string; focus: string | null; daysPerWeek: number | null; defaultWeeks: number; _count: { workouts: number } }
+
 export default function MesocycleDetailPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const weekParam = searchParams.get('week')
+  const { data: authSession } = useSession()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
@@ -49,9 +53,49 @@ export default function MesocycleDetailPage() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [inProgressWorkouts, setInProgressWorkouts] = useState<Set<string>>(new Set())
   const [generatingWorkouts, setGeneratingWorkouts] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [templates, setTemplates] = useState<PhaseTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
+
+  async function openTemplatePicker() {
+    setShowTemplatePicker(true)
+    if (templates.length > 0) return
+    setLoadingTemplates(true)
+    try {
+      const res = await fetch('/api/coach/templates')
+      if (res.ok) {
+        const data = await res.json()
+        setTemplates(data)
+      }
+    } finally {
+      setLoadingTemplates(false)
+    }
+  }
+
+  async function applyTemplate(templateId: string) {
+    setApplyingTemplate(true)
+    try {
+      const res = await fetch(`/api/mesocycles/${params.id}/apply-template`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to apply template')
+        setApplyingTemplate(false)
+      }
+    } catch {
+      alert('Network error')
+      setApplyingTemplate(false)
+    }
+  }
 
   async function generateWorkouts(mode: 'default' | 'manual') {
     setGeneratingWorkouts(true)
@@ -230,6 +274,65 @@ export default function MesocycleDetailPage() {
                   <p className="text-sm text-gray-600 -mt-2">
                     Create empty workout slots and add exercises yourself
                   </p>
+
+                  {authSession?.user?.role === 'COACH' && (
+                    <>
+                      <Button
+                        onClick={openTemplatePicker}
+                        disabled={generatingWorkouts || applyingTemplate}
+                        variant="secondary"
+                        className="w-full py-4 text-lg"
+                        size="lg"
+                      >
+                        📋 Use Phase Template
+                      </Button>
+                      <p className="text-sm text-gray-600 -mt-2">
+                        Apply one of your saved phase templates to this block
+                      </p>
+
+                      {showTemplatePicker && (
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm text-left">
+                          <div className="flex items-center justify-between px-4 py-3 border-b">
+                            <p className="font-semibold text-gray-900 text-sm">Select a template</p>
+                            <button
+                              onClick={() => setShowTemplatePicker(false)}
+                              className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          {loadingTemplates ? (
+                            <p className="text-sm text-gray-400 text-center py-6">Loading templates…</p>
+                          ) : templates.length === 0 ? (
+                            <div className="text-center py-6">
+                              <p className="text-sm text-gray-500 mb-2">No templates yet.</p>
+                              <Link href="/coach/templates/new" className="text-sm text-primary-600 underline">
+                                Create your first template →
+                              </Link>
+                            </div>
+                          ) : (
+                            <div className="divide-y max-h-64 overflow-y-auto">
+                              {templates.map((t) => (
+                                <button
+                                  key={t.id}
+                                  onClick={() => applyTemplate(t.id)}
+                                  disabled={applyingTemplate}
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                  <p className="font-medium text-gray-900 text-sm">{t.name}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {t._count.workouts} workout{t._count.workouts !== 1 ? 's' : ''}
+                                    {t.daysPerWeek ? ` · ${t.daysPerWeek} days/week` : ''}
+                                    {' · '}{t.defaultWeeks} weeks
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </CardBody>
