@@ -67,6 +67,7 @@ model User {
   coachCreatedMacrocycles Macrocycle[] @relation("CoachCreatedBlocks")
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
+  phaseTemplates          CoachPhaseTemplate[]
 
   @@map("users")
 }
@@ -126,8 +127,9 @@ model Exercise {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  workoutExercises  WorkoutExercise[]
-  exerciseLogs      ExerciseLog[]
+  workoutExercises        WorkoutExercise[]
+  exerciseLogs            ExerciseLog[]
+  phaseTemplateExercises  CoachPhaseTemplateExercise[]
 
   @@map("exercises")
   @@index([createdById])
@@ -365,6 +367,64 @@ model CoachMessage {
   createdAt      DateTime                @default(now())
 
   @@map("coach_messages")
+}
+
+model CoachPhaseTemplate {
+  id            String   @id @default(cuid())
+  coachId       String
+  coach         User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  focus         String?  // hypertrophy, strength, power, endurance, deload
+  goal          String?
+  trainingSplit String?
+  daysPerWeek   Int?
+  defaultWeeks  Int      @default(4)
+  warmupNotes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workouts      CoachPhaseTemplateWorkout[]
+
+  @@map("coach_phase_templates")
+  @@index([coachId])
+}
+
+model CoachPhaseTemplateWorkout {
+  id          String             @id @default(cuid())
+  templateId  String
+  template    CoachPhaseTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name        String
+  orderIndex  Int                @default(0)
+  dayOfWeek   Int?
+  warmupNotes String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  exercises   CoachPhaseTemplateExercise[]
+
+  @@map("coach_phase_template_workouts")
+  @@index([templateId])
+}
+
+model CoachPhaseTemplateExercise {
+  id          String                    @id @default(cuid())
+  workoutId   String
+  workout     CoachPhaseTemplateWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise                  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  orderIndex  Int                       @default(0)
+  targetSets  Int                       @default(3)
+  targetReps  String?
+  targetRpe   Float?
+  targetRir   Int?
+  restPeriod  Int?
+  notes       String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@map("coach_phase_template_exercises")
+  @@index([workoutId])
 }
 
 model PasswordResetToken {
