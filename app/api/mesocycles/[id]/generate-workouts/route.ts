@@ -96,14 +96,6 @@ export async function POST(
     const availableEquipment: string[] = mesocycle.macrocycle?.availableEquipment ?? []
     const goal = mesocycle.goal ?? null
 
-    // If regenerating, delete all existing workouts across all microcycles first
-    if (regenerate) {
-      const microcycleIds = mesocycle.microcycles.map((m) => m.id)
-      await prisma.workout.deleteMany({
-        where: { microcycleId: { in: microcycleIds } },
-      })
-    }
-
     // ── Repeat Previous Phase ────────────────────────────────────────────
     if (mode === 'repeat-previous') {
       const macrocycleId = mesocycle.macrocycle!.id
@@ -164,50 +156,66 @@ export async function POST(
         )
       }
 
-      // Clone workouts into each destination microcycle sequentially
-      for (const microcycle of mesocycle.microcycles) {
-        for (const sourceWorkout of sourceWeek1.workouts) {
-          await prisma.workout.create({
-            data: {
-              name: sourceWorkout.name,
-              dayOfWeek: sourceWorkout.dayOfWeek,
-              estimatedDuration: sourceWorkout.estimatedDuration,
-              warmupNotes: sourceWorkout.warmupNotes,
-              orderIndex: sourceWorkout.orderIndex,
-              microcycleId: microcycle.id,
-              workoutExercises: {
-                create: sourceWorkout.workoutExercises.map((we) => ({
-                  exerciseId: we.exerciseId,
-                  orderIndex: we.orderIndex,
-                  targetSets: microcycle.isRecovery
-                    ? Math.max(1, Math.floor(we.targetSets * 0.6))
-                    : we.targetSets,
-                  targetReps: we.targetReps,
-                  targetRpe: we.targetRpe,
-                  targetRir: we.targetRir,
-                  tempo: we.tempo,
-                  restPeriod: we.restPeriod,
-                  supersetWithPrevious: we.supersetWithPrevious,
-                  notes: we.notes,
-                })),
-              },
-            },
-          })
-        }
-      }
+      const microcycleIds = mesocycle.microcycles.map((m) => m.id)
 
-      // Sync destination phase split/days to match source (goal intentionally not copied)
-      await prisma.mesocycle.update({
-        where: { id },
-        data: {
-          trainingDaysPerWeek: sourcePhase.trainingDaysPerWeek,
-          trainingSplit: sourcePhase.trainingSplit,
-        },
+      // Delete + clone + update are atomic: partial failure leaves no orphaned workouts
+      await prisma.$transaction(async (tx) => {
+        if (regenerate) {
+          await tx.workout.deleteMany({ where: { microcycleId: { in: microcycleIds } } })
+        }
+
+        for (const microcycle of mesocycle.microcycles) {
+          for (const sourceWorkout of sourceWeek1.workouts) {
+            await tx.workout.create({
+              data: {
+                name: sourceWorkout.name,
+                dayOfWeek: sourceWorkout.dayOfWeek,
+                estimatedDuration: sourceWorkout.estimatedDuration,
+                warmupNotes: sourceWorkout.warmupNotes,
+                orderIndex: sourceWorkout.orderIndex,
+                microcycleId: microcycle.id,
+                workoutExercises: {
+                  create: sourceWorkout.workoutExercises.map((we) => ({
+                    exerciseId: we.exerciseId,
+                    orderIndex: we.orderIndex,
+                    targetSets: microcycle.isRecovery
+                      ? Math.max(1, Math.floor(we.targetSets * 0.6))
+                      : we.targetSets,
+                    targetReps: we.targetReps,
+                    targetRpe: we.targetRpe,
+                    targetRir: we.targetRir,
+                    tempo: we.tempo,
+                    restPeriod: we.restPeriod,
+                    supersetWithPrevious: we.supersetWithPrevious,
+                    notes: we.notes,
+                  })),
+                },
+              },
+            })
+          }
+        }
+
+        // Sync destination phase split/days to match source (goal intentionally not copied)
+        await tx.mesocycle.update({
+          where: { id },
+          data: {
+            trainingDaysPerWeek: sourcePhase.trainingDaysPerWeek,
+            trainingSplit: sourcePhase.trainingSplit,
+          },
+        })
       })
 
       return NextResponse.json({ success: true })
     }
     // ─────────────────────────────────────────────────────────────────────
+
+    // If regenerating, delete all existing workouts across all microcycles first
+    if (regenerate) {
+      const microcycleIds = mesocycle.microcycles.map((m) => m.id)
+      await prisma.workout.deleteMany({
+        where: { microcycleId: { in: microcycleIds } },
+      })
+    }
 
     // Get workout types based on split
     const workoutTypeNames = getSplitWorkoutTypes(mesocycle.trainingSplit!)

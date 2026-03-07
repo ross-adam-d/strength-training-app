@@ -1,4 +1,5 @@
 import { getUserSubscriptionStatus } from '@/lib/subscription'
+import type { SubscriptionStatus } from '@/types/next-auth'
 
 export async function SubscriptionBanner({
   userId,
@@ -6,7 +7,7 @@ export async function SubscriptionBanner({
   trialEndsAt,
 }: {
   userId: string
-  subscriptionStatus?: string | null
+  subscriptionStatus?: SubscriptionStatus | null
   trialEndsAt?: string | null
 }) {
   if (!userId) return null

@@ -93,10 +93,10 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.subscriptionStatus = (user as any).subscriptionStatus
-        token.tier = (user as any).tier
-        token.trialEndsAt = (user as any).trialEndsAt
-        token.manualAccessGrantedUntil = (user as any).manualAccessGrantedUntil
+        token.subscriptionStatus = user.subscriptionStatus
+        token.tier = user.tier
+        token.trialEndsAt = user.trialEndsAt
+        token.manualAccessGrantedUntil = user.manualAccessGrantedUntil
       }
       return token
     },
