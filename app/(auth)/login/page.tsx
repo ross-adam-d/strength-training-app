@@ -119,6 +119,9 @@ function LoginContent() {
           <Link href="/" className="block text-sm text-gray-600 hover:text-gray-400 transition">
             ← Back to home
           </Link>
+          <Link href="/privacy" className="block text-sm text-gray-600 hover:text-gray-400 transition">
+            Privacy Policy
+          </Link>
         </div>
       </div>
     </div>

@@ -276,6 +276,7 @@ export default function Home() {
           <div className="flex gap-6 text-sm">
             <Link href="/login" className="hover:text-white transition">Log in</Link>
             <Link href="/register" className="hover:text-white transition">Register</Link>
+            <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
           </div>
           <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} pbX. All rights reserved.</p>
         </div>
