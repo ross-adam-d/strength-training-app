@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-07c'
+export const CURRENT_RELEASE_ID = '2026-03-07d'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,14 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-07d',
+    date: 'March 7, 2026',
+    title: 'Coach Template Workout Builder',
+    changes: [
+      'Coach template workout editor now matches the full user workout builder — drag-and-drop exercise reordering, full exercise form with sets, reps, RIR, rest, tempo, notes, and superset grouping',
+    ],
+  },
   {
     id: '2026-03-07c',
     date: 'March 7, 2026',
