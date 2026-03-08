@@ -70,13 +70,14 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
   useEffect(() => {
     let cancelled = false
     setLoadingMuscle(true)
-    fetch(`/api/progress/muscle-volume?period=${timePeriod}`)
+    // Always use current phase for weak point analysis — cross-phase data is misleading here
+    fetch('/api/progress/muscle-volume?period=phase')
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => { if (!cancelled) setMuscleVolumeData(data) })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoadingMuscle(false) })
     return () => { cancelled = true }
-  }, [timePeriod])
+  }, [])
 
   if (isBasic) {
     return (
@@ -205,7 +206,7 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
         <CardHeader>
           <h2 className="text-base font-semibold text-gray-900">Weak Point Analysis</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Avg sets/week vs Minimum Effective Volume (MEV) in selected period
+            Avg sets/week vs Minimum Effective Volume (MEV) — current phase
           </p>
         </CardHeader>
         <CardBody>

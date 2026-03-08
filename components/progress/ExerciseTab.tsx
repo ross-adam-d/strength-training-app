@@ -13,7 +13,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 
@@ -443,30 +442,24 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                     Max Weight & Estimated 1RM (kg)
                   </p>
                   <ResponsiveContainer width="100%" height={240}>
-                    <LineChart data={weightProgressData}>
+                    <BarChart data={weightProgressData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} width={40} />
                       <Tooltip />
-                      <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="maxWeight"
-                        stroke="#0ea5e9"
+                        fill="#d96b00"
                         name="Max Weight (kg)"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
+                        radius={[3, 3, 0, 0]}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="estimated1RM"
-                        stroke="#8b5cf6"
+                        fill="#f5a855"
                         name="Est. 1RM (kg)"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={false}
+                        radius={[3, 3, 0, 0]}
                       />
-                    </LineChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
 
@@ -480,7 +473,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                       <Tooltip />
                       <Bar
                         dataKey="volume"
-                        fill="#0ea5e9"
+                        fill="#d96b00"
                         name="Volume (kg)"
                         radius={[3, 3, 0, 0]}
                       />

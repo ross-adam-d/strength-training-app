@@ -246,6 +246,24 @@ export default function MacrocycleDetailPage() {
     }
   }
 
+  async function handleActivatePhase(mesocycleId: string) {
+    optimisticPhaseUpdate(mesocycleId, { status: 'active' })
+    try {
+      const res = await fetch(`/api/mesocycles/${mesocycleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      })
+      if (!res.ok) {
+        optimisticPhaseUpdate(mesocycleId, { status: 'planned' })
+        alert('Failed to activate phase')
+      }
+    } catch {
+      optimisticPhaseUpdate(mesocycleId, { status: 'planned' })
+      alert('Failed to activate phase')
+    }
+  }
+
   function handleUpdatePhaseGoal(mesocycleId: string, goal: string) {
     optimisticPhaseUpdate(mesocycleId, { goal })
     schedulePhaseSave(mesocycleId, { goal })
@@ -528,7 +546,7 @@ export default function MacrocycleDetailPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {isLocked && (
                         <span className="text-xs text-gray-400">🔒</span>
                       )}
@@ -544,6 +562,15 @@ export default function MacrocycleDetailPage() {
                         >
                           {phase.status}
                         </span>
+                      )}
+                      {isViewingAsCoach && phase.status === 'planned' && (
+                        <button
+                          type="button"
+                          onClick={() => handleActivatePhase(phase.id)}
+                          className="px-2 py-1 text-xs font-medium rounded-full bg-primary-600 text-white hover:bg-primary-700 transition"
+                        >
+                          Activate
+                        </button>
                       )}
                     </div>
                   </div>

@@ -15,6 +15,7 @@ const updateMesocycleSchema = z.object({
   trainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
   trainingSplit: z.string().optional(),
   warmupNotes: z.string().optional(),
+  status: z.enum(['planned', 'active', 'completed']).optional(),
 })
 
 export async function GET(

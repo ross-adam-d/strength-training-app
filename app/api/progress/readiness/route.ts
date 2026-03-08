@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const MIN_LOGS_FOR_READINESS = 10
+
 type ExerciseLogEntry = {
   exerciseId: string
   exercise: { name: string }
@@ -37,53 +39,105 @@ export async function GET() {
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
   const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
 
-  const EXERCISE_LOG_SELECT = {
-    where: { skipped: false, weight: { gt: 0 } },
-    select: {
-      exerciseId: true,
-      exercise: { select: { name: true } },
-      weight: true,
-      reps: true,
-      repsLeft: true,
-      repsRight: true,
+  // Must have at least MIN_LOGS_FOR_READINESS total logs before showing readiness data
+  const totalLogCount = await prisma.workoutLog.count({ where: { userId } })
+  if (totalLogCount < MIN_LOGS_FOR_READINESS) return NextResponse.json(null)
+
+  // Find current active block → active mesocycle → current microcycle (for adherence scoping)
+  const currentMicro = await prisma.microcycle.findFirst({
+    where: {
+      mesocycle: {
+        macrocycle: { userId, status: 'active' },
+        status: 'active',
+      },
+      startDate: { lte: now },
+      endDate: { gte: now },
     },
+    select: {
+      id: true,
+      isRecovery: true,
+      mesocycleId: true,
+      workouts: { select: { id: true } },
+    },
+  })
+
+  // Fallback: earliest started microcycle in active block with any incomplete workouts
+  const fallbackMicro = !currentMicro
+    ? await prisma.microcycle.findFirst({
+        where: {
+          mesocycle: {
+            macrocycle: { userId, status: 'active' },
+            status: 'active',
+          },
+          startDate: { lte: now },
+          workouts: { some: { workoutLogs: { none: {} } } },
+        },
+        orderBy: { weekNumber: 'asc' },
+        select: {
+          id: true,
+          isRecovery: true,
+          mesocycleId: true,
+          workouts: { select: { id: true } },
+        },
+      })
+    : null
+
+  const activeMicro = currentMicro ?? fallbackMicro
+
+  const exerciseLogSelect = {
+    exerciseId: true,
+    exercise: { select: { name: true } },
+    weight: true,
+    reps: true,
+    repsLeft: true,
+    repsRight: true,
   } as const
 
-  const [recentWorkoutLogs, priorWorkoutLogs, recentMicrocycles, recentExerciseLogs, priorExerciseLogs] = await Promise.all([
-    prisma.workoutLog.findMany({
-      where: { userId, completedAt: { gte: twoWeeksAgo } },
-      select: { overallRpe: true, workoutId: true },
-    }),
-    prisma.workoutLog.findMany({
-      where: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } },
-      select: { overallRpe: true },
-    }),
-    prisma.microcycle.findMany({
-      where: {
-        mesocycle: { macrocycle: { userId } },
-        startDate: { lte: now },
-        endDate: { gte: twoWeeksAgo },
-      },
-      select: {
-        isRecovery: true,
-        workouts: { select: { id: true } },
-      },
-    }),
-    prisma.exerciseLog.findMany({
-      where: { workoutLog: { userId, completedAt: { gte: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } },
-      select: { exerciseId: true, exercise: { select: { name: true } }, weight: true, reps: true, repsLeft: true, repsRight: true },
-    }),
-    prisma.exerciseLog.findMany({
-      where: { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } },
-      select: { exerciseId: true, exercise: { select: { name: true } }, weight: true, reps: true, repsLeft: true, repsRight: true },
-    }),
-  ])
+  // Scope exercise progression to current phase when possible, else rolling date window
+  const recentExerciseWhere = activeMicro?.mesocycleId
+    ? { workoutLog: { userId, completedAt: { gte: twoWeeksAgo }, workout: { microcycle: { mesocycleId: activeMicro.mesocycleId } } }, skipped: false, weight: { gt: 0 } }
+    : { workoutLog: { userId, completedAt: { gte: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } }
+
+  const priorExerciseWhere = activeMicro?.mesocycleId
+    ? { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo }, workout: { microcycle: { mesocycleId: activeMicro.mesocycleId } } }, skipped: false, weight: { gt: 0 } }
+    : { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } }
+
+  const [recentWorkoutLogs, priorWorkoutLogs, recentExerciseLogs, priorExerciseLogs, currentMicroLogs] =
+    await Promise.all([
+      // Recent 2 weeks of logs for RPE trending
+      prisma.workoutLog.findMany({
+        where: { userId, completedAt: { gte: twoWeeksAgo } },
+        select: { overallRpe: true, workoutId: true },
+      }),
+      // Prior 2 weeks for RPE comparison
+      prisma.workoutLog.findMany({
+        where: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } },
+        select: { overallRpe: true },
+      }),
+      // Exercise logs — recent 2-week rolling window, scoped to current phase
+      prisma.exerciseLog.findMany({
+        where: recentExerciseWhere,
+        select: exerciseLogSelect,
+      }),
+      // Exercise logs — prior 2-week window for progression comparison
+      prisma.exerciseLog.findMany({
+        where: priorExerciseWhere,
+        select: exerciseLogSelect,
+      }),
+      // Completed workout logs for current microcycle (for adherence)
+      activeMicro
+        ? prisma.workoutLog.findMany({
+            where: { userId, workout: { microcycleId: activeMicro.id } },
+            select: { workoutId: true },
+          })
+        : Promise.resolve([]),
+    ])
 
   if (recentWorkoutLogs.length === 0) {
     return NextResponse.json(null)
   }
 
-  // RPE trend
+  // RPE trend (rolling 2-week windows)
   const recentWithRpe = recentWorkoutLogs.filter((l) => l.overallRpe != null)
   const recentRpe =
     recentWithRpe.length > 0
@@ -98,20 +152,24 @@ export async function GET() {
 
   const rpeDelta = recentRpe != null && priorRpe != null ? recentRpe - priorRpe : null
 
-  // Adherence — planned workouts in recent microcycles vs completed logs for those workouts
-  const plannedWorkoutIds = new Set(
-    recentMicrocycles.flatMap((mc) => mc.workouts.map((w) => w.id))
-  )
-  const totalPlanned = recentMicrocycles.reduce((s, mc) => s + mc.workouts.length, 0)
-  const completedPlanned = recentWorkoutLogs.filter(
-    (l) => l.workoutId && plannedWorkoutIds.has(l.workoutId)
-  ).length
-  const adherencePct = totalPlanned > 0 ? (completedPlanned / totalPlanned) * 100 : null
+  // Adherence — current microcycle workouts completed vs total planned this week
+  let adherencePct: number | null = null
+  let completedPlanned = 0
+  let totalPlanned = 0
 
-  // Recovery credit
-  const recoveryCredit = recentMicrocycles.some((mc) => mc.isRecovery)
+  if (activeMicro && activeMicro.workouts.length > 0) {
+    const plannedWorkoutIds = new Set(activeMicro.workouts.map((w) => w.id))
+    totalPlanned = activeMicro.workouts.length
+    completedPlanned = currentMicroLogs.filter(
+      (l) => l.workoutId && plannedWorkoutIds.has(l.workoutId)
+    ).length
+    adherencePct = (completedPlanned / totalPlanned) * 100
+  }
 
-  // Progression signal — compare exercise performance between periods
+  // Recovery credit — is the current microcycle a recovery/deload week?
+  const recoveryCredit = activeMicro?.isRecovery ?? false
+
+  // Progression signal — compare exercise performance between rolling 2-week windows
   const recentByEx = groupByExercise(recentExerciseLogs)
   const priorByEx = groupByExercise(priorExerciseLogs)
 
@@ -137,7 +195,7 @@ export async function GET() {
     } else if (volPct < -0.15) {
       declining++
     } else {
-      improving++ // stable is counted as not declining
+      improving++ // stable counts as not declining
     }
   }
 
@@ -157,12 +215,10 @@ export async function GET() {
     if (rpeDelta >= 1.0) score += 3
     else if (rpeDelta >= 0.5) score += 2
     else if (rpeDelta >= 0.25) score += 1
-    // High RPE + improving lifts → adaptation, reduce alarm
     if (rpeDelta >= 0.5 && progressionTrend === 'improving') score -= 1
   }
   if (adherencePct != null && adherencePct < 70) score += 1
   if (recoveryCredit) score -= 1
-  // Declining lifts + rising RPE → extra fatigue signal
   if (progressionTrend === 'declining' && rpeDelta != null && rpeDelta >= 0.25) score += 1
 
   const trafficLight: 'green' | 'amber' | 'red' =

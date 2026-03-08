@@ -150,7 +150,7 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
                 <Bar
                   dataKey="avgSetsPerWeek"
                   name="Avg Sets/Week"
-                  fill="#0ea5e9"
+                  fill="#d96b00"
                   radius={[0, 3, 3, 0]}
                 />
               </BarChart>

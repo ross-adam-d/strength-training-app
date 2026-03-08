@@ -66,8 +66,27 @@ export async function GET(request: Request) {
 
     // ── Weeks in active/latest phase ───────────────────────────────────────
     if (type === 'weeks') {
+      // Step 1: find the active macrocycle (or most recent if none active)
+      const activeMacro = await prisma.macrocycle.findFirst({
+        where: { userId: session.user.id, status: 'active' },
+        orderBy: { startDate: 'desc' },
+        select: { id: true },
+      })
+      const macroId =
+        activeMacro?.id ??
+        (
+          await prisma.macrocycle.findFirst({
+            where: { userId: session.user.id },
+            orderBy: { startDate: 'desc' },
+            select: { id: true },
+          })
+        )?.id
+
+      if (!macroId) return NextResponse.json([])
+
+      // Step 2: within that block, prefer the active mesocycle, else most recent started
       const activeMeso = await prisma.mesocycle.findFirst({
-        where: { macrocycle: { userId: session.user.id }, status: 'active' },
+        where: { macrocycleId: macroId, status: 'active' },
         orderBy: { startDate: 'desc' },
         select: { id: true },
       })
@@ -76,7 +95,7 @@ export async function GET(request: Request) {
         activeMeso?.id ??
         (
           await prisma.mesocycle.findFirst({
-            where: { macrocycle: { userId: session.user.id } },
+            where: { macrocycleId: macroId },
             orderBy: { startDate: 'desc' },
             select: { id: true },
           })

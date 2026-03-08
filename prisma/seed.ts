@@ -607,6 +607,72 @@ async function main() {
       equipment: ['barbell'],
       isPublic: true,
     },
+
+    // ── Calves ───────────────────────────────────────────────────────────────
+    {
+      name: 'Standing Calf Raise',
+      description: 'Classic bilateral calf raise performed with straight knees — primarily targets the gastrocnemius',
+      muscleGroups: ['calves'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Standing Calf Raise (Barbell)',
+      description: 'Barbell calf raise performed on a plate or step — heavy loading for gastrocnemius development',
+      muscleGroups: ['calves'],
+      equipment: ['barbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Standing Calf Raise (Dumbbell)',
+      description: 'Dumbbell calf raise — convenient variation with full range of motion off a step',
+      muscleGroups: ['calves'],
+      equipment: ['dumbbell'],
+      isPublic: true,
+    },
+    {
+      name: 'Single Leg Calf Raise',
+      description: 'Unilateral bodyweight calf raise — loads each leg independently for balanced development',
+      muscleGroups: ['calves'],
+      equipment: ['bodyweight'],
+      isPublic: true,
+      isUnilateral: true,
+    },
+    {
+      name: 'Seated Calf Raise',
+      description: 'Calf raise performed seated with knees bent — emphasises the soleus over the gastrocnemius',
+      muscleGroups: ['calves'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Leg Press Calf Raise',
+      description: 'Calf raise performed on a leg press machine — allows heavy bilateral loading through the full range of motion',
+      muscleGroups: ['calves'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Donkey Calf Raise',
+      description: 'Hinged-forward calf raise with a neutral torso — stretches the gastrocnemius under load for greater hypertrophy stimulus',
+      muscleGroups: ['calves'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Smith Machine Calf Raise',
+      description: 'Standing calf raise on the Smith machine — guided bar path allows focus on contraction without balance demands',
+      muscleGroups: ['calves'],
+      equipment: ['machine'],
+      isPublic: true,
+    },
+    {
+      name: 'Cable Calf Raise',
+      description: 'Single or bilateral calf raise using a cable machine — constant tension throughout the range of motion',
+      muscleGroups: ['calves'],
+      equipment: ['cable'],
+      isPublic: true,
+    },
   ]
 
   for (const exercise of exercises) {

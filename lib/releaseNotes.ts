@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-08'
+export const CURRENT_RELEASE_ID = '2026-03-08f'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,57 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-08f',
+    date: 'March 8, 2026',
+    title: 'Coach Phase Activation',
+    changes: [
+      'Coaches can now activate individual training phases directly from the block builder — tap "Activate" next to any planned phase to make it live for the client',
+      'Athlete dashboard now correctly shows coach-programmed plans even when the first training week starts in the future',
+    ],
+  },
+  {
+    id: '2026-03-08e',
+    date: 'March 8, 2026',
+    title: 'Coached Athlete Dashboard',
+    changes: [
+      'Athletes with a coach now see a personalised message on the dashboard when their coach is still building the training plan — instead of the generic getting-started screen',
+      'When a training block is created but workouts have not yet been programmed, the dashboard shows a "your coach is building your workouts" placeholder rather than a blank panel',
+    ],
+  },
+  {
+    id: '2026-03-08d',
+    date: 'March 8, 2026',
+    title: 'Progress Chart Improvements',
+    changes: [
+      'All progress charts now use the app\'s orange colour scheme',
+      'Exercise progress weight chart changed to a column chart — one column per session, easier to compare across workouts',
+      'Muscle group volume chart and weak point analysis now both exclude the current partial week for consistent averages',
+    ],
+  },
+  {
+    id: '2026-03-08c',
+    date: 'March 8, 2026',
+    title: 'Exercise Library & Analytics Fixes',
+    changes: [
+      'Calf exercises added to the library: Standing Calf Raise (barbell, dumbbell, machine), Seated Calf Raise, Single Leg Calf Raise, Leg Press Calf Raise, Donkey Calf Raise, Smith Machine and Cable Calf Raise',
+      'Muscle group volume chart now uses the correct fixed period length as the weekly average divisor — 4-week view always divides by 4, 3-month by 13, fixing inflated or deflated averages',
+      'Weak Point Analysis now always reflects your current active training phase instead of the selected time period',
+    ],
+  },
+  {
+    id: '2026-03-08b',
+    date: 'March 8, 2026',
+    title: 'Free Workout Rebuild & Analytics Improvements',
+    changes: [
+      'Free workout (Start a Workout) rebuilt to match the full workout logging experience — timer, per-set skip and delete, copy previous set values, and a clean finish modal',
+      'Exercise search in free workouts now surfaces exercises from muscle groups you\'ve already selected — making it faster to build balanced sessions',
+      'Custom exercises can be created directly from the exercise picker during any workout',
+      'Training Readiness now requires at least 10 logged workouts before showing — prevents misleading scores for new accounts',
+      'Readiness adherence is now calculated against the current week\'s workouts only (not the whole phase)',
+      'Lift progression data is now scoped to your current active training phase rather than any historical data',
+    ],
+  },
   {
     id: '2026-03-08',
     date: 'March 8, 2026',

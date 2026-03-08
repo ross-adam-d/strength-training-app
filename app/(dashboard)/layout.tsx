@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { Navigation } from '@/components/navigation'
 import { SubscriptionBanner } from '@/components/SubscriptionBanner'
-import { DomainChangeBanner } from '@/components/DomainChangeBanner'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +19,6 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DomainChangeBanner />
       <Navigation
         email={session.user?.email ?? ''}
         role={session.user?.role}

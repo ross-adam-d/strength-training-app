@@ -43,7 +43,7 @@ export default async function DashboardPage({
   const now = new Date()
 
   // Stage 1: independent queries in parallel
-  const [blockCount, activeBlock, recentWorkoutLogs, userData] = await Promise.all([
+  const [blockCount, activeBlock, recentWorkoutLogs, userData, coachRelationship] = await Promise.all([
     prisma.macrocycle.count({
       where: { userId: session.user.id },
     }),
@@ -70,6 +70,10 @@ export default async function DashboardPage({
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { lastSeenReleaseId: true },
+    }),
+    prisma.coachClientRelationship.findFirst({
+      where: { clientId: session.user.id, status: 'ACTIVE' },
+      select: { coach: { select: { name: true } } },
     }),
   ])
 
@@ -145,6 +149,29 @@ export default async function DashboardPage({
         select: microSelect,
       })
     }
+
+    // Final fallback: show the earliest upcoming microcycle that has workouts.
+    // Handles coach-created plans where the first week starts in the future.
+    if (!currentMicro) {
+      currentMicro = await prisma.microcycle.findFirst({
+        where: {
+          startDate: { gt: now },
+          mesocycle: { macrocycleId: activeBlock.id },
+          workouts: { some: {} },
+        },
+        orderBy: { startDate: 'asc' },
+        select: microSelect,
+      })
+    }
+  }
+
+  // Detect active block with no workouts built yet (coach hasn't set up exercises)
+  let phaseHasNoWorkouts = false
+  if (activeBlock && !currentMicro) {
+    const workoutCount = await prisma.workout.count({
+      where: { microcycle: { mesocycle: { macrocycleId: activeBlock.id } } },
+    })
+    phaseHasNoWorkouts = workoutCount === 0
   }
 
   // Stat views for carousel — only computed when there's an active phase
@@ -258,13 +285,62 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {/* No training blocks — show welcome checklist */}
-      {blockCount === 0 && (
+      {/* Coached athlete with no block yet — coach is still building the plan */}
+      {blockCount === 0 && coachRelationship && (
+        <div className="bg-primary-50 border border-primary-200 rounded-xl p-6 flex gap-4 items-start">
+          <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="font-semibold text-primary-900 text-base">
+              Your coach is building your plan
+            </h2>
+            <p className="text-sm text-primary-700 mt-1 leading-relaxed">
+              {coachRelationship.coach.name
+                ? `${coachRelationship.coach.name} is setting up your personalised training programme.`
+                : 'Your coach is setting up your personalised training programme.'}{' '}
+              Check back soon — you&apos;ll see your workouts here once it&apos;s ready.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* No training blocks and no coach — show welcome checklist */}
+      {blockCount === 0 && !coachRelationship && (
         <WelcomeChecklist name={session.user.name} />
       )}
 
       {/* Stats carousel — only shown when there's an active phase */}
       {statViews.length > 0 && <StatsCarousel views={statViews} />}
+
+      {/* Active block but no workouts built yet — coach is still programming */}
+      {phaseHasNoWorkouts && coachRelationship && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="px-6 py-4 border-b-2 border-gray-200 bg-gray-50">
+            <h2 className="font-semibold text-gray-900">{activeBlock?.name}</h2>
+            <p className="text-sm text-gray-500">Your coach is setting up this phase</p>
+          </div>
+          <div className="px-6 py-10 flex flex-col items-center text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-gray-800">
+                {coachRelationship.coach.name
+                  ? `${coachRelationship.coach.name} is building your workouts`
+                  : 'Your coach is building your workouts'}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Your training block is set up — workouts will appear here once your coach has programmed the exercises.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Current week */}
       {currentMicro && (

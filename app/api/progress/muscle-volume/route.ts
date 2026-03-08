@@ -21,7 +21,24 @@ export async function GET(request: NextRequest) {
   startOfCurrentWeek.setHours(0, 0, 0, 0)
 
   let since: Date | null = null
-  if (period === '4w') {
+  let phaseWorkoutFilter: { microcycle: { mesocycleId: string } } | undefined
+
+  if (period === 'phase') {
+    // Scope to current active block → active mesocycle
+    const activeMeso = await prisma.mesocycle.findFirst({
+      where: {
+        macrocycle: { userId: session.user.id, status: 'active' },
+        status: 'active',
+      },
+      orderBy: { startDate: 'desc' },
+      select: { id: true, startDate: true },
+    })
+    if (activeMeso) {
+      since = new Date(activeMeso.startDate)
+      phaseWorkoutFilter = { microcycle: { mesocycleId: activeMeso.id } }
+    }
+    // If no active phase, fall through with no date filter (show all)
+  } else if (period === '4w') {
     since = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
   } else if (period === '3m') {
     since = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
@@ -33,8 +50,10 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         completedAt: {
           ...(since ? { gte: since } : {}),
+          // Always exclude the current partial week so mid-week averages aren't deflated
           lt: startOfCurrentWeek,
         },
+        ...(phaseWorkoutFilter ? { workout: phaseWorkoutFilter } : {}),
       },
       skipped: false,
     },
@@ -46,12 +65,14 @@ export async function GET(request: NextRequest) {
 
   if (logs.length === 0) return NextResponse.json([])
 
-  // Derive completed weeks from the earliest log to the start of the current week.
+  // Derive completed weeks from the earliest log to startOfCurrentWeek.
+  // Current partial week is always excluded so mid-week averages aren't deflated.
   const earliest = logs.reduce(
     (min, l) => (l.workoutLog.completedAt < min ? l.workoutLog.completedAt : min),
     logs[0].workoutLog.completedAt
   )
-  const weeksInPeriod = Math.max(1, Math.round((startOfCurrentWeek.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
+  const endRef = startOfCurrentWeek
+  const weeksInPeriod = Math.max(1, Math.round((endRef.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
 
   // Count sets per muscle group — each log counts once per muscle group on the exercise
   const counts: Record<string, number> = {}
