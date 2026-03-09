@@ -65,24 +65,21 @@ export default function ClientBlocksPage() {
       ) : (
         <div className="space-y-3">
           {macrocycles.map((macro) => (
-            <div key={macro.id} className="bg-white rounded-xl border border-gray-200 p-5">
+            <Link
+              key={macro.id}
+              href={`/macrocycles/${macro.id}`}
+              className="block bg-white rounded-xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-sm transition group"
+            >
               <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900">{macro.name}</p>
-                    {macro.createdByCoachId && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700">
-                        Coach-created
-                      </span>
-                    )}
-                  </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 group-hover:text-primary-700 transition">{macro.name}</p>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {new Date(macro.startDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                     {' – '}
                     {new Date(macro.endDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                   <span
                     className={`px-2 py-1 text-xs rounded-full font-medium ${
                       macro.status === 'active'
@@ -94,14 +91,9 @@ export default function ClientBlocksPage() {
                   >
                     {macro.status}
                   </span>
-                  {macro.createdByCoachId && (
-                    <Link
-                      href={`/macrocycles/${macro.id}`}
-                      className="px-3 py-1 text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg transition"
-                    >
-                      Edit →
-                    </Link>
-                  )}
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
 
@@ -138,7 +130,7 @@ export default function ClientBlocksPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

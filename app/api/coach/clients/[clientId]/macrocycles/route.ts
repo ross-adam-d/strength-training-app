@@ -113,6 +113,7 @@ export async function POST(
           startDate: new Date(mesoData.startDate),
           endDate: new Date(mesoData.endDate),
           macrocycleId: macrocycle.id,
+          status: 'active',
         },
       })
 

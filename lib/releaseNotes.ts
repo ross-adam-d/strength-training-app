@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-09b'
+export const CURRENT_RELEASE_ID = '2026-03-10'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-10',
+    date: 'March 10, 2026',
+    title: 'Progressive Overload Fixes',
+    changes: [
+      'Fixed: rep targets for sets 2 and 3 are now capped at the Set 1 target — a later set will never suggest more reps than Set 1',
+      'Fixed: unilateral exercises (e.g. single-leg press, dumbbell lunges) now correctly show progressive overload targets in the Left/Right rep fields',
+      'Fixed: bodyweight exercises will never incorrectly show a weight increase suggestion',
+    ],
+  },
   {
     id: '2026-03-09b',
     date: 'March 9, 2026',

@@ -128,7 +128,12 @@ export default function MacrocycleDetailPage() {
       })
 
       if (response.ok) {
-        router.push('/macrocycles')
+        // If a coach is deleting a client's block, go back to the client's blocks page
+        if (macrocycle?.createdByCoachId && authSession?.user?.id === macrocycle.createdByCoachId) {
+          router.push(`/coach/clients/${macrocycle.userId}/blocks`)
+        } else {
+          router.push('/macrocycles')
+        }
       }
     } catch (error) {
       console.error('Error deleting macrocycle:', error)

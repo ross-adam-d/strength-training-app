@@ -310,6 +310,7 @@ export default function WorkoutLogPage() {
             we.exercise.isBodyweight
           )
           const isWeightProgression = set1Suggestion !== null && representativeSet !== undefined &&
+            !we.exercise.isBodyweight &&
             parseFloat(set1Suggestion.weight) > representativeSet.weight
 
           for (let i = 0; i < we.targetSets; i++) {
@@ -334,9 +335,10 @@ export default function WorkoutLogPage() {
                 const lastReps = we.exercise.isUnilateral && thisLastSet.repsLeft
                   ? thisLastSet.repsLeft
                   : (thisLastSet.reps > 0 ? thisLastSet.reps : 0)
+                const set1RepTarget = parseInt(set1Suggestion!.reps) || 999
                 setMap.set(setNum, {
                   weight: set1Suggestion!.weight,
-                  reps: lastReps > 0 ? String(lastReps + 1) : set1Suggestion!.reps,
+                  reps: lastReps > 0 ? String(Math.min(lastReps + 1, set1RepTarget)) : set1Suggestion!.reps,
                 })
               } else {
                 setMap.set(setNum, set1Suggestion!)
@@ -1501,21 +1503,21 @@ export default function WorkoutLogPage() {
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
-                                    placeholder="0"
+                                    placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
                                     value={log.repsLeft ?? ''}
                                     onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
                                     onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
-                                    className={`${baseCls} ${isCompleted ? completedCls : leftMissing ? invalidCls : normalCls}`}
+                                    className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : leftMissing ? invalidCls : normalCls}`}
                                   />
                                   <input
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
-                                    placeholder="0"
+                                    placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
                                     value={log.repsRight ?? ''}
                                     onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
                                     onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
-                                    className={`${baseCls} ${isCompleted ? completedCls : rightMissing ? invalidCls : normalCls}`}
+                                    className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : rightMissing ? invalidCls : normalCls}`}
                                   />
                                 </>
                               ) : we.exercise.isTimed ? (
