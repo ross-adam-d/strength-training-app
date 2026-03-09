@@ -25,7 +25,7 @@ export function calculateSuggestedReps(
   repRange: { min: number; max: number }
 ): number {
   if (newWeight <= 0) return repRange.min
-  const reps = Math.round((oneRM / newWeight - 1) * 30)
+  const reps = Math.floor((oneRM / newWeight - 1) * 30)
   return Math.max(repRange.min, Math.min(repRange.max, reps))
 }
 

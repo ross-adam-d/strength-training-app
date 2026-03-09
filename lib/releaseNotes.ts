@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-09'
+export const CURRENT_RELEASE_ID = '2026-03-09b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-09b',
+    date: 'March 9, 2026',
+    title: 'Smarter Progressive Overload',
+    changes: [
+      'Progressive overload projections are now set-aware: when your weight increases, only Set 1 shows a rep target (calculated from your estimated 1RM); remaining sets are left blank so you can go by feel',
+      'Rep progression now tracks each set individually — if you added reps on sets 2 and 3 last session, those sets each get their own +1 rep target this time',
+      'Rep targets derived from 1RM calculations now always show the lower whole number (e.g. 7 instead of 8 when the calculation lands between them)',
+      'Dashboard stats carousel: "All Time" replaced with "Last Week" — shows your actual sessions, time, and volume for the prior completed week',
+    ],
+  },
   {
     id: '2026-03-09',
     date: 'March 9, 2026',

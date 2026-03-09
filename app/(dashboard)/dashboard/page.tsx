@@ -197,7 +197,16 @@ export default async function DashboardPage({
   let statViews: import('@/components/StatsCarousel').StatView[] = []
 
   if (currentMicro) {
-    const [phaseLogs, weekLogs, allTimeLogs] = await Promise.all([
+    // Boundaries for the prior completed calendar week (Mon–Sun)
+    const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, …
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const startOfThisWeek = new Date(now)
+    startOfThisWeek.setDate(now.getDate() - daysToMonday)
+    startOfThisWeek.setHours(0, 0, 0, 0)
+    const startOfLastWeek = new Date(startOfThisWeek)
+    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7)
+
+    const [phaseLogs, weekLogs, lastWeekLogs] = await Promise.all([
       prisma.workoutLog.findMany({
         where: { userId: session.user.id, workout: { microcycle: { mesocycleId: currentMicro.mesocycle.id } } },
         select: LOG_SELECT,
@@ -207,22 +216,17 @@ export default async function DashboardPage({
         select: LOG_SELECT,
       }),
       prisma.workoutLog.findMany({
-        where: { userId: session.user.id },
-        select: { completedAt: true, ...LOG_SELECT },
+        where: {
+          userId: session.user.id,
+          completedAt: { gte: startOfLastWeek, lt: startOfThisWeek },
+        },
+        select: LOG_SELECT,
       }),
     ])
 
     const phase = sumLogs(phaseLogs)
     const week = sumLogs(weekLogs)
-
-    // All-time weekly averages
-    const totalWeeks = allTimeLogs.length === 0 ? 1 : Math.max(1, Math.round(
-      (now.getTime() - Math.min(...allTimeLogs.map(l => new Date(l.completedAt).getTime()))) / (7 * 24 * 60 * 60 * 1000)
-    ))
-    const allTime = sumLogs(allTimeLogs)
-    const avgSessions = (allTime.sessions / totalWeeks).toFixed(1)
-    const avgMinutes = allTime.totalMinutes / totalWeeks
-    const avgVolume = allTime.totalVolumeKg / totalWeeks
+    const lastWeek = sumLogs(lastWeekLogs)
 
     statViews = [
       {
@@ -240,11 +244,11 @@ export default async function DashboardPage({
         volume: formatVolume(week.totalVolumeKg),
       },
       {
-        title: 'All Time',
-        sub: 'avg / week',
-        sessions: avgSessions,
-        time: avgMinutes >= 60 ? `${(avgMinutes / 60).toFixed(1)}h` : `${Math.round(avgMinutes)}m`,
-        volume: formatVolume(avgVolume),
+        title: 'Last Week',
+        sub: 'last week',
+        sessions: lastWeek.sessions.toString(),
+        time: lastWeek.totalMinutes > 0 ? `${(lastWeek.totalMinutes / 60).toFixed(1)}h` : '0h',
+        volume: formatVolume(lastWeek.totalVolumeKg),
       },
     ]
   }

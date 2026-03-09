@@ -290,33 +290,57 @@ export default function WorkoutLogPage() {
         setExerciseRpes(lastExerciseRpes)
 
         // Compute progressive overload suggestions per exercise × set
-        // Use set 1 as the representative for all sets — ensures consistent weight/reps shown across sets
+        // Set 1 governs the progression type (weight vs rep); subsequent sets follow that decision:
+        //   Weight progression → all sets get new weight; only set 1 shows a rep target (1RM-derived); rest blank
+        //   Rep progression   → each set adds 1 rep vs its own last performance (same weight)
         const newSuggestions = new Map<string, Map<number, { weight: string; reps: string; duration?: string }>>()
         for (const we of data.workoutExercises) {
           const setMap = new Map<number, { weight: string; reps: string; duration?: string }>()
           const exerciseSets = lastLogSets.get(we.exercise.id) ?? []
           const representativeSet = exerciseSets.find((s) => s.setNumber === 1) ?? exerciseSets[0]
 
+          // Determine progression type from set 1
+          const effectiveRepresentativeSet = representativeSet && we.exercise.isUnilateral && representativeSet.repsLeft
+            ? { ...representativeSet, reps: representativeSet.repsLeft }
+            : representativeSet
+          const set1Suggestion = we.exercise.isTimed ? null : getSuggestion(
+            effectiveRepresentativeSet,
+            we.targetReps,
+            we.exercise.equipment ?? [],
+            we.exercise.isBodyweight
+          )
+          const isWeightProgression = set1Suggestion !== null && representativeSet !== undefined &&
+            parseFloat(set1Suggestion.weight) > representativeSet.weight
+
           for (let i = 0; i < we.targetSets; i++) {
+            const setNum = i + 1
             if (we.exercise.isTimed) {
-              const lastSet = exerciseSets.find((s) => s.setNumber === i + 1)
-              setMap.set(i + 1, {
+              const lastSet = exerciseSets.find((s) => s.setNumber === setNum)
+              setMap.set(setNum, {
                 weight: representativeSet?.weight ? String(representativeSet.weight) : '',
                 reps: '',
                 duration: lastSet?.duration ? String(lastSet.duration) : '',
               })
+            } else if (setNum === 1 || !representativeSet) {
+              // Set 1 (or no history): use the computed suggestion directly
+              setMap.set(setNum, set1Suggestion!)
+            } else if (isWeightProgression) {
+              // Weight increased: show new weight for all sets, blank reps (user fills from feel)
+              setMap.set(setNum, { weight: set1Suggestion!.weight, reps: '' })
             } else {
-              // For unilateral exercises, use repsLeft as the effective rep count
-              const effectiveSet = representativeSet && we.exercise.isUnilateral && representativeSet.repsLeft
-                ? { ...representativeSet, reps: representativeSet.repsLeft }
-                : representativeSet
-              const suggestion = getSuggestion(
-                effectiveSet,
-                we.targetReps,
-                we.exercise.equipment ?? [],
-                we.exercise.isBodyweight
-              )
-              setMap.set(i + 1, suggestion)
+              // Rep progression: each set adds 1 rep vs its own last performance
+              const thisLastSet = exerciseSets.find((s) => s.setNumber === setNum)
+              if (thisLastSet) {
+                const lastReps = we.exercise.isUnilateral && thisLastSet.repsLeft
+                  ? thisLastSet.repsLeft
+                  : (thisLastSet.reps > 0 ? thisLastSet.reps : 0)
+                setMap.set(setNum, {
+                  weight: set1Suggestion!.weight,
+                  reps: lastReps > 0 ? String(lastReps + 1) : set1Suggestion!.reps,
+                })
+              } else {
+                setMap.set(setNum, set1Suggestion!)
+              }
             }
           }
           newSuggestions.set(we.exercise.id, setMap)
@@ -958,7 +982,9 @@ export default function WorkoutLogPage() {
             setSuggestions((prev) => {
               const exerciseMap = new Map(prev.get(exerciseId) ?? [])
               exerciseMap.forEach((val, key) => {
-                exerciseMap.set(key, { ...val, weight: cleanedValue, reps: String(suggestedReps) })
+                // Only set 1 shows a rep target; other sets left blank so the user fills from feel
+                const reps = key === 1 ? String(suggestedReps) : ''
+                exerciseMap.set(key, { ...val, weight: cleanedValue, reps })
               })
               const next = new Map(prev)
               next.set(exerciseId, exerciseMap)
