@@ -18,6 +18,7 @@ const exerciseSchema = z.object({
   isUnilateral: z.boolean().default(false),
   isTimed: z.boolean().default(false),
   isBodyweight: z.boolean().default(false),
+  needsReview: z.boolean().default(false),
 })
 
 export async function GET(request: Request) {
@@ -86,6 +87,7 @@ export async function GET(request: Request) {
         isUnilateral: true,
         isTimed: true,
         isBodyweight: true,
+        needsReview: true,
         createdById: true,
       },
     })

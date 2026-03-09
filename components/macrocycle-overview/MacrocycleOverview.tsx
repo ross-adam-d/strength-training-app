@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PhaseSummaryBar } from './PhaseSummaryBar'
 import { PhaseEditor } from './PhaseEditor'
 
@@ -56,18 +56,8 @@ export interface MacrocycleData {
   mesocycles: Mesocycle[]
 }
 
-interface Exercise {
-  id: string
-  name: string
-}
-
 export default function MacrocycleOverview({ data, onRefresh }: { data: MacrocycleData; onRefresh: () => void }) {
-  const [exercises, setExercises] = useState<Exercise[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
-
-  useEffect(() => {
-    fetch('/api/exercises').then((r) => r.json()).then(setExercises)
-  }, [])
 
   function handleRefresh() {
     onRefresh()
@@ -91,7 +81,6 @@ export default function MacrocycleOverview({ data, onRefresh }: { data: Macrocyc
           <PhaseEditor
             key={`${meso.id}-${refreshKey}`}
             mesocycle={meso}
-            exercises={exercises}
             onRefresh={handleRefresh}
           />
         ))}

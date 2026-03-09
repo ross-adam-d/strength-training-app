@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-10'
+export const CURRENT_RELEASE_ID = '2026-03-10b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-10b',
+    date: 'March 10, 2026',
+    title: 'Unified Exercise Picker',
+    changes: [
+      'New unified exercise picker used everywhere: workout planner, workout editor, free workout, and coach template builder — consistent search, muscle group filters, and inline custom exercise creation',
+      'Custom exercises created inline (e.g. during a free workout) are flagged "Update required" in your exercise library so you can add muscle groups and equipment later',
+      'Coach phase builder: exercise picker upgraded to full modal with muscle-group filtering and smart search',
+      'Coach fixes: new training blocks are now immediately active (visible to athletes); deleting a client\'s block now correctly returns to the client\'s blocks page',
+    ],
+  },
   {
     id: '2026-03-10',
     date: 'March 10, 2026',

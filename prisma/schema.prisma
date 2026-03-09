@@ -120,6 +120,7 @@ model Exercise {
   isUnilateral      Boolean  @default(false) // true for single-side exercises (e.g., single-leg press, single-arm row)
   isTimed           Boolean  @default(false) // true for timed exercises (e.g., planks, wall sits)
   isBodyweight      Boolean  @default(false) // true for bodyweight exercises (e.g., push-ups, pull-ups)
+  needsReview       Boolean  @default(false) // true for custom exercises created inline (needs muscle groups etc. filled in)
 
   createdById       String?
   createdBy         User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { EditableSlotRow, SlotData } from './EditableSlotRow'
 
@@ -45,14 +45,8 @@ interface Mesocycle {
   microcycles: Microcycle[]
 }
 
-interface Exercise {
-  id: string
-  name: string
-}
-
 interface PhaseEditorProps {
   mesocycle: Mesocycle
-  exercises: Exercise[]
   onRefresh: () => void
 }
 
@@ -76,7 +70,7 @@ function buildSlots(workouts: Workout[]): Record<string, SlotData[]> {
   return map
 }
 
-export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProps) {
+export function PhaseEditor({ mesocycle, onRefresh }: PhaseEditorProps) {
   const templateWorkouts =
     mesocycle.microcycles.length > 0 ? mesocycle.microcycles[0].workouts : []
 
@@ -118,13 +112,8 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [localExercises, setLocalExercises] = useState<Exercise[]>(exercises)
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null)
-
-  useEffect(() => {
-    setLocalExercises(exercises)
-  }, [exercises])
 
   function updateSlot(workoutName: string, index: number, updated: SlotData) {
     setSlotsByWorkout((prev) => ({
@@ -175,10 +164,6 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
       ],
     }))
     setDirty(true)
-  }
-
-  function handleExerciseCreated(exercise: Exercise) {
-    setLocalExercises((prev) => [...prev, exercise])
   }
 
   async function handleSave() {
@@ -400,11 +385,9 @@ export function PhaseEditor({ mesocycle, exercises, onRefresh }: PhaseEditorProp
                     <EditableSlotRow
                       key={idx}
                       slot={slot}
-                      exercises={localExercises}
                       onChange={(updated) => !isWorkoutReadOnly && updateSlot(workout.name, idx, updated)}
                       onDelete={() => !isWorkoutReadOnly && deleteSlot(workout.name, idx)}
                       onReorder={(dir) => !isWorkoutReadOnly && reorderSlot(workout.name, idx, dir)}
-                      onExerciseCreated={handleExerciseCreated}
                       readOnly={isWorkoutReadOnly}
                     />
                   ))}

@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
+import { ExercisePickerModal, ExercisePickerResult, ExercisePickerInitialValues } from '@/components/ExercisePickerModal'
 import {
   DndContext,
   closestCenter,
@@ -236,26 +237,11 @@ export default function EditWorkoutPage() {
   const [warmupNotes, setWarmupNotes] = useState('')
 
   // Exercise management
-  const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [exercises, setExercises] = useState<WorkoutExercise[]>([])
   const [editingExercise, setEditingExercise] = useState<string | null>(null)
   const [addingExercise, setAddingExercise] = useState(false)
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null)
-
-  // Exercise form state
-  const [exerciseForm, setExerciseForm] = useState({
-    exerciseId: '',
-    targetSets: '3',
-    targetReps: '8-12',
-    targetRir: '2',
-    tempo: '',
-    restPeriod: '90',
-    supersetWithPrevious: false,
-    notes: '',
-  })
-
-  // Validation errors
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [pickerInitialValues, setPickerInitialValues] = useState<ExercisePickerInitialValues | undefined>()
 
   // Apply to rest of phase modal (workout-level only)
   const [showScopeModal, setShowScopeModal] = useState(false)
@@ -267,10 +253,7 @@ export default function EditWorkoutPage() {
     setExercises([])
     async function fetchData() {
       try {
-        const [workoutRes, exercisesRes] = await Promise.all([
-          fetch(`/api/workouts/${params.id}`),
-          fetch('/api/exercises'),
-        ])
+        const workoutRes = await fetch(`/api/workouts/${params.id}`)
 
         if (workoutRes.ok) {
           const data = await workoutRes.json()
@@ -280,11 +263,6 @@ export default function EditWorkoutPage() {
           setEstimatedDuration(data.estimatedDuration ?? null)
           setWarmupNotes(data.warmupNotes || '')
           setExercises(data.workoutExercises.sort((a: WorkoutExercise, b: WorkoutExercise) => a.orderIndex - b.orderIndex))
-        }
-
-        if (exercisesRes.ok) {
-          const exercisesData = await exercisesRes.json()
-          setAllExercises(exercisesData)
         }
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -347,8 +325,7 @@ export default function EditWorkoutPage() {
   function handleEditExercise(exerciseId: string) {
     const ex = exercises.find((e) => e.id === exerciseId)
     if (!ex) return
-
-    setExerciseForm({
+    setPickerInitialValues({
       exerciseId: ex.exercise.id,
       targetSets: String(ex.targetSets),
       targetReps: ex.targetReps || '',
@@ -361,71 +338,28 @@ export default function EditWorkoutPage() {
     setEditingExercise(exerciseId)
   }
 
-  function validateExerciseForm(): boolean {
-    const errors: Record<string, string> = {}
-
-    // Validate required fields
-    if (!exerciseForm.exerciseId) {
-      errors.exerciseId = 'Please select an exercise'
-    }
-
-    const targetSets = parseInt(exerciseForm.targetSets)
-    if (!exerciseForm.targetSets || isNaN(targetSets) || targetSets <= 0) {
-      errors.targetSets = 'Target sets must be at least 1'
-    }
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  async function handleSaveExercise() {
-    if (!editingExercise && !addingExercise) return
-
-    // Validate form before saving
-    if (!validateExerciseForm()) {
-      return
-    }
-
-    // Always save exercise changes locally (this week only).
-    // Propagation to remaining weeks happens via the workout-level Save button.
-    await performExerciseSave(false)
-  }
-
-  async function performExerciseSave(applyToRestOfPhase: boolean) {
-    if (!editingExercise && !addingExercise) return
-
-    // Re-validate before saving
-    if (!validateExerciseForm()) {
-      return
-    }
-
+  async function performExerciseSave(result: ExercisePickerResult) {
     setSaving(true)
 
     const endpoint = editingExercise
       ? `/api/workout-exercises/${editingExercise}`
       : '/api/workout-exercises'
-
     const method = editingExercise ? 'PATCH' : 'POST'
 
     const payload: any = {
-      exerciseId: exerciseForm.exerciseId,
-      targetSets: parseInt(exerciseForm.targetSets),
-      targetReps: exerciseForm.targetReps || null,
-      targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
-      tempo: exerciseForm.tempo || null,
-      restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
-      supersetWithPrevious: exerciseForm.supersetWithPrevious,
-      notes: exerciseForm.notes || null,
+      exerciseId: result.exercise.id,
+      targetSets: result.targetSets,
+      targetReps: result.targetReps || null,
+      targetRir: result.targetRir,
+      tempo: result.tempo || null,
+      restPeriod: result.restPeriod,
+      supersetWithPrevious: result.supersetWithPrevious,
+      notes: result.notes || null,
     }
 
     if (!editingExercise) {
       payload.workoutId = params.id
       payload.orderIndex = exercises.length
-    }
-
-    if (editingExercise && applyToRestOfPhase) {
-      payload.applyToRestOfPhase = true
-      payload.mesocycleId = workout?.microcycle.mesocycle.id
     }
 
     try {
@@ -437,68 +371,51 @@ export default function EditWorkoutPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        // Show validation details if available
-        if (errorData.details) {
-          const fieldErrors: Record<string, string> = {}
-          errorData.details.forEach((err: any) => {
-            if (err.path && err.path.length > 0) {
-              fieldErrors[err.path[0]] = err.message
-            }
-          })
-          setValidationErrors(fieldErrors)
-          alert(`Validation error: ${errorData.details.map((e: any) => e.message).join(', ')}`)
-        } else {
-          alert(errorData.error || 'Failed to save exercise')
-        }
+        alert(errorData.error || 'Failed to save exercise')
         setSaving(false)
         return
       }
 
       const savedData = await response.json()
-      const exerciseDetail = allExercises.find((e) => e.id === exerciseForm.exerciseId)
 
       if (editingExercise) {
-        // Optimistic: update the exercise in local state from form values
         setExercises((prev) =>
           prev.map((ex) =>
             ex.id === editingExercise
               ? {
                   ...ex,
-                  exercise: exerciseDetail ? { id: exerciseDetail.id, name: exerciseDetail.name } : ex.exercise,
-                  targetSets: parseInt(exerciseForm.targetSets),
-                  targetReps: exerciseForm.targetReps || null,
-                  targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
-                  tempo: exerciseForm.tempo || null,
-                  restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
-                  supersetWithPrevious: exerciseForm.supersetWithPrevious,
-                  notes: exerciseForm.notes || null,
+                  exercise: { id: result.exercise.id, name: result.exercise.name },
+                  targetSets: result.targetSets,
+                  targetReps: result.targetReps || null,
+                  targetRir: result.targetRir,
+                  tempo: result.tempo || null,
+                  restPeriod: result.restPeriod,
+                  supersetWithPrevious: result.supersetWithPrevious,
+                  notes: result.notes || null,
                 }
               : ex
           )
         )
       } else {
-        // Add the new exercise using the ID returned by the API
         setExercises((prev) => [
           ...prev,
           {
             id: savedData.id,
             orderIndex: prev.length,
-            targetSets: parseInt(exerciseForm.targetSets),
-            targetReps: exerciseForm.targetReps || null,
-            targetRir: exerciseForm.targetRir ? parseInt(exerciseForm.targetRir) : null,
-            tempo: exerciseForm.tempo || null,
-            restPeriod: exerciseForm.restPeriod ? parseInt(exerciseForm.restPeriod) : null,
-            supersetWithPrevious: exerciseForm.supersetWithPrevious,
-            notes: exerciseForm.notes || null,
-            exercise: exerciseDetail
-              ? { id: exerciseDetail.id, name: exerciseDetail.name }
-              : { id: exerciseForm.exerciseId, name: '' },
+            targetSets: result.targetSets,
+            targetReps: result.targetReps || null,
+            targetRir: result.targetRir,
+            tempo: result.tempo || null,
+            restPeriod: result.restPeriod,
+            supersetWithPrevious: result.supersetWithPrevious,
+            notes: result.notes || null,
+            exercise: { id: result.exercise.id, name: result.exercise.name },
           },
         ])
       }
       setEditingExercise(null)
       setAddingExercise(false)
-      resetExerciseForm()
+      setPickerInitialValues(undefined)
       setSaving(false)
     } catch (error) {
       console.error('Error saving exercise:', error)
@@ -520,20 +437,6 @@ export default function EditWorkoutPage() {
     } catch (error) {
       console.error('Error deleting exercise:', error)
     }
-  }
-
-  function resetExerciseForm() {
-    setExerciseForm({
-      exerciseId: '',
-      targetSets: '3',
-      targetReps: '8-12',
-      targetRir: '2',
-      tempo: '',
-      restPeriod: '90',
-      supersetWithPrevious: false,
-      notes: '',
-    })
-    setValidationErrors({})
   }
 
   async function handleSave(applyToRest: boolean) {
@@ -767,158 +670,15 @@ export default function EditWorkoutPage() {
       </div>
 
       {/* Add/Edit Exercise Modal */}
-      {(addingExercise || editingExercise) && (
-        <Modal
-          isOpen={true}
-          onClose={() => {
-            setAddingExercise(false)
-            setEditingExercise(null)
-            resetExerciseForm()
-          }}
-          title={editingExercise ? 'Edit Exercise' : 'Add Exercise'}
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Exercise {validationErrors.exerciseId && <span className="text-red-600 text-xs ml-1">*</span>}
-              </label>
-              <Select
-                options={[
-                  { value: '', label: '-- Select Exercise --' },
-                  ...allExercises.map((ex) => ({
-                    value: ex.id,
-                    label: ex.name,
-                  })),
-                ]}
-                value={exerciseForm.exerciseId}
-                onChange={(e) => {
-                  setExerciseForm({ ...exerciseForm, exerciseId: e.target.value })
-                  // Clear error on change
-                  if (validationErrors.exerciseId) {
-                    setValidationErrors({ ...validationErrors, exerciseId: '' })
-                  }
-                }}
-                className={validationErrors.exerciseId ? 'border-red-500' : ''}
-              />
-              {validationErrors.exerciseId && (
-                <p className="text-red-600 text-xs mt-1">{validationErrors.exerciseId}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Target Sets {validationErrors.targetSets && <span className="text-red-600 text-xs ml-1">*</span>}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={exerciseForm.targetSets}
-                  onChange={(e) => {
-                    setExerciseForm({ ...exerciseForm, targetSets: e.target.value })
-                    // Clear error on change
-                    const numValue = parseInt(e.target.value)
-                    if (validationErrors.targetSets && !isNaN(numValue) && numValue > 0) {
-                      setValidationErrors({ ...validationErrors, targetSets: '' })
-                    }
-                  }}
-                  className={`w-full px-3 py-2 border rounded-lg ${
-                    validationErrors.targetSets ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {validationErrors.targetSets && (
-                  <p className="text-red-600 text-xs mt-1">{validationErrors.targetSets}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target Reps</label>
-                <input
-                  type="text"
-                  value={exerciseForm.targetReps}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetReps: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="8-12"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target RIR</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={exerciseForm.targetRir}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, targetRir: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rest Period (s)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={exerciseForm.restPeriod}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, restPeriod: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="supersetWithPrevious"
-                checked={exerciseForm.supersetWithPrevious}
-                onChange={(e) => setExerciseForm({ ...exerciseForm, supersetWithPrevious: e.target.checked })}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="supersetWithPrevious" className="text-sm text-gray-700">
-                Superset with previous exercise (no rest between exercises)
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tempo (optional)</label>
-              <input
-                type="text"
-                value={exerciseForm.tempo}
-                onChange={(e) => setExerciseForm({ ...exerciseForm, tempo: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                placeholder="3-0-1-0"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-              <textarea
-                value={exerciseForm.notes}
-                onChange={(e) => setExerciseForm({ ...exerciseForm, notes: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveExercise} disabled={saving} className="flex-1">
-                {saving ? 'Saving...' : (editingExercise ? 'Update' : 'Add')}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setAddingExercise(false)
-                  setEditingExercise(null)
-                  resetExerciseForm()
-                }}
-                disabled={saving}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <ExercisePickerModal
+        open={addingExercise || editingExercise !== null}
+        onClose={() => { setAddingExercise(false); setEditingExercise(null); setPickerInitialValues(undefined) }}
+        onAdd={performExerciseSave}
+        mode="plan"
+        existingExerciseIds={exercises.filter(e => e.id !== editingExercise).map(e => e.exercise.id)}
+        initialValues={pickerInitialValues}
+        addLabel={editingExercise ? 'Update' : 'Add'}
+      />
 
       {/* Delete Confirmation Modal */}
       {exerciseToDelete && (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExercisePickerDropdown } from './ExercisePickerDropdown'
+import { ExercisePickerModal } from '@/components/ExercisePickerModal'
 
 export interface SlotData {
   exerciseId: string
@@ -13,39 +13,26 @@ export interface SlotData {
   notes: string
 }
 
-interface Exercise {
-  id: string
-  name: string
-}
-
 interface EditableSlotRowProps {
   slot: SlotData
-  exercises: Exercise[]
   onChange: (updated: SlotData) => void
   onDelete: () => void
   onReorder: (direction: 'up' | 'down') => void
-  onExerciseCreated: (exercise: Exercise) => void
   readOnly?: boolean
 }
 
 export function EditableSlotRow({
   slot,
-  exercises,
   onChange,
   onDelete,
   onReorder,
-  onExerciseCreated,
   readOnly = false,
 }: EditableSlotRowProps) {
   const [tempoError, setTempoError] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   function update(field: keyof SlotData, value: unknown) {
     onChange({ ...slot, [field]: value })
-  }
-
-  function handleExerciseChange(id: string) {
-    const ex = exercises.find((e) => e.id === id)
-    onChange({ ...slot, exerciseId: id, exerciseName: ex?.name || '' })
   }
 
   return (
@@ -55,12 +42,25 @@ export function EditableSlotRow({
           {readOnly ? (
             <p className="text-xs font-medium text-gray-700">{slot.exerciseName}</p>
           ) : (
-            <ExercisePickerDropdown
-              exercises={exercises}
-              value={slot.exerciseId}
-              onChange={handleExerciseChange}
-              onExerciseCreated={onExerciseCreated}
-            />
+            <>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="w-full text-left text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 hover:border-primary-400 truncate"
+              >
+                {slot.exerciseName || 'Pick exercise...'}
+              </button>
+              <ExercisePickerModal
+                open={pickerOpen}
+                onClose={() => setPickerOpen(false)}
+                onAdd={(result) => {
+                  onChange({ ...slot, exerciseId: result.exercise.id, exerciseName: result.exercise.name })
+                  setPickerOpen(false)
+                }}
+                mode="log"
+                existingExerciseIds={slot.exerciseId ? [] : []}
+              />
+            </>
           )}
         </div>
         {!readOnly && (

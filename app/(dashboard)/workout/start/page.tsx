@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { ExercisePickerModal } from '@/components/ExercisePickerModal'
 
 interface Exercise {
   id: string
@@ -38,147 +39,7 @@ function formatTimer(s: number) {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
-// Rank exercises by muscle group overlap with current workout
-function sortByMuscleRelevance(exercises: Exercise[], currentMuscleGroups: Set<string>): Exercise[] {
-  if (currentMuscleGroups.size === 0) return exercises
-  return [...exercises].sort((a, b) => {
-    const aScore = a.muscleGroups.filter((g) => currentMuscleGroups.has(g)).length
-    const bScore = b.muscleGroups.filter((g) => currentMuscleGroups.has(g)).length
-    if (bScore !== aScore) return bScore - aScore
-    return a.name.localeCompare(b.name)
-  })
-}
-
-// Inline exercise picker with muscle-group sorting + custom create
-function ExercisePicker({
-  exercises,
-  onAdd,
-}: {
-  exercises: Exercise[]
-  onAdd: (exercise: Exercise) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [saving, setSaving] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-        setCreating(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const filtered = exercises.filter((ex) =>
-    ex.name.toLowerCase().includes(search.toLowerCase())
-  )
-
-  async function handleCreate() {
-    if (!newName.trim()) return
-    setSaving(true)
-    try {
-      const res = await fetch('/api/exercises', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), muscleGroups: [], equipment: [], isPublic: false }),
-      })
-      if (res.ok) {
-        const created = await res.json()
-        onAdd({ id: created.id, name: created.name, muscleGroups: [], isUnilateral: false, isTimed: false, isBodyweight: false })
-        setCreating(false)
-        setNewName('')
-        setOpen(false)
-        setSearch('')
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen(!open); setSearch('') }}
-        className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition"
-      >
-        <span className="text-lg leading-none">+</span>
-        Add Exercise
-      </button>
-
-      {open && (
-        <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input
-              type="text"
-              autoFocus
-              placeholder="Search exercises..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-400"
-            />
-          </div>
-          <div className="max-h-56 overflow-y-auto">
-            {filtered.map((ex) => (
-              <button
-                key={ex.id}
-                type="button"
-                onClick={() => { onAdd(ex); setOpen(false); setSearch('') }}
-                className="w-full text-left px-3 py-2.5 text-sm hover:bg-primary-50 transition flex items-center justify-between"
-              >
-                <span>{ex.name}</span>
-                {ex.muscleGroups.length > 0 && (
-                  <span className="text-xs text-gray-400 ml-2 shrink-0">{ex.muscleGroups[0]}</span>
-                )}
-              </button>
-            ))}
-            {filtered.length === 0 && !creating && (
-              <p className="text-xs text-gray-400 px-3 py-3 text-center">No matches</p>
-            )}
-          </div>
-          {creating ? (
-            <div className="border-t p-2 flex gap-1.5">
-              <input
-                type="text"
-                autoFocus
-                placeholder="Exercise name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                className="flex-1 text-sm border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-primary-400"
-              />
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={saving || !newName.trim()}
-                className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded disabled:opacity-50"
-              >
-                {saving ? '...' : 'Create'}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="w-full border-t text-left text-xs text-primary-600 hover:bg-primary-50 px-3 py-2.5"
-            >
-              + Create custom exercise
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function ManualWorkoutPage() {
-  const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [entries, setEntries] = useState<ExerciseEntry[]>([])
   const [startTime] = useState(() => new Date())
   const [elapsed, setElapsed] = useState(0)
@@ -193,14 +54,11 @@ export default function ManualWorkoutPage() {
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
 
+  // Exercise picker modal
+  const [showExercisePicker, setShowExercisePicker] = useState(false)
+
   // Delete confirmation state: { entryKey, setId }
   const [deleteTarget, setDeleteTarget] = useState<{ entryKey: string; setId: number } | null>(null)
-
-  useEffect(() => {
-    fetch('/api/exercises?limit=500')
-      .then((r) => r.json())
-      .then((data) => setAllExercises(Array.isArray(data) ? data : []))
-  }, [])
 
   // Wall-clock-anchored workout timer
   useEffect(() => {
@@ -227,16 +85,7 @@ export default function ManualWorkoutPage() {
     }
   }
 
-  // Collect muscle groups from all current exercises for sorting
-  const currentMuscleGroups = new Set(entries.flatMap((e) => e.exercise.muscleGroups))
-
-  // Exercises not already added, sorted by muscle group relevance
-  const availableExercises = sortByMuscleRelevance(
-    allExercises.filter((ex) => !entries.find((e) => e.exercise.id === ex.id)),
-    currentMuscleGroups
-  )
-
-  function addExercise(exercise: Exercise) {
+  function addExercise(exercise: Pick<Exercise, 'id' | 'name' | 'muscleGroups' | 'isUnilateral' | 'isTimed' | 'isBodyweight'>) {
     const key = `${exercise.id}-${Date.now()}`
     const firstSet: SetRow = { id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', skipped: false }
     setEntries((prev) => [...prev, { key, exercise, sets: [firstSet] }])
@@ -550,10 +399,26 @@ export default function ManualWorkoutPage() {
         )
       })}
 
-      {/* Exercise picker */}
+      {/* Add exercise button */}
       <div className="mt-2">
-        <ExercisePicker exercises={availableExercises} onAdd={addExercise} />
+        <button
+          type="button"
+          onClick={() => setShowExercisePicker(true)}
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition"
+        >
+          <span className="text-lg leading-none">+</span>
+          Add Exercise
+        </button>
       </div>
+
+      <ExercisePickerModal
+        open={showExercisePicker}
+        onClose={() => setShowExercisePicker(false)}
+        onAdd={(result) => { addExercise(result.exercise); setShowExercisePicker(false) }}
+        mode="log"
+        existingExerciseIds={entries.map((e) => e.exercise.id)}
+        currentMuscleGroups={Array.from(new Set(entries.flatMap((e) => e.exercise.muscleGroups)))}
+      />
 
       {/* Finish workout modal */}
       {showFinish && (

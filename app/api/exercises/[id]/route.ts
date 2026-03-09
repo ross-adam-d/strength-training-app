@@ -138,6 +138,7 @@ export async function PATCH(
         isUnilateral: isUnilateral !== undefined ? isUnilateral : exercise.isUnilateral,
         isTimed: isTimed !== undefined ? isTimed : exercise.isTimed,
         isBodyweight: isBodyweight !== undefined ? isBodyweight : exercise.isBodyweight,
+        needsReview: false,
       },
     })
 

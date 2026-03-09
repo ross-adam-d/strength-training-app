@@ -17,6 +17,7 @@ interface Exercise {
   isUnilateral: boolean
   isTimed: boolean
   isBodyweight: boolean
+  needsReview?: boolean
   createdById?: string
 }
 
@@ -372,7 +373,12 @@ export default function ExercisesPage() {
             <CardBody>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-lg font-semibold flex-1">{exercise.name}</h3>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
+                  {exercise.needsReview && (
+                    <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded font-medium">
+                      Update required
+                    </span>
+                  )}
                   {!exercise.isPublic && (
                     <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                       Custom
