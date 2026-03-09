@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-08f'
+export const CURRENT_RELEASE_ID = '2026-03-09'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-09',
+    date: 'March 9, 2026',
+    title: 'Bug Fixes',
+    changes: [
+      'Fixed a bug where multiple sets in the same session could each show "New PR!" — only the best set in the session is now flagged',
+      'Fixed a rare issue where the email verification message could fail to send during account registration',
+    ],
+  },
   {
     id: '2026-03-08f',
     date: 'March 8, 2026',

@@ -365,17 +365,23 @@ export default function WorkoutLogPage() {
   }, [])
 
   // Compute which sets are PRs (new all-time best estimated 1RM)
+  // Track session best per exercise so only the highest set in this session is flagged
   const prSets = useMemo(() => {
     const result = new Set<string>()
+    const sessionBest: Record<string, number> = {}
     for (const log of exerciseLogs) {
       if (log.skipped) continue
       const weight = parseFloat(String(log.weight))
       const reps = parseInt(String(log.reps))
       if (!weight || !reps || weight <= 0 || reps <= 0) continue
       const oneRM = estimate1RM(weight, reps)
-      const best = allTimeBests[log.exerciseId]
-      if (best !== undefined && oneRM > best) {
+      const historicalBest = allTimeBests[log.exerciseId] ?? 0
+      const currentBest = Math.max(historicalBest, sessionBest[log.exerciseId] ?? 0)
+      if (historicalBest > 0 && oneRM > currentBest) {
         result.add(`${log.exerciseId}-${log.setNumber}`)
+        sessionBest[log.exerciseId] = oneRM
+      } else if (oneRM > (sessionBest[log.exerciseId] ?? 0)) {
+        sessionBest[log.exerciseId] = oneRM
       }
     }
     return result
