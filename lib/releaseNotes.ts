@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-10b'
+export const CURRENT_RELEASE_ID = '2026-03-10c'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-10c',
+    date: 'March 10, 2026',
+    title: 'Workout Logging Improvements',
+    changes: [
+      'Free workout now matches planned workout format — RIR column, per-set rest timer, and Skip/Remove buttons with the same styling',
+      'Free workout: reorder exercises, swap exercise, and view lift history — all available during a free session',
+      'Both workout types now have reorder, swap, history, and remove buttons on every exercise card',
+      'Removing an exercise now shows a confirmation prompt before removing it from the session',
+      'Fixed: weight field on iOS now correctly shows a decimal keyboard so values like 102.5 kg can be entered',
+    ],
+  },
   {
     id: '2026-03-10b',
     date: 'March 10, 2026',
