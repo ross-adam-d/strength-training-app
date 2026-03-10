@@ -1431,7 +1431,7 @@ export default function WorkoutLogPage() {
                             <>
                               <input
                                 type="text"
-                                inputMode="numeric"
+                                inputMode="decimal"
                                 pattern="[0-9.]*"
                                 placeholder={we.exercise.isBodyweight ? 'BW' : (suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || '')}
                                 value={log.weight}
