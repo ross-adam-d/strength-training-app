@@ -19,6 +19,7 @@ interface SetRow {
   repsLeft: string
   repsRight: string
   rpe: string
+  rir: string
   skipped: boolean
 }
 
@@ -26,6 +27,7 @@ interface ExerciseEntry {
   key: string
   exercise: Exercise
   sets: SetRow[]
+  restPeriod: number | null
 }
 
 let _setIdCounter = 1
@@ -60,6 +62,13 @@ export default function ManualWorkoutPage() {
   // Delete confirmation state: { entryKey, setId }
   const [deleteTarget, setDeleteTarget] = useState<{ entryKey: string; setId: number } | null>(null)
 
+  // Rest timer state
+  const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
+  const [timerSecondsLeft, setTimerSecondsLeft] = useState(0)
+  const [timerFlashing, setTimerFlashing] = useState(false)
+  const timerEndTimeRef = useRef<number>(0)
+  const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Wall-clock-anchored workout timer
   useEffect(() => {
     if (timerRunning) {
@@ -71,6 +80,25 @@ export default function ManualWorkoutPage() {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [timerRunning])
+
+  // Rest timer countdown
+  useEffect(() => {
+    if (activeTimerKey) {
+      restIntervalRef.current = setInterval(() => {
+        const remaining = Math.ceil((timerEndTimeRef.current - Date.now()) / 1000)
+        if (remaining <= 0) {
+          setTimerSecondsLeft(0)
+          setTimerFlashing(true)
+          if (restIntervalRef.current) clearInterval(restIntervalRef.current)
+        } else {
+          setTimerSecondsLeft(remaining)
+        }
+      }, 250)
+    } else {
+      if (restIntervalRef.current) clearInterval(restIntervalRef.current)
+    }
+    return () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current) }
+  }, [activeTimerKey])
 
   function toggleTimer() {
     if (timerRunning) {
@@ -85,12 +113,27 @@ export default function ManualWorkoutPage() {
     }
   }
 
+  function startRestTimer(entryKey: string, setId: number, restPeriod: number) {
+    const key = `${entryKey}-${setId}`
+    if (activeTimerKey === key) {
+      // Cancel running timer
+      setActiveTimerKey(null)
+      setTimerSecondsLeft(0)
+      setTimerFlashing(false)
+      return
+    }
+    timerEndTimeRef.current = Date.now() + restPeriod * 1000
+    setActiveTimerKey(key)
+    setTimerSecondsLeft(restPeriod)
+    setTimerFlashing(false)
+  }
+
   function addExercise(result: ExercisePickerResult) {
     const key = `${result.exercise.id}-${Date.now()}`
     const sets: SetRow[] = Array.from({ length: result.targetSets }, () => ({
-      id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', skipped: false,
+      id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', rir: '', skipped: false,
     }))
-    setEntries((prev) => [...prev, { key, exercise: result.exercise, sets }])
+    setEntries((prev) => [...prev, { key, exercise: result.exercise, sets, restPeriod: result.restPeriod }])
   }
 
   function removeExercise(entryKey: string) {
@@ -108,6 +151,7 @@ export default function ManualWorkoutPage() {
         repsLeft: last ? last.repsLeft : '',
         repsRight: last ? last.repsRight : '',
         rpe: last ? last.rpe : '',
+        rir: last ? last.rir : '',
         skipped: false,
       }
       return { ...e, sets: [...e.sets, newSet] }
@@ -121,15 +165,25 @@ export default function ManualWorkoutPage() {
       return { ...e, sets: newSets }
     }))
     setDeleteTarget(null)
+    if (activeTimerKey === `${entryKey}-${setId}`) {
+      setActiveTimerKey(null)
+      setTimerSecondsLeft(0)
+      setTimerFlashing(false)
+    }
   }
 
   function skipSet(entryKey: string, setId: number) {
+    if (activeTimerKey === `${entryKey}-${setId}`) {
+      setActiveTimerKey(null)
+      setTimerSecondsLeft(0)
+      setTimerFlashing(false)
+    }
     setEntries((prev) => prev.map((e) => {
       if (e.key !== entryKey) return e
       return {
         ...e,
         sets: e.sets.map((s) =>
-          s.id === setId ? { ...s, skipped: !s.skipped, weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '' } : s
+          s.id === setId ? { ...s, skipped: !s.skipped, weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', rir: '' } : s
         ),
       }
     }))
@@ -170,6 +224,7 @@ export default function ManualWorkoutPage() {
         }
         const weight = parseFloat(s.weight) || 0
         const rpe = s.rpe ? parseFloat(s.rpe) : undefined
+        const rir = s.rir ? parseInt(s.rir) : undefined
         if (e.exercise.isUnilateral) {
           return {
             exerciseId: e.exercise.id,
@@ -179,6 +234,7 @@ export default function ManualWorkoutPage() {
             repsRight: parseInt(s.repsRight) || 0,
             weight,
             rpe,
+            rir,
             skipped: false,
           }
         }
@@ -188,6 +244,7 @@ export default function ManualWorkoutPage() {
           reps: parseInt(s.reps) || 0,
           weight,
           rpe,
+          rir,
           skipped: false,
         }
       })
@@ -216,6 +273,8 @@ export default function ManualWorkoutPage() {
       setSaving(false)
     }
   }
+
+  const inputCls = 'w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300'
 
   return (
     <div className="max-w-2xl mx-auto pb-10">
@@ -250,6 +309,10 @@ export default function ManualWorkoutPage() {
       {/* Exercise cards */}
       {entries.map((entry) => {
         const ex = entry.exercise
+        const colsCls = ex.isUnilateral
+          ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_1fr]'
+          : 'grid-cols-[2rem_1fr_1fr_1fr]'
+
         return (
           <div key={entry.key} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
             {/* Exercise header */}
@@ -259,6 +322,13 @@ export default function ManualWorkoutPage() {
                 {ex.muscleGroups.length > 0 && (
                   <p className="text-xs text-gray-400 mt-0.5 capitalize">{ex.muscleGroups.join(' · ')}</p>
                 )}
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {entry.restPeriod != null && entry.restPeriod > 0 && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
+                      Rest {formatTimer(entry.restPeriod)}
+                    </span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => removeExercise(entry.key)}
@@ -269,7 +339,7 @@ export default function ManualWorkoutPage() {
             </div>
 
             {/* Column headers */}
-            <div className={`grid ${ex.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr_2.5rem]' : 'grid-cols-[2rem_1fr_1fr_1fr_2.5rem]'} gap-2 px-4 pt-3 pb-1 border-b border-gray-50`}>
+            <div className={`grid ${colsCls} gap-2 px-4 pt-3 pb-1 border-b border-gray-50`}>
               <div />
               <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">kg</div>
               {ex.isUnilateral ? (
@@ -280,14 +350,18 @@ export default function ManualWorkoutPage() {
               ) : (
                 <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">Reps</div>
               )}
-              <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">RPE</div>
-              <div />
+              <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">RIR</div>
             </div>
 
             {/* Set rows */}
-            <div className="px-4 py-2 space-y-2">
+            <div className="px-4 py-2 space-y-3">
               {entry.sets.map((s, idx) => {
+                const timerKey = `${entry.key}-${s.id}`
+                const isTimerActive = activeTimerKey === timerKey
+                const isFlashing = isTimerActive && timerFlashing
                 const isDeleting = deleteTarget?.entryKey === entry.key && deleteTarget?.setId === s.id
+                const hasRest = entry.restPeriod != null && entry.restPeriod > 0
+
                 return (
                   <div key={s.id}>
                     {isDeleting ? (
@@ -306,79 +380,104 @@ export default function ManualWorkoutPage() {
                           Cancel
                         </button>
                       </div>
+                    ) : s.skipped ? (
+                      <div className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-2.5">
+                        <span className="text-sm font-semibold text-gray-600 w-[2rem] line-through">{idx + 1}</span>
+                        <span className="text-sm font-medium text-yellow-700 flex-1 line-through">⊘ Skipped</span>
+                        <button
+                          onClick={() => skipSet(entry.key, s.id)}
+                          className="text-xs px-3 py-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg font-medium hover:bg-yellow-100 transition min-h-[36px]"
+                        >
+                          Unskip
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ entryKey: entry.key, setId: s.id })}
+                          className="text-xs px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-100 transition min-h-[36px]"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     ) : (
-                      <div className={`grid ${ex.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr_2.5rem]' : 'grid-cols-[2rem_1fr_1fr_1fr_2.5rem]'} gap-2 items-center`}>
-                        <span className={`text-xs font-medium text-center ${s.skipped ? 'text-gray-300 line-through' : 'text-gray-500'}`}>
-                          {idx + 1}
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          placeholder={s.skipped ? '—' : '0'}
-                          value={s.weight}
-                          disabled={s.skipped}
-                          onChange={(e) => updateSet(entry.key, s.id, 'weight', e.target.value)}
-                          className="w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300"
-                        />
-                        {ex.isUnilateral ? (
-                          <>
+                      <div className="space-y-1.5">
+                        {/* Input row */}
+                        <div className={`grid ${colsCls} gap-2 items-center`}>
+                          <span className="text-xs font-medium text-gray-500 text-center">{idx + 1}</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={s.weight}
+                            onChange={(e) => updateSet(entry.key, s.id, 'weight', e.target.value)}
+                            className={inputCls}
+                          />
+                          {ex.isUnilateral ? (
+                            <>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={s.repsLeft}
+                                onChange={(e) => updateSet(entry.key, s.id, 'repsLeft', e.target.value)}
+                                className={inputCls}
+                              />
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={s.repsRight}
+                                onChange={(e) => updateSet(entry.key, s.id, 'repsRight', e.target.value)}
+                                className={inputCls}
+                              />
+                            </>
+                          ) : (
                             <input
                               type="number"
                               inputMode="numeric"
-                              placeholder={s.skipped ? '—' : '0'}
-                              value={s.repsLeft}
-                              disabled={s.skipped}
-                              onChange={(e) => updateSet(entry.key, s.id, 'repsLeft', e.target.value)}
-                              className="w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300"
+                              placeholder="0"
+                              value={s.reps}
+                              onChange={(e) => updateSet(entry.key, s.id, 'reps', e.target.value)}
+                              className={inputCls}
                             />
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              placeholder={s.skipped ? '—' : '0'}
-                              value={s.repsRight}
-                              disabled={s.skipped}
-                              onChange={(e) => updateSet(entry.key, s.id, 'repsRight', e.target.value)}
-                              className="w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300"
-                            />
-                          </>
-                        ) : (
+                          )}
                           <input
                             type="number"
                             inputMode="numeric"
-                            placeholder={s.skipped ? '—' : '0'}
-                            value={s.reps}
-                            disabled={s.skipped}
-                            onChange={(e) => updateSet(entry.key, s.id, 'reps', e.target.value)}
-                            className="w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300"
+                            placeholder="—"
+                            min="0"
+                            max="5"
+                            value={s.rir}
+                            onChange={(e) => updateSet(entry.key, s.id, 'rir', e.target.value)}
+                            className={inputCls}
                           />
-                        )}
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          placeholder="—"
-                          step="0.5"
-                          min="1"
-                          max="10"
-                          value={s.rpe}
-                          disabled={s.skipped}
-                          onChange={(e) => updateSet(entry.key, s.id, 'rpe', e.target.value)}
-                          className="w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300"
-                        />
-                        {/* Action menu */}
-                        <div className="flex flex-col gap-0.5">
+                        </div>
+
+                        {/* Action row */}
+                        <div className="ml-[2.5rem] flex items-center gap-2">
+                          {hasRest && (
+                            <button
+                              onClick={() => startRestTimer(entry.key, s.id, entry.restPeriod!)}
+                              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition min-h-[36px] ${
+                                isFlashing
+                                  ? 'bg-red-500 text-white animate-pulse'
+                                  : isTimerActive
+                                  ? 'bg-primary-600 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {isTimerActive ? formatTimer(timerSecondsLeft) : `Rest ${formatTimer(entry.restPeriod!)}`}
+                            </button>
+                          )}
                           <button
                             onClick={() => skipSet(entry.key, s.id)}
-                            title={s.skipped ? 'Unskip' : 'Skip'}
-                            className={`text-xs px-1 py-0.5 rounded transition ${s.skipped ? 'text-primary-600 bg-primary-50' : 'text-gray-400 hover:text-gray-600'}`}
+                            className="text-xs px-3 py-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg font-medium hover:bg-yellow-100 transition min-h-[36px]"
                           >
-                            {s.skipped ? '↩' : '⊘'}
+                            Skip
                           </button>
                           <button
                             onClick={() => setDeleteTarget({ entryKey: entry.key, setId: s.id })}
-                            title="Delete"
-                            className="text-xs px-1 py-0.5 rounded text-gray-400 hover:text-red-500 transition"
+                            className="text-xs px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-100 transition min-h-[36px]"
                           >
-                            ✕
+                            Remove
                           </button>
                         </div>
                       </div>
