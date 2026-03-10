@@ -54,11 +54,29 @@ export function EditableSlotRow({
                 open={pickerOpen}
                 onClose={() => setPickerOpen(false)}
                 onAdd={(result) => {
-                  onChange({ ...slot, exerciseId: result.exercise.id, exerciseName: result.exercise.name })
+                  onChange({
+                    ...slot,
+                    exerciseId: result.exercise.id,
+                    exerciseName: result.exercise.name,
+                    targetSets: result.targetSets,
+                    targetReps: result.targetReps,
+                    targetRir: result.targetRir,
+                    restPeriod: result.restPeriod,
+                    tempo: result.tempo ?? '',
+                    notes: result.notes ?? '',
+                  })
                   setPickerOpen(false)
                 }}
-                mode="log"
+                mode="plan"
                 existingExerciseIds={slot.exerciseId ? [] : []}
+                initialValues={{
+                  targetSets: String(slot.targetSets),
+                  targetReps: slot.targetReps,
+                  targetRir: slot.targetRir != null ? String(slot.targetRir) : '',
+                  restPeriod: slot.restPeriod != null ? String(slot.restPeriod) : '',
+                  tempo: slot.tempo,
+                  notes: slot.notes,
+                }}
               />
             </>
           )}

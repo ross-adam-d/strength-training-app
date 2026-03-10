@@ -526,10 +526,10 @@ export default function TemplateWorkoutEditPage() {
         open={addingExercise || editingExercise !== null}
         onClose={() => { setAddingExercise(false); setEditingExercise(null); setPickerInitialValues(undefined) }}
         onAdd={performExerciseSave}
-        mode={editingExercise ? 'plan' : 'log'}
+        mode="plan"
         existingExerciseIds={exercises.filter(e => e.id !== editingExercise).map(e => e.exercise.id)}
         initialValues={pickerInitialValues}
-        addLabel="Update"
+        addLabel={editingExercise ? 'Update' : 'Add'}
       />
 
       {/* Delete Confirmation Modal */}

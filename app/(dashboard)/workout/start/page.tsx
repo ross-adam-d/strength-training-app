@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { ExercisePickerModal } from '@/components/ExercisePickerModal'
+import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
 
 interface Exercise {
   id: string
@@ -85,10 +85,12 @@ export default function ManualWorkoutPage() {
     }
   }
 
-  function addExercise(exercise: Pick<Exercise, 'id' | 'name' | 'muscleGroups' | 'isUnilateral' | 'isTimed' | 'isBodyweight'>) {
-    const key = `${exercise.id}-${Date.now()}`
-    const firstSet: SetRow = { id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', skipped: false }
-    setEntries((prev) => [...prev, { key, exercise, sets: [firstSet] }])
+  function addExercise(result: ExercisePickerResult) {
+    const key = `${result.exercise.id}-${Date.now()}`
+    const sets: SetRow[] = Array.from({ length: result.targetSets }, () => ({
+      id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', skipped: false,
+    }))
+    setEntries((prev) => [...prev, { key, exercise: result.exercise, sets }])
   }
 
   function removeExercise(entryKey: string) {
@@ -414,8 +416,8 @@ export default function ManualWorkoutPage() {
       <ExercisePickerModal
         open={showExercisePicker}
         onClose={() => setShowExercisePicker(false)}
-        onAdd={(result) => { addExercise(result.exercise); setShowExercisePicker(false) }}
-        mode="log"
+        onAdd={(result) => { addExercise(result); setShowExercisePicker(false) }}
+        mode="plan"
         existingExerciseIds={entries.map((e) => e.exercise.id)}
         currentMuscleGroups={Array.from(new Set(entries.flatMap((e) => e.exercise.muscleGroups)))}
       />

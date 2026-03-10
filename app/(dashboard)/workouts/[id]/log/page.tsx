@@ -1941,7 +1941,7 @@ export default function WorkoutLogPage() {
         open={showExercisePicker}
         onClose={() => setShowExercisePicker(false)}
         onAdd={handleAddExercise}
-        mode="log"
+        mode="plan"
         existingExerciseIds={(workout?.workoutExercises || []).map((we) => we.exercise.id)}
         currentMuscleGroups={[]}
       />
