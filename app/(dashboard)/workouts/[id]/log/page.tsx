@@ -174,6 +174,7 @@ export default function WorkoutLogPage() {
   // Completed exercises tracking
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
   const [removedExercises, setRemovedExercises] = useState<Set<string>>(new Set())
+  const [exerciseToRemove, setExerciseToRemove] = useState<string | null>(null)
 
   // Lift history modal state
   const [showLiftHistory, setShowLiftHistory] = useState(false)
@@ -1337,7 +1338,7 @@ export default function WorkoutLogPage() {
                       📊
                     </button>
                     <button
-                      onClick={() => setRemovedExercises((prev) => new Set([...prev, we.id]))}
+                      onClick={() => setExerciseToRemove(we.id)}
                       className="text-xl hover:opacity-70 transition"
                       aria-label="Remove exercise from session"
                       title="Remove from session"
@@ -1813,6 +1814,36 @@ export default function WorkoutLogPage() {
               onClick={handleCompleteWithAutoSkip}
             >
               Complete Workout
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Remove Exercise Confirmation Modal */}
+      <Modal
+        isOpen={exerciseToRemove !== null}
+        onClose={() => setExerciseToRemove(null)}
+        title="Remove Exercise?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            This will hide the exercise from your current session. It won&apos;t affect future workouts.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button variant="secondary" onClick={() => setExerciseToRemove(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (exerciseToRemove) {
+                  setRemovedExercises((prev) => new Set([...prev, exerciseToRemove]))
+                }
+                setExerciseToRemove(null)
+              }}
+            >
+              Remove
             </Button>
           </div>
         </div>

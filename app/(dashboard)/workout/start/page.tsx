@@ -67,6 +67,9 @@ export default function ManualWorkoutPage() {
   // Swap exercise
   const [swapTarget, setSwapTarget] = useState<string | null>(null)
 
+  // Remove exercise confirmation
+  const [removeExerciseTarget, setRemoveExerciseTarget] = useState<string | null>(null)
+
   // Lift history modal
   const [historyExercise, setHistoryExercise] = useState<{ id: string; name: string } | null>(null)
 
@@ -335,6 +338,14 @@ export default function ManualWorkoutPage() {
 
         return (
           <div key={entry.key} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+            {/* Remove exercise confirmation */}
+            {removeExerciseTarget === entry.key && (
+              <div className="px-4 py-3 bg-red-50 border-b border-red-200 flex items-center gap-3">
+                <span className="text-sm text-gray-700 flex-1">Remove <span className="font-semibold">{ex.name}</span> from this workout?</span>
+                <Button variant="danger" size="sm" onClick={() => { removeExercise(entry.key); setRemoveExerciseTarget(null) }}>Remove</Button>
+                <Button variant="secondary" size="sm" onClick={() => setRemoveExerciseTarget(null)}>Cancel</Button>
+              </div>
+            )}
             {/* Exercise header — matches planned workout style */}
             <div className="px-4 py-3 border-b border-gray-100">
               <div className="flex items-start justify-between gap-2">
@@ -381,7 +392,7 @@ export default function ManualWorkoutPage() {
                     📊
                   </button>
                   <button
-                    onClick={() => removeExercise(entry.key)}
+                    onClick={() => setRemoveExerciseTarget(entry.key)}
                     className="text-xl hover:opacity-70 transition"
                     aria-label="Remove exercise"
                     title="Remove exercise"
