@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
+import { LiftHistoryModal } from '@/components/LiftHistoryModal'
 
 interface Exercise {
   id: string
@@ -27,7 +29,10 @@ interface ExerciseEntry {
   key: string
   exercise: Exercise
   sets: SetRow[]
+  targetReps: string
+  targetRir: number | null
   restPeriod: number | null
+  tempo: string | null
 }
 
 let _setIdCounter = 1
@@ -56,8 +61,14 @@ export default function ManualWorkoutPage() {
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
 
-  // Exercise picker modal
+  // Exercise picker modal (add new)
   const [showExercisePicker, setShowExercisePicker] = useState(false)
+
+  // Swap exercise
+  const [swapTarget, setSwapTarget] = useState<string | null>(null)
+
+  // Lift history modal
+  const [historyExercise, setHistoryExercise] = useState<{ id: string; name: string } | null>(null)
 
   // Delete confirmation state: { entryKey, setId }
   const [deleteTarget, setDeleteTarget] = useState<{ entryKey: string; setId: number } | null>(null)
@@ -116,7 +127,6 @@ export default function ManualWorkoutPage() {
   function startRestTimer(entryKey: string, setId: number, restPeriod: number) {
     const key = `${entryKey}-${setId}`
     if (activeTimerKey === key) {
-      // Cancel running timer
       setActiveTimerKey(null)
       setTimerSecondsLeft(0)
       setTimerFlashing(false)
@@ -133,11 +143,31 @@ export default function ManualWorkoutPage() {
     const sets: SetRow[] = Array.from({ length: result.targetSets }, () => ({
       id: nextSetId(), weight: '', reps: '', repsLeft: '', repsRight: '', rpe: '', rir: '', skipped: false,
     }))
-    setEntries((prev) => [...prev, { key, exercise: result.exercise, sets, restPeriod: result.restPeriod }])
+    setEntries((prev) => [...prev, {
+      key,
+      exercise: result.exercise,
+      sets,
+      targetReps: result.targetReps,
+      targetRir: result.targetRir,
+      restPeriod: result.restPeriod,
+      tempo: result.tempo,
+    }])
   }
 
   function removeExercise(entryKey: string) {
     setEntries((prev) => prev.filter((e) => e.key !== entryKey))
+  }
+
+  function moveEntry(entryKey: string, direction: 'up' | 'down') {
+    setEntries((prev) => {
+      const idx = prev.findIndex((e) => e.key === entryKey)
+      if (direction === 'up' && idx === 0) return prev
+      if (direction === 'down' && idx === prev.length - 1) return prev
+      const next = [...prev]
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+      ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
+      return next
+    })
   }
 
   function addSet(entryKey: string) {
@@ -161,8 +191,7 @@ export default function ManualWorkoutPage() {
   function deleteSet(entryKey: string, setId: number) {
     setEntries((prev) => prev.map((e) => {
       if (e.key !== entryKey) return e
-      const newSets = e.sets.filter((s) => s.id !== setId)
-      return { ...e, sets: newSets }
+      return { ...e, sets: e.sets.filter((s) => s.id !== setId) }
     }))
     setDeleteTarget(null)
     if (activeTimerKey === `${entryKey}-${setId}`) {
@@ -232,20 +261,14 @@ export default function ManualWorkoutPage() {
             reps: 0,
             repsLeft: parseInt(s.repsLeft) || 0,
             repsRight: parseInt(s.repsRight) || 0,
-            weight,
-            rpe,
-            rir,
-            skipped: false,
+            weight, rpe, rir, skipped: false,
           }
         }
         return {
           exerciseId: e.exercise.id,
           setNumber: idx + 1,
           reps: parseInt(s.reps) || 0,
-          weight,
-          rpe,
-          rir,
-          skipped: false,
+          weight, rpe, rir, skipped: false,
         }
       })
     )
@@ -274,7 +297,7 @@ export default function ManualWorkoutPage() {
     }
   }
 
-  const inputCls = 'w-full text-center text-sm border border-gray-200 rounded-lg px-1 py-2.5 focus:outline-none focus:border-primary-400 disabled:bg-gray-50 disabled:text-gray-300'
+  const inputCls = 'w-full text-center text-sm border border-gray-300 rounded-md px-1 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
 
   return (
     <div className="max-w-2xl mx-auto pb-10">
@@ -297,64 +320,118 @@ export default function ManualWorkoutPage() {
               </button>
             </div>
           </div>
-          <button
-            onClick={handleComplete}
-            className="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
-          >
+          <Button onClick={handleComplete} size="md">
             Finish
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Exercise cards */}
-      {entries.map((entry) => {
+      {entries.map((entry, index) => {
         const ex = entry.exercise
         const colsCls = ex.isUnilateral
           ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_1fr]'
           : 'grid-cols-[2rem_1fr_1fr_1fr]'
 
         return (
-          <div key={entry.key} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
-            {/* Exercise header */}
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
-              <div>
-                <h2 className="font-bold text-gray-900">{ex.name}</h2>
-                {ex.muscleGroups.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-0.5 capitalize">{ex.muscleGroups.join(' · ')}</p>
-                )}
-                <div className="flex gap-2 mt-1 flex-wrap">
-                  {entry.restPeriod != null && entry.restPeriod > 0 && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
-                      Rest {formatTimer(entry.restPeriod)}
-                    </span>
+          <div key={entry.key} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+            {/* Exercise header — matches planned workout style */}
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold text-gray-900">{ex.name}</h2>
+                  {ex.muscleGroups.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5 capitalize">{ex.muscleGroups.join(' · ')}</p>
                   )}
+                  <p className="text-sm text-gray-600 mt-1">
+                    Target: {entry.sets.length} sets × {entry.targetReps || '—'} reps
+                  </p>
+                </div>
+                {/* Reorder + swap + history + remove */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex flex-col">
+                    <button
+                      onClick={() => moveEntry(entry.key, 'up')}
+                      disabled={index === 0}
+                      className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none"
+                      aria-label="Move exercise up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => moveEntry(entry.key, 'down')}
+                      disabled={index === entries.length - 1}
+                      className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none"
+                      aria-label="Move exercise down"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setSwapTarget(entry.key)}
+                    className="text-xl hover:opacity-70 transition"
+                    aria-label="Swap exercise"
+                    title="Swap exercise"
+                  >
+                    🔄
+                  </button>
+                  <button
+                    onClick={() => setHistoryExercise({ id: ex.id, name: ex.name })}
+                    className="text-xl hover:opacity-70 transition"
+                    aria-label="View lift history"
+                    title="View lift history"
+                  >
+                    📊
+                  </button>
+                  <button
+                    onClick={() => removeExercise(entry.key)}
+                    className="text-xl hover:opacity-70 transition"
+                    aria-label="Remove exercise"
+                    title="Remove exercise"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => removeExercise(entry.key)}
-                className="text-xs text-gray-400 hover:text-red-500 transition px-2 py-1"
-              >
-                Remove
-              </button>
+              {/* Badges */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {entry.targetRir != null && (
+                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                    RIR {entry.targetRir}
+                  </span>
+                )}
+                {entry.tempo && (
+                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                    Tempo {entry.tempo}
+                  </span>
+                )}
+                {entry.restPeriod != null && entry.restPeriod > 0 && (
+                  <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded">
+                    Rest {formatTimer(entry.restPeriod)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Column headers */}
             <div className={`grid ${colsCls} gap-2 px-4 pt-3 pb-1 border-b border-gray-50`}>
               <div />
-              <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">kg</div>
+              <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">
+                {ex.isBodyweight ? 'Weight' : 'Weight (kg)'}
+              </div>
               {ex.isUnilateral ? (
                 <>
-                  <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">L</div>
-                  <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">R</div>
+                  <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Left</div>
+                  <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Right</div>
                 </>
               ) : (
-                <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">Reps</div>
+                <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">Reps</div>
               )}
-              <div className="text-xs font-semibold text-gray-400 text-center uppercase tracking-wide">RIR</div>
+              <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">RIR</div>
             </div>
 
             {/* Set rows */}
-            <div className="px-4 py-2 space-y-3">
+            <div className="px-4 py-2 space-y-4">
               {entry.sets.map((s, idx) => {
                 const timerKey = `${entry.key}-${s.id}`
                 const isTimerActive = activeTimerKey === timerKey
@@ -367,45 +444,40 @@ export default function ManualWorkoutPage() {
                     {isDeleting ? (
                       <div className="flex items-center gap-2 py-1">
                         <span className="text-sm text-gray-600 flex-1">Delete set {idx + 1}?</span>
-                        <button
-                          onClick={() => deleteSet(entry.key, s.id)}
-                          className="text-xs px-3 py-1.5 bg-red-500 text-white rounded-lg font-medium"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(null)}
-                          className="text-xs px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg font-medium"
-                        >
-                          Cancel
-                        </button>
+                        <Button variant="danger" size="sm" onClick={() => deleteSet(entry.key, s.id)}>Delete</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
                       </div>
                     ) : s.skipped ? (
-                      <div className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-2.5">
+                      <div className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 rounded-md px-3 py-3">
                         <span className="text-sm font-semibold text-gray-600 w-[2rem] line-through">{idx + 1}</span>
                         <span className="text-sm font-medium text-yellow-700 flex-1 line-through">⊘ Skipped</span>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-[36px] text-yellow-600 hover:bg-yellow-100 border border-yellow-300"
                           onClick={() => skipSet(entry.key, s.id)}
-                          className="text-xs px-3 py-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg font-medium hover:bg-yellow-100 transition min-h-[36px]"
                         >
                           Unskip
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="min-h-[36px]"
                           onClick={() => setDeleteTarget({ entryKey: entry.key, setId: s.id })}
-                          className="text-xs px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-100 transition min-h-[36px]"
                         >
                           Remove
-                        </button>
+                        </Button>
                       </div>
                     ) : (
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {/* Input row */}
                         <div className={`grid ${colsCls} gap-2 items-center`}>
-                          <span className="text-xs font-medium text-gray-500 text-center">{idx + 1}</span>
+                          <span className="text-sm font-semibold text-gray-600 text-center">{idx + 1}</span>
                           <input
-                            type="number"
+                            type="text"
                             inputMode="decimal"
-                            placeholder="0"
+                            pattern="[0-9.]*"
+                            placeholder={ex.isBodyweight ? 'BW' : '0'}
                             value={s.weight}
                             onChange={(e) => updateSet(entry.key, s.id, 'weight', e.target.value)}
                             className={inputCls}
@@ -413,16 +485,18 @@ export default function ManualWorkoutPage() {
                           {ex.isUnilateral ? (
                             <>
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
+                                pattern="[0-9]*"
                                 placeholder="0"
                                 value={s.repsLeft}
                                 onChange={(e) => updateSet(entry.key, s.id, 'repsLeft', e.target.value)}
                                 className={inputCls}
                               />
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
+                                pattern="[0-9]*"
                                 placeholder="0"
                                 value={s.repsRight}
                                 onChange={(e) => updateSet(entry.key, s.id, 'repsRight', e.target.value)}
@@ -431,8 +505,9 @@ export default function ManualWorkoutPage() {
                             </>
                           ) : (
                             <input
-                              type="number"
+                              type="text"
                               inputMode="numeric"
+                              pattern="[0-9]*"
                               placeholder="0"
                               value={s.reps}
                               onChange={(e) => updateSet(entry.key, s.id, 'reps', e.target.value)}
@@ -440,11 +515,10 @@ export default function ManualWorkoutPage() {
                             />
                           )}
                           <input
-                            type="number"
+                            type="text"
                             inputMode="numeric"
+                            pattern="[0-9]*"
                             placeholder="—"
-                            min="0"
-                            max="5"
                             value={s.rir}
                             onChange={(e) => updateSet(entry.key, s.id, 'rir', e.target.value)}
                             className={inputCls}
@@ -454,31 +528,31 @@ export default function ManualWorkoutPage() {
                         {/* Action row */}
                         <div className="ml-[2.5rem] flex items-center gap-2">
                           {hasRest && (
-                            <button
+                            <Button
+                              variant={isFlashing ? 'danger' : isTimerActive ? 'primary' : 'secondary'}
+                              size="sm"
+                              className={`min-h-[36px] ${isFlashing ? 'animate-pulse' : ''}`}
                               onClick={() => startRestTimer(entry.key, s.id, entry.restPeriod!)}
-                              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition min-h-[36px] ${
-                                isFlashing
-                                  ? 'bg-red-500 text-white animate-pulse'
-                                  : isTimerActive
-                                  ? 'bg-primary-600 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
                             >
                               {isTimerActive ? formatTimer(timerSecondsLeft) : `Rest ${formatTimer(entry.restPeriod!)}`}
-                            </button>
+                            </Button>
                           )}
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-[36px] text-yellow-600 hover:bg-yellow-50 border border-yellow-300"
                             onClick={() => skipSet(entry.key, s.id)}
-                            className="text-xs px-3 py-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg font-medium hover:bg-yellow-100 transition min-h-[36px]"
                           >
                             Skip
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            className="min-h-[36px]"
                             onClick={() => setDeleteTarget({ entryKey: entry.key, setId: s.id })}
-                            className="text-xs px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-100 transition min-h-[36px]"
                           >
                             Remove
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -488,13 +562,10 @@ export default function ManualWorkoutPage() {
             </div>
 
             {/* Add set */}
-            <div className="px-4 pb-3 pt-1">
-              <button
-                onClick={() => addSet(entry.key)}
-                className="w-full py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-              >
+            <div className="px-4 pb-4 pt-1">
+              <Button variant="secondary" size="sm" className="min-h-[40px] w-full" onClick={() => addSet(entry.key)}>
                 + Add Set
-              </button>
+              </Button>
             </div>
           </div>
         )
@@ -502,16 +573,12 @@ export default function ManualWorkoutPage() {
 
       {/* Add exercise button */}
       <div className="mt-2">
-        <button
-          type="button"
-          onClick={() => setShowExercisePicker(true)}
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition"
-        >
-          <span className="text-lg leading-none">+</span>
-          Add Exercise
-        </button>
+        <Button size="md" className="w-full py-3" onClick={() => setShowExercisePicker(true)}>
+          + Add Exercise
+        </Button>
       </div>
 
+      {/* Add exercise picker */}
       <ExercisePickerModal
         open={showExercisePicker}
         onClose={() => setShowExercisePicker(false)}
@@ -520,6 +587,30 @@ export default function ManualWorkoutPage() {
         existingExerciseIds={entries.map((e) => e.exercise.id)}
         currentMuscleGroups={Array.from(new Set(entries.flatMap((e) => e.exercise.muscleGroups)))}
       />
+
+      {/* Swap exercise picker */}
+      <ExercisePickerModal
+        open={swapTarget !== null}
+        onClose={() => setSwapTarget(null)}
+        onAdd={(result) => {
+          setEntries((prev) => prev.map((e) =>
+            e.key === swapTarget ? { ...e, exercise: result.exercise } : e
+          ))
+          setSwapTarget(null)
+        }}
+        mode="log"
+        existingExerciseIds={entries.filter((e) => e.key !== swapTarget).map((e) => e.exercise.id)}
+        title="Swap Exercise"
+      />
+
+      {/* Lift history modal */}
+      {historyExercise && (
+        <LiftHistoryModal
+          exerciseId={historyExercise.id}
+          exerciseName={historyExercise.name}
+          onClose={() => setHistoryExercise(null)}
+        />
+      )}
 
       {/* Finish workout modal */}
       {showFinish && (
@@ -565,19 +656,12 @@ export default function ManualWorkoutPage() {
               </div>
 
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowFinish(false)}
-                  className="flex-1 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                >
+                <Button variant="secondary" size="md" className="flex-1" onClick={() => setShowFinish(false)}>
                   Back
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2.5 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
-                >
+                </Button>
+                <Button size="md" className="flex-1" disabled={saving} onClick={handleSave}>
                   {saving ? 'Saving...' : 'Save Workout'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
