@@ -674,10 +674,10 @@ export default function EditWorkoutPage() {
         open={addingExercise || editingExercise !== null}
         onClose={() => { setAddingExercise(false); setEditingExercise(null); setPickerInitialValues(undefined) }}
         onAdd={performExerciseSave}
-        mode="plan"
+        mode={editingExercise ? 'plan' : 'log'}
         existingExerciseIds={exercises.filter(e => e.id !== editingExercise).map(e => e.exercise.id)}
         initialValues={pickerInitialValues}
-        addLabel={editingExercise ? 'Update' : 'Add'}
+        addLabel="Update"
       />
 
       {/* Delete Confirmation Modal */}
