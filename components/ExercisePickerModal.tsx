@@ -355,9 +355,9 @@ export function ExercisePickerModal({
         /* Form view — plan mode */
         <div className="space-y-4">
           {/* Selected exercise */}
-          <div className="flex items-center justify-between bg-primary-50 border border-primary-200 rounded-lg px-3 py-2.5">
+          <div className="flex items-center justify-between bg-gray-100 border border-gray-300 rounded-lg px-3 py-2.5">
             <div>
-              <p className="font-medium text-gray-900 text-sm">{selectedExercise?.name}</p>
+              <p className="font-bold text-gray-900 text-sm">{selectedExercise?.name}</p>
               {selectedExercise && selectedExercise.muscleGroups.length > 0 && (
                 <p className="text-xs text-gray-500 capitalize mt-0.5">{selectedExercise.muscleGroups.join(', ')}</p>
               )}
