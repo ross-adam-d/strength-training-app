@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
             password: true,
             role: true,
             emailVerified: true,
+            unitPreference: true,
             subscription: {
               select: {
                 status: true,
@@ -104,6 +105,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           emailVerified: !!user.emailVerified,
+          unitPreference: user.unitPreference ?? 'metric',
           subscriptionStatus: user.subscription?.status ?? null,
           tier: user.subscription?.tier ?? 'PREMIERE',
           trialEndsAt: user.subscription?.trialEndsAt?.toISOString() ?? null,
@@ -118,6 +120,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = user.role
         token.emailVerified = (user as any).emailVerified
+        token.unitPreference = (user as any).unitPreference ?? 'metric'
         token.subscriptionStatus = (user as any).subscriptionStatus
         token.tier = (user as any).tier
         token.trialEndsAt = (user as any).trialEndsAt
@@ -128,6 +131,7 @@ export const authOptions: NextAuthOptions = {
           where: { id: token.id as string },
           select: {
             emailVerified: true,
+            unitPreference: true,
             subscription: {
               select: {
                 status: true,
@@ -140,6 +144,7 @@ export const authOptions: NextAuthOptions = {
         })
         if (dbUser) {
           token.emailVerified = !!dbUser.emailVerified
+          token.unitPreference = dbUser.unitPreference ?? 'metric'
           if (dbUser.subscription) {
             token.subscriptionStatus = dbUser.subscription.status
             token.tier = dbUser.subscription.tier
@@ -155,6 +160,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role
         session.user.emailVerified = token.emailVerified as boolean | undefined
+        session.user.unitPreference = token.unitPreference ?? 'metric'
         session.user.tier = token.tier ?? 'PREMIERE'
         session.user.subscriptionStatus = token.subscriptionStatus ?? null
         session.user.trialEndsAt = token.trialEndsAt ?? null

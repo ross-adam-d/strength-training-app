@@ -11,6 +11,7 @@ declare module 'next-auth' {
       tier?: string
       subscriptionStatus?: string | null
       trialEndsAt?: string | null
+      unitPreference?: string
     }
   }
 
@@ -32,5 +33,6 @@ declare module 'next-auth/jwt' {
     tier?: string
     trialEndsAt?: string | null
     manualAccessGrantedUntil?: string | null
+    unitPreference?: string
   }
 }

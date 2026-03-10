@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { LiftHistoryModal } from '@/components/LiftHistoryModal'
 import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
 import { getSuggestion, estimate1RM, calculateSuggestedReps, parseRepRange } from '@/lib/progressiveOverload'
+import { kgToDisplay, displayToKg, weightUnit } from '@/lib/units'
 
 interface WorkoutExercise {
   id: string
@@ -144,6 +146,10 @@ function playBeep() {
 
 export default function WorkoutLogPage() {
   const params = useParams()
+  const { data: session } = useSession()
+  const unitPref = ((session?.user as any)?.unitPreference ?? 'metric') as 'metric' | 'imperial'
+  const unitPrefRef = useRef<'metric' | 'imperial'>('metric')
+  useEffect(() => { unitPrefRef.current = unitPref }, [unitPref])
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
   const [startTime] = useState(new Date())
@@ -339,6 +345,19 @@ export default function WorkoutLogPage() {
           }
           newSuggestions.set(we.exercise.id, setMap)
         }
+        // Convert suggestion weights from kg to user's display units
+        if (unitPrefRef.current === 'imperial') {
+          for (const [, setMap] of newSuggestions) {
+            for (const [setNum, val] of setMap) {
+              if (val.weight) {
+                const kgVal = parseFloat(val.weight)
+                if (!isNaN(kgVal) && kgVal > 0) {
+                  setMap.set(setNum, { ...val, weight: String(kgToDisplay(kgVal, 'imperial')) })
+                }
+              }
+            }
+          }
+        }
         setSuggestions(newSuggestions)
 
         // Initialise empty sets (ghost placeholders handle the suggestions)
@@ -389,10 +408,11 @@ export default function WorkoutLogPage() {
     const sessionBest: Record<string, number> = {}
     for (const log of exerciseLogs) {
       if (log.skipped) continue
-      const weight = parseFloat(String(log.weight))
+      const weightDisplay = parseFloat(String(log.weight))
       const reps = parseInt(String(log.reps))
-      if (!weight || !reps || weight <= 0 || reps <= 0) continue
-      const oneRM = estimate1RM(weight, reps)
+      if (!weightDisplay || !reps || weightDisplay <= 0 || reps <= 0) continue
+      const weightKg = displayToKg(weightDisplay, unitPref)
+      const oneRM = estimate1RM(weightKg, reps)
       const historicalBest = allTimeBests[log.exerciseId] ?? 0
       const currentBest = Math.max(historicalBest, sessionBest[log.exerciseId] ?? 0)
       if (historicalBest > 0 && oneRM > currentBest) {
@@ -403,7 +423,7 @@ export default function WorkoutLogPage() {
       }
     }
     return result
-  }, [exerciseLogs, allTimeBests])
+  }, [exerciseLogs, allTimeBests, unitPref])
 
   const saveDraft = useCallback(() => {
     if (!workout) return
@@ -924,7 +944,8 @@ export default function WorkoutLogPage() {
           const oneRM = allTimeBests[exerciseId]
           if (oneRM && oneRM > 0) {
             const repRange = parseRepRange(we.targetReps)
-            const suggestedReps = calculateSuggestedReps(oneRM, weightVal, repRange)
+            const weightKg = displayToKg(weightVal, unitPref)
+            const suggestedReps = calculateSuggestedReps(oneRM, weightKg, repRange)
             setSuggestions((prev) => {
               const exerciseMap = new Map(prev.get(exerciseId) ?? [])
               exerciseMap.forEach((val, key) => {
@@ -1053,7 +1074,8 @@ export default function WorkoutLogPage() {
 
         // Clean and validate numeric values before submission
         const weightStr = String(log.weight ?? '').trim()
-        const weightValue = weightStr === '' ? 0 : parseFloat(weightStr)
+        const weightDisplay = weightStr === '' ? 0 : parseFloat(weightStr)
+        const weightValue = displayToKg(weightDisplay, unitPref)
         const rirStr = String(log.rir ?? '').trim()
         const rirValue = rirStr === '' ? undefined : parseInt(rirStr, 10)
 
@@ -1371,7 +1393,7 @@ export default function WorkoutLogPage() {
             <CardBody>
               <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 pb-2 border-b mb-3`}>
                 <div />
-                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">{we.exercise.isBodyweight ? 'Weight' : 'Weight (kg)'}</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">{we.exercise.isBodyweight ? 'Weight' : `Weight (${weightUnit(unitPref)})`}</div>
                 {we.exercise.isUnilateral ? (
                   <>
                     <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Left</div>

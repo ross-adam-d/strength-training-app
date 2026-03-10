@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
 import { LiftHistoryModal } from '@/components/LiftHistoryModal'
+import { displayToKg, weightUnit } from '@/lib/units'
 
 interface Exercise {
   id: string
@@ -47,6 +49,8 @@ function formatTimer(s: number) {
 }
 
 export default function ManualWorkoutPage() {
+  const { data: session } = useSession()
+  const unitPref = ((session?.user as any)?.unitPreference ?? 'metric') as 'metric' | 'imperial'
   const [entries, setEntries] = useState<ExerciseEntry[]>([])
   const [startTime] = useState(() => new Date())
   const [elapsed, setElapsed] = useState(0)
@@ -254,7 +258,7 @@ export default function ManualWorkoutPage() {
             skipped: true,
           }
         }
-        const weight = parseFloat(s.weight) || 0
+        const weight = displayToKg(parseFloat(s.weight) || 0, unitPref)
         const rpe = s.rpe ? parseFloat(s.rpe) : undefined
         const rir = s.rir ? parseInt(s.rir) : undefined
         if (e.exercise.isUnilateral) {
@@ -425,7 +429,7 @@ export default function ManualWorkoutPage() {
             <div className={`grid ${colsCls} gap-2 px-4 pt-3 pb-1 border-b border-gray-50`}>
               <div />
               <div className="text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">
-                {ex.isBodyweight ? 'Weight' : 'Weight (kg)'}
+                {ex.isBodyweight ? 'Weight' : `Weight (${weightUnit(unitPref)})`}
               </div>
               {ex.isUnilateral ? (
                 <>

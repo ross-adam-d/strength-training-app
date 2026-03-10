@@ -53,6 +53,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   lastSeenReleaseId String?
+  unitPreference    String  @default("metric")
 
   profile       Profile?
   macrocycles   Macrocycle[]

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import DeleteWorkoutLogButton from './DeleteWorkoutLogButton'
+import { formatWeight, weightUnit } from '@/lib/units'
 
 export default async function WorkoutLogDetailPage({
   params,
@@ -15,6 +16,8 @@ export default async function WorkoutLogDetailPage({
   if (!session?.user?.id) {
     return null
   }
+
+  const unitPref = (session.user.unitPreference ?? 'metric') as 'metric' | 'imperial'
 
   const log = await prisma.workoutLog.findFirst({
     where: { id, userId: session.user.id },
@@ -143,7 +146,7 @@ export default async function WorkoutLogDetailPage({
                   ) : (
                     <div key={set.setNumber} className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-sm`}>
                       <span className="font-medium text-gray-700 text-center">{set.setNumber}</span>
-                      <span className="text-center text-gray-900">{set.weight} kg</span>
+                      <span className="text-center text-gray-900">{formatWeight(set.weight, unitPref)} {weightUnit(unitPref)}</span>
                       <span className="text-center text-gray-900">
                         {isUnilateral
                           ? `${set.repsLeft ?? 0} / ${set.repsRight ?? 0}`

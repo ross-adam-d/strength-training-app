@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-10c'
+export const CURRENT_RELEASE_ID = '2026-03-11'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-11',
+    date: 'March 11, 2026',
+    title: 'Settings — Units & Account',
+    changes: [
+      'New Settings page at /settings — manage your account, billing, and display preferences',
+      'Choose between Metric (kg) and Imperial (lbs) — weights display in your preferred unit across the workout log and exercise history',
+      'Billing management moved to Settings, with your current plan displayed',
+      'Password reset link now available in Settings',
+    ],
+  },
   {
     id: '2026-03-10c',
     date: 'March 10, 2026',
