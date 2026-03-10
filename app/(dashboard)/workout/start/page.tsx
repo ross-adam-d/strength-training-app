@@ -340,9 +340,6 @@ export default function ManualWorkoutPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-gray-900">{ex.name}</h2>
-                  {ex.muscleGroups.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-0.5 capitalize">{ex.muscleGroups.join(' · ')}</p>
-                  )}
                   <p className="text-sm text-gray-600 mt-1">
                     Target: {entry.sets.length} sets × {entry.targetReps || '—'} reps
                   </p>

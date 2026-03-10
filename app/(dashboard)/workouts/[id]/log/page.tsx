@@ -173,6 +173,7 @@ export default function WorkoutLogPage() {
 
   // Completed exercises tracking
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
+  const [removedExercises, setRemovedExercises] = useState<Set<string>>(new Set())
 
   // Lift history modal state
   const [showLiftHistory, setShowLiftHistory] = useState(false)
@@ -1251,9 +1252,10 @@ export default function WorkoutLogPage() {
 
       {/* Vertical exercise cards */}
       {(() => {
-        const orderedExercises = exerciseDisplayOrder.length > 0
+        const orderedExercises = (exerciseDisplayOrder.length > 0
           ? exerciseDisplayOrder.map((id) => workout.workoutExercises.find((we) => we.id === id)!).filter(Boolean)
           : workout.workoutExercises
+        ).filter((we) => !removedExercises.has(we.id))
         const supersetGroups = calculateSupersetGroups(orderedExercises)
 
         return orderedExercises.map((we, index) => {
@@ -1333,6 +1335,14 @@ export default function WorkoutLogPage() {
                       aria-label="View lift history"
                     >
                       📊
+                    </button>
+                    <button
+                      onClick={() => setRemovedExercises((prev) => new Set([...prev, we.id]))}
+                      className="text-xl hover:opacity-70 transition"
+                      aria-label="Remove exercise from session"
+                      title="Remove from session"
+                    >
+                      🗑️
                     </button>
                   </div>
                 </div>
