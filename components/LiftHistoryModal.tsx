@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { formatWeight, weightUnit, kgToDisplay } from '@/lib/units'
 
 interface ExerciseLog {
   id: string
@@ -29,6 +31,10 @@ interface LiftHistoryModalProps {
 }
 
 export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHistoryModalProps) {
+  const { data: authSession } = useSession()
+  const unitPref = (authSession?.user as any)?.unitPreference ?? 'metric'
+  const unit = weightUnit(unitPref)
+
   const [sessions, setSessions] = useState<WorkoutSession[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -142,7 +148,7 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="text-left px-3 py-2 font-medium text-gray-700">Set</th>
-                            <th className="text-left px-3 py-2 font-medium text-gray-700">Weight</th>
+                            <th className="text-left px-3 py-2 font-medium text-gray-700">Weight ({unit})</th>
                             <th className="text-left px-3 py-2 font-medium text-gray-700">Reps</th>
                             <th className="text-left px-3 py-2 font-medium text-gray-700">RIR</th>
                           </tr>
@@ -158,7 +164,7 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
                                 {set.setNumber}
                               </td>
                               <td className="px-3 py-2">
-                                {set.skipped ? '—' : `${set.weight} kg`}
+                                {set.skipped ? '—' : formatWeight(set.weight, unitPref)}
                               </td>
                               <td className="px-3 py-2">
                                 {set.skipped ? '—' : set.repsLeft != null
@@ -179,24 +185,26 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
                       <div className="mt-3 pt-3 border-t flex items-center gap-4 text-sm text-gray-600">
                         <span>
                           <strong className="text-gray-900">Total Volume:</strong>{' '}
-                          {completedSets
-                            .reduce((sum, set) => {
+                          {Math.round(kgToDisplay(
+                            completedSets.reduce((sum, set) => {
                               const effectiveReps = set.repsLeft != null
                                 ? (set.repsLeft + (set.repsRight ?? 0))
                                 : set.reps
                               return sum + set.weight * effectiveReps
-                            }, 0)
-                            .toLocaleString()}{' '}
-                          kg
+                            }, 0),
+                            unitPref
+                          )).toLocaleString()}{' '}
+                          {unit}
                         </span>
                         <span>•</span>
                         <span>
                           <strong className="text-gray-900">Avg Weight:</strong>{' '}
-                          {(
+                          {formatWeight(
                             completedSets.reduce((sum, set) => sum + set.weight, 0) /
-                            completedSets.length
-                          ).toFixed(1)}{' '}
-                          kg
+                            completedSets.length,
+                            unitPref
+                          )}{' '}
+                          {unit}
                         </span>
                       </div>
                     )}

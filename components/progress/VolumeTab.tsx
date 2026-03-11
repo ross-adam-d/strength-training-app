@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { weightUnit, kgToDisplay } from '@/lib/units'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import {
@@ -73,6 +75,10 @@ interface Props {
 }
 
 export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
+  const { data: session } = useSession()
+  const unitPref = (session?.user as any)?.unitPreference ?? 'metric'
+  const unit = weightUnit(unitPref)
+
   const [comparisonData, setComparisonData] = useState<ComparisonItem[]>([])
   const [comparisonType, setComparisonType] = useState<ComparisonType>('blocks')
   const [loadingComparison, setLoadingComparison] = useState(false)
@@ -103,7 +109,7 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
 
   const comparisonItems = comparisonData.filter((b) => b.sessionsCompleted > 0)
   const isWeeks = comparisonType === 'weeks'
-  const volumeChartLabel = isWeeks ? 'Volume (kg)' : 'Weekly Avg (kg)'
+  const volumeChartLabel = isWeeks ? `Volume (${unit})` : `Weekly Avg (${unit})`
   const xAxisAngleProps = isWeeks
     ? {}
     : { angle: -30, textAnchor: 'end' as const, interval: 0 }
@@ -191,9 +197,9 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
                   <BarChart data={comparisonItems} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} {...xAxisAngleProps} />
-                    <YAxis tick={{ fontSize: 11 }} width={50} />
+                    <YAxis tick={{ fontSize: 11 }} width={50} tickFormatter={(v: number) => Math.round(kgToDisplay(v, unitPref)).toLocaleString()} />
                     <Tooltip
-                      formatter={(val: number) => [`${val.toLocaleString()} kg`, volumeChartLabel]}
+                      formatter={(val: number) => [`${Math.round(kgToDisplay(val, unitPref)).toLocaleString()} ${unit}`, volumeChartLabel]}
                       labelFormatter={(label) => {
                         const item = comparisonItems.find((b) => b.label === label)
                         if (!item) return label

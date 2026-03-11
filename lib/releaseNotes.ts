@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-11'
+export const CURRENT_RELEASE_ID = '2026-03-11b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-11b',
+    date: 'March 11, 2026',
+    title: 'Imperial Units — Full Coverage',
+    changes: [
+      'Personal Records table now shows 1RM/5RM/10RM in your preferred unit (lbs or kg)',
+      'Exercise progress charts (weight, 1RM, volume) now display in your chosen unit',
+      'Lift History modal now shows set weights, totals, and averages in your preferred unit',
+      'Dashboard stats carousel volume figures now respect metric/imperial preference',
+      'Training Comparison chart tooltips and axis now display in your preferred unit',
+    ],
+  },
   {
     id: '2026-03-11',
     date: 'March 11, 2026',

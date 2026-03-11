@@ -13,7 +13,12 @@ import { StatsCarousel } from '@/components/StatsCarousel'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-function formatVolume(kg: number): string {
+function formatVolume(kg: number, unitPref: string): string {
+  if (unitPref === 'imperial') {
+    const lbs = kg * 2.20462
+    if (lbs >= 2000) return `${(lbs / 2000).toFixed(1)}t`
+    return `${Math.round(lbs).toLocaleString()}lbs`
+  }
   if (kg >= 1000) return `${(kg / 1000).toFixed(1)}t`
   return `${Math.round(kg).toLocaleString()}kg`
 }
@@ -27,6 +32,7 @@ export default async function DashboardPage({
   const { billing, uid, session_id } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return null
+  const unitPref = (session.user as any).unitPreference ?? 'metric'
 
   // Wrong account: Stripe redirected to a browser logged in as a different user
   if (uid && uid !== session.user.id) {
@@ -245,21 +251,21 @@ export default async function DashboardPage({
         sub: 'this phase',
         sessions: phase.sessions.toString(),
         time: `${(phase.totalMinutes / 60).toFixed(1)}h`,
-        volume: formatVolume(phase.totalVolumeKg),
+        volume: formatVolume(phase.totalVolumeKg, unitPref),
       },
       {
         title: 'This Week',
         sub: 'this week',
         sessions: week.sessions.toString(),
         time: week.totalMinutes > 0 ? `${(week.totalMinutes / 60).toFixed(1)}h` : '0h',
-        volume: formatVolume(week.totalVolumeKg),
+        volume: formatVolume(week.totalVolumeKg, unitPref),
       },
       {
         title: 'Last Week',
         sub: 'last week',
         sessions: lastWeek.sessions.toString(),
         time: lastWeek.totalMinutes > 0 ? `${(lastWeek.totalMinutes / 60).toFixed(1)}h` : '0h',
-        volume: formatVolume(lastWeek.totalVolumeKg),
+        volume: formatVolume(lastWeek.totalVolumeKg, unitPref),
       },
     ]
   }

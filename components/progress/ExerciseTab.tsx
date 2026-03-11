@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
+import { formatWeight, weightUnit, kgToDisplay } from '@/lib/units'
 import { Select } from '@/components/ui/select'
 import {
   LineChart,
@@ -108,6 +109,8 @@ function SortButton({
 export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
   const { data: session } = useSession()
   const isBasic = (session?.user as any)?.tier === 'BASIC'
+  const unitPref = (session?.user as any)?.unitPreference ?? 'metric'
+  const unit = weightUnit(unitPref)
 
   // PR table state
   const [prData, setPrData] = useState<PrItem[]>([])
@@ -200,11 +203,15 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
       const existing = acc.find((item) => item.date === date)
       if (existing) {
         if (log.weight > existing.maxWeight) {
-          existing.maxWeight = log.weight
-          existing.estimated1RM = est1RM
+          existing.maxWeight = Math.round(kgToDisplay(log.weight, unitPref) * 10) / 10
+          existing.estimated1RM = Math.round(kgToDisplay(est1RM, unitPref))
         }
       } else {
-        acc.push({ date, maxWeight: log.weight, estimated1RM: est1RM })
+        acc.push({
+          date,
+          maxWeight: Math.round(kgToDisplay(log.weight, unitPref) * 10) / 10,
+          estimated1RM: Math.round(kgToDisplay(est1RM, unitPref)),
+        })
       }
       return acc
     },
@@ -215,7 +222,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
     (acc: { date: string; volume: number; sets: number }[], log) => {
       const date = formatDate(log.workoutLog.completedAt)
       const existing = acc.find((item) => item.date === date)
-      const vol = log.weight * log.reps
+      const vol = kgToDisplay(log.weight * log.reps, unitPref)
       if (existing) {
         existing.volume += vol
         existing.sets += 1
@@ -248,26 +255,24 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
     const lastDate = sessionDates[sessionDates.length - 1]
     const firstLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === firstDate)
     const lastLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === lastDate)
-    const firstWeight = Math.max(...firstLogs.map((l) => l.weight))
-    const lastWeight = Math.max(...lastLogs.map((l) => l.weight))
-    const weightChange = firstWeight > 0 ? ((lastWeight - firstWeight) / firstWeight) * 100 : 0
+    const firstWeightKg = Math.max(...firstLogs.map((l) => l.weight))
+    const lastWeightKg = Math.max(...lastLogs.map((l) => l.weight))
+    const weightChange = firstWeightKg > 0 ? ((lastWeightKg - firstWeightKg) / firstWeightKg) * 100 : 0
     const firstBestLog = firstLogs.reduce((best, l) =>
       calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
     )
     const lastBestLog = lastLogs.reduce((best, l) =>
       calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
     )
-    const first1RM = calculate1RM(firstBestLog.weight, firstBestLog.reps)
-    const last1RM = calculate1RM(lastBestLog.weight, lastBestLog.reps)
-    const rmChange = first1RM > 0 ? ((last1RM - first1RM) / first1RM) * 100 : 0
-    const allTimeMaxWeight = Math.max(...validLogs.map((l) => l.weight))
-    const isPR = lastWeight >= allTimeMaxWeight && lastWeight > firstWeight
+    const first1RMKg = calculate1RM(firstBestLog.weight, firstBestLog.reps)
+    const last1RMKg = calculate1RM(lastBestLog.weight, lastBestLog.reps)
+    const rmChange = first1RMKg > 0 ? ((last1RMKg - first1RMKg) / first1RMKg) * 100 : 0
+    const allTimeMaxWeightKg = Math.max(...validLogs.map((l) => l.weight))
+    const isPR = lastWeightKg >= allTimeMaxWeightKg && lastWeightKg > firstWeightKg
     return {
-      firstWeight,
-      lastWeight,
+      lastWeight: formatWeight(lastWeightKg, unitPref),
+      last1RM: formatWeight(last1RMKg, unitPref),
       weightChange,
-      first1RM,
-      last1RM,
       rmChange,
       isPR,
       sessionCount: sessionDates.length,
@@ -320,9 +325,9 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-3">Exercise</th>
-                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">1RM</th>
-                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">5RM</th>
-                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">10RM</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">1RM ({unit})</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">5RM ({unit})</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">10RM ({unit})</th>
                     <th className="text-right text-xs font-medium text-gray-500 pb-2 pl-2">Last</th>
                   </tr>
                 </thead>
@@ -331,10 +336,10 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                     <tr key={item.exerciseId}>
                       <td className="py-2.5 pr-3 font-medium text-gray-900">{item.exerciseName}</td>
                       <td className="py-2.5 px-2 text-right text-primary-600 font-semibold">
-                        {item.est1RM}kg
+                        {formatWeight(item.est1RM, unitPref)}
                       </td>
-                      <td className="py-2.5 px-2 text-right text-gray-600">{item.est5RM}kg</td>
-                      <td className="py-2.5 px-2 text-right text-gray-600">{item.est10RM}kg</td>
+                      <td className="py-2.5 px-2 text-right text-gray-600">{formatWeight(item.est5RM, unitPref)}</td>
+                      <td className="py-2.5 px-2 text-right text-gray-600">{formatWeight(item.est10RM, unitPref)}</td>
                       <td className="py-2.5 pl-2 text-right text-gray-400 text-xs">
                         {formatLastLogged(item.lastLoggedAt)}
                       </td>
@@ -397,7 +402,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                     <div className="text-center">
                       <p className="text-xs text-gray-500 mb-1">Top Weight</p>
                       <p className="text-lg font-bold text-gray-900">
-                        {performanceSummary.lastWeight} kg
+                        {performanceSummary.lastWeight} {unit}
                       </p>
                       <p
                         className={`text-xs font-medium mt-0.5 ${
@@ -416,7 +421,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                     <div className="text-center">
                       <p className="text-xs text-gray-500 mb-1">Est. 1RM</p>
                       <p className="text-lg font-bold text-gray-900">
-                        {performanceSummary.last1RM} kg
+                        {performanceSummary.last1RM} {unit}
                       </p>
                       <p
                         className={`text-xs font-medium mt-0.5 ${
@@ -439,7 +444,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
 
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-3">
-                    Max Weight & Estimated 1RM (kg)
+                    Max Weight & Estimated 1RM ({unit})
                   </p>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={weightProgressData}>
@@ -450,13 +455,13 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                       <Bar
                         dataKey="maxWeight"
                         fill="#d96b00"
-                        name="Max Weight (kg)"
+                        name={`Max Weight (${unit})`}
                         radius={[3, 3, 0, 0]}
                       />
                       <Bar
                         dataKey="estimated1RM"
                         fill="#f5a855"
-                        name="Est. 1RM (kg)"
+                        name={`Est. 1RM (${unit})`}
                         radius={[3, 3, 0, 0]}
                       />
                     </BarChart>
@@ -464,7 +469,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-3">Session Volume (kg)</p>
+                  <p className="text-xs font-medium text-gray-500 mb-3">Session Volume ({unit})</p>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={volumeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -474,7 +479,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
                       <Bar
                         dataKey="volume"
                         fill="#d96b00"
-                        name="Volume (kg)"
+                        name={`Volume (${unit})`}
                         radius={[3, 3, 0, 0]}
                       />
                     </BarChart>
