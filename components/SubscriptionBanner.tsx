@@ -1,6 +1,7 @@
 import { getUserSubscriptionStatus } from '@/lib/subscription'
 import { STRIPE_PRICES } from '@/lib/stripe'
 import { PlanSelectionUI } from '@/components/PlanSelectionUI'
+import { DismissibleBanner } from '@/components/DismissibleBanner'
 
 export async function SubscriptionBanner({
   userId,
@@ -61,11 +62,13 @@ export async function SubscriptionBanner({
 
   if (isExpiringSoon) {
     return (
-      <div className="bg-amber-50 border-b border-amber-200">
-        <div className="container mx-auto px-4 py-4">
-          <PlanSelectionUI daysLeft={daysUntilExpiry!} priceIds={STRIPE_PRICES} />
+      <DismissibleBanner>
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="container mx-auto px-4 py-4 pr-12">
+            <PlanSelectionUI daysLeft={daysUntilExpiry!} priceIds={STRIPE_PRICES} />
+          </div>
         </div>
-      </div>
+      </DismissibleBanner>
     )
   }
 
