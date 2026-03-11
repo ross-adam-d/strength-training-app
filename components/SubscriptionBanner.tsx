@@ -63,11 +63,7 @@ export async function SubscriptionBanner({
   if (isExpiringSoon) {
     return (
       <DismissibleBanner>
-        <div className="bg-amber-50 border-b border-amber-200">
-          <div className="container mx-auto px-4 py-4 pr-12">
-            <PlanSelectionUI daysLeft={daysUntilExpiry!} priceIds={STRIPE_PRICES} />
-          </div>
-        </div>
+        <PlanSelectionUI daysLeft={daysUntilExpiry!} priceIds={STRIPE_PRICES} />
       </DismissibleBanner>
     )
   }
