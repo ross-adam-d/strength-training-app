@@ -147,7 +147,7 @@ export default function SettingsPage() {
               disabled={unitSaving}
               className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold transition ${
                 unitPreference === 'metric'
-                  ? 'border-primary-600 bg-primary-50 text-primary-700'
+                  ? 'border-primary-600 bg-primary-600 text-white'
                   : 'border-gray-200 text-gray-700 hover:border-gray-300'
               } disabled:opacity-60`}
             >
@@ -158,7 +158,7 @@ export default function SettingsPage() {
               disabled={unitSaving}
               className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold transition ${
                 unitPreference === 'imperial'
-                  ? 'border-primary-600 bg-primary-50 text-primary-700'
+                  ? 'border-primary-600 bg-primary-600 text-white'
                   : 'border-gray-200 text-gray-700 hover:border-gray-300'
               } disabled:opacity-60`}
             >
