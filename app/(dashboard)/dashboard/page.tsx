@@ -331,8 +331,8 @@ export default async function DashboardPage({
             <Link href="/workout/start" className="px-4 py-2 bg-white text-primary-700 font-medium text-sm rounded-lg hover:bg-primary-50 transition">
               Start a free workout
             </Link>
-            <Link href="/progress" className="px-4 py-2 bg-white/15 text-white font-medium text-sm rounded-lg hover:bg-white/25 transition">
-              View your progress
+            <Link href="/my-coach/messages" className="px-4 py-2 bg-white/15 text-white font-medium text-sm rounded-lg hover:bg-white/25 transition">
+              Message your coach
             </Link>
           </div>
         </div>
@@ -372,9 +372,14 @@ export default async function DashboardPage({
             <p className="text-sm text-gray-500 mb-6 max-w-sm">
               Your training block is all set up — workouts will appear here once your coach has added the exercises and sets.
             </p>
-            <Link href="/workout/start" className="px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition">
-              Start a free workout
-            </Link>
+            <div className="flex gap-3 flex-wrap justify-center">
+              <Link href="/workout/start" className="px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition">
+                Start a free workout
+              </Link>
+              <Link href="/my-coach/messages" className="px-4 py-2 bg-gray-100 text-gray-700 font-medium text-sm rounded-lg hover:bg-gray-200 transition">
+                Message your coach
+              </Link>
+            </div>
           </div>
         </div>
       )}

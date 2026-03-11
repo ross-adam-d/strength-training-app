@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-11b'
+export const CURRENT_RELEASE_ID = '2026-03-12'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-12',
+    date: 'March 12, 2026',
+    title: 'Coach Improvements',
+    changes: [
+      'Admin: new Coaches page showing all coaches with seat usage and capacity indicator',
+      'Coach profile photo upload — set your photo on the About Me page, visible to clients',
+      'Coached athlete dashboard: "Message your coach" button added to waiting state cards',
+    ],
+  },
   {
     id: '2026-03-11b',
     date: 'March 11, 2026',

@@ -325,6 +325,7 @@ model CoachProfile {
   bio          String?
   contactPhone String?
   officeHours  String?
+  photoUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

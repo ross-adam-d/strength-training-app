@@ -21,7 +21,7 @@ export default async function MyCoachPage() {
           id: true,
           name: true,
           email: true,
-          coachProfile: { select: { bio: true, contactPhone: true, officeHours: true } },
+          coachProfile: { select: { bio: true, contactPhone: true, officeHours: true, photoUrl: true } },
         },
       },
     },
@@ -73,10 +73,15 @@ export default async function MyCoachPage() {
       {/* Coach card */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-700 font-bold text-lg">
-              {displayName.charAt(0).toUpperCase()}
-            </span>
+          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-primary-100 flex items-center justify-center">
+            {coach.coachProfile?.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coach.coachProfile.photoUrl} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-primary-700 font-bold text-lg">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-lg">{displayName}</p>

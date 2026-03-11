@@ -20,7 +20,7 @@ export async function GET() {
     where: { userId: session.user.id },
     create: { userId: session.user.id },
     update: {},
-    select: { bio: true, contactPhone: true, officeHours: true, maxClients: true },
+    select: { bio: true, contactPhone: true, officeHours: true, maxClients: true, photoUrl: true },
   })
 
   return NextResponse.json(profile)
@@ -40,7 +40,7 @@ export async function PATCH(request: Request) {
       where: { userId: session.user.id },
       create: { userId: session.user.id, ...data },
       update: data,
-      select: { bio: true, contactPhone: true, officeHours: true, maxClients: true },
+      select: { bio: true, contactPhone: true, officeHours: true, maxClients: true, photoUrl: true },
     })
 
     return NextResponse.json(profile)

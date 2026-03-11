@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 interface CoachProfile {
@@ -8,6 +8,7 @@ interface CoachProfile {
   contactPhone: string | null
   officeHours: string | null
   maxClients: number
+  photoUrl: string | null
 }
 
 export default function CoachAboutPage() {
@@ -15,10 +16,15 @@ export default function CoachAboutPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
   const [bio, setBio] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [officeHours, setOfficeHours] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/coach/profile')
@@ -28,6 +34,7 @@ export default function CoachAboutPage() {
         setBio(data.bio ?? '')
         setContactPhone(data.contactPhone ?? '')
         setOfficeHours(data.officeHours ?? '')
+        setPhotoUrl(data.photoUrl ?? null)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -55,6 +62,36 @@ export default function CoachAboutPage() {
     setSaving(false)
   }
 
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setPhotoError(null)
+    setPhotoUploading(true)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch('/api/coach/profile/photo', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      setPhotoUrl(data.photoUrl)
+    } else {
+      const data = await res.json()
+      setPhotoError(data.error ?? 'Upload failed')
+    }
+
+    setPhotoUploading(false)
+    // Reset input so the same file can be re-selected
+    e.target.value = ''
+  }
+
+  const displayName = profile ? undefined : undefined // resolved from session, not needed in preview
+
   if (loading) return <div className="text-center py-20 text-gray-400">Loading…</div>
 
   return (
@@ -70,6 +107,47 @@ export default function CoachAboutPage() {
         <p className="text-sm text-gray-500 mt-1">
           This information is visible to your clients on their My Coach page.
         </p>
+      </div>
+
+      {/* Photo upload */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-4">Profile photo</label>
+        <div className="flex items-center gap-5">
+          <div className="relative flex-shrink-0">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center">
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl} alt="Profile photo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-primary-700 font-bold text-2xl">?</span>
+              )}
+            </div>
+            {photoUploading && (
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={photoUploading}
+              className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+            >
+              {photoUploading ? 'Uploading…' : photoUrl ? 'Change photo' : 'Upload photo'}
+            </button>
+            <p className="text-xs text-gray-400 mt-1.5">JPEG, PNG or WebP · max 2 MB</p>
+            {photoError && <p className="text-xs text-red-600 mt-1">{photoError}</p>}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
+        </div>
       </div>
 
       {/* Edit form */}
@@ -125,10 +203,16 @@ export default function CoachAboutPage() {
       <div>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Client preview</h2>
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          {!bio && !contactPhone && !officeHours ? (
+          {!bio && !contactPhone && !officeHours && !photoUrl ? (
             <p className="text-sm text-gray-400 text-center py-4">Fill in your details above to see a preview</p>
           ) : (
             <>
+              {photoUrl && (
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photoUrl} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
+                </div>
+              )}
               {bio && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">About</p>
