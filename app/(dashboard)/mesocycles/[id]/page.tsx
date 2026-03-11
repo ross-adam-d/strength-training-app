@@ -38,6 +38,7 @@ interface Mesocycle {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 type PhaseTemplate = { id: string; name: string; focus: string | null; daysPerWeek: number | null; defaultWeeks: number; _count: { workouts: number } }
+type SiblingPhase = { id: string; name: string; hasWorkouts: boolean }
 
 export default function MesocycleDetailPage() {
   const params = useParams()
@@ -57,6 +58,9 @@ export default function MesocycleDetailPage() {
   const [templates, setTemplates] = useState<PhaseTemplate[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [applyingTemplate, setApplyingTemplate] = useState(false)
+  const [showRepeatPicker, setShowRepeatPicker] = useState(false)
+  const [siblingPhases, setSiblingPhases] = useState<SiblingPhase[]>([])
+  const [loadingSiblings, setLoadingSiblings] = useState(false)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -94,6 +98,50 @@ export default function MesocycleDetailPage() {
     } catch {
       alert('Network error')
       setApplyingTemplate(false)
+    }
+  }
+
+  async function openRepeatPicker() {
+    if (!mesocycle) return
+    setShowRepeatPicker(true)
+    if (siblingPhases.length > 0) return
+    setLoadingSiblings(true)
+    try {
+      const res = await fetch(`/api/macrocycles/${mesocycle.macrocycle.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        const others: SiblingPhase[] = (data.mesocycles ?? [])
+          .filter((m: any) => m.id !== params.id)
+          .map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            hasWorkouts: (m.microcycles ?? []).some((mc: any) => (mc.workouts ?? []).length > 0),
+          }))
+        setSiblingPhases(others)
+      }
+    } finally {
+      setLoadingSiblings(false)
+    }
+  }
+
+  async function repeatPhase(sourceMesocycleId: string) {
+    setGeneratingWorkouts(true)
+    try {
+      const res = await fetch(`/api/mesocycles/${params.id}/generate-workouts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'repeat-previous', sourceMesocycleId }),
+      })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to repeat phase')
+        setGeneratingWorkouts(false)
+      }
+    } catch {
+      alert('Network error')
+      setGeneratingWorkouts(false)
     }
   }
 
@@ -274,6 +322,58 @@ export default function MesocycleDetailPage() {
                   <p className="text-sm text-gray-600 -mt-2">
                     Create empty workout slots and add exercises yourself
                   </p>
+
+                  <Button
+                    onClick={openRepeatPicker}
+                    disabled={generatingWorkouts}
+                    variant="secondary"
+                    className="w-full py-4 text-lg"
+                    size="lg"
+                  >
+                    🔁 Repeat a Prior Phase
+                  </Button>
+                  <p className="text-sm text-gray-600 -mt-2">
+                    Copy workouts from a previous phase in this block
+                  </p>
+
+                  {showRepeatPicker && (
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm text-left">
+                      <div className="flex items-center justify-between px-4 py-3 border-b">
+                        <p className="font-semibold text-gray-900 text-sm">Select a phase to repeat</p>
+                        <button
+                          onClick={() => setShowRepeatPicker(false)}
+                          className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {loadingSiblings ? (
+                        <p className="text-sm text-gray-400 text-center py-6">Loading phases…</p>
+                      ) : siblingPhases.filter((p) => p.hasWorkouts).length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-6">
+                          No other phases with workouts in this block yet.
+                        </p>
+                      ) : (
+                        <div className="divide-y max-h-64 overflow-y-auto">
+                          {siblingPhases
+                            .filter((p) => p.hasWorkouts)
+                            .map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => repeatPhase(p.id)}
+                                disabled={generatingWorkouts}
+                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition disabled:opacity-50"
+                              >
+                                <p className="font-medium text-gray-900 text-sm">{p.name}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  Week 1 workouts copied into all weeks · recovery weeks at 60% sets
+                                </p>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {authSession?.user?.role === 'COACH' && (
                     <>

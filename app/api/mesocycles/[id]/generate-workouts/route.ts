@@ -55,7 +55,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { mode, regenerate } = body // mode: 'default' | 'manual' | 'repeat-previous'; regenerate: bool
+    const { mode, regenerate, sourceMesocycleId } = body // mode: 'default' | 'manual' | 'repeat-previous'; regenerate: bool; sourceMesocycleId: optional override for repeat-previous
 
     // Determine ownership: user or coach creator
     let genWhere: any = { id, macrocycle: { userId: session.user.id } }
@@ -115,22 +115,34 @@ export async function POST(
     if (mode === 'repeat-previous') {
       const macrocycleId = mesocycle.macrocycle!.id
 
-      // All phases in this block ordered by startDate
-      const allPhases = await prisma.mesocycle.findMany({
-        where: { macrocycleId },
-        orderBy: { startDate: 'asc' },
-        select: { id: true, trainingDaysPerWeek: true, trainingSplit: true },
-      })
+      let sourcePhase: { id: string; trainingDaysPerWeek: number | null; trainingSplit: string | null }
 
-      const thisIndex = allPhases.findIndex((m) => m.id === id)
-      if (thisIndex <= 0) {
-        return NextResponse.json(
-          { error: 'No previous phase to repeat — this is the first phase' },
-          { status: 400 }
-        )
+      if (sourceMesocycleId) {
+        // Use explicitly chosen source phase (must belong to the same macrocycle)
+        const found = await prisma.mesocycle.findFirst({
+          where: { id: sourceMesocycleId, macrocycleId },
+          select: { id: true, trainingDaysPerWeek: true, trainingSplit: true },
+        })
+        if (!found) {
+          return NextResponse.json({ error: 'Source phase not found in this block' }, { status: 400 })
+        }
+        sourcePhase = found
+      } else {
+        // Fall back: automatically use the immediately preceding phase
+        const allPhases = await prisma.mesocycle.findMany({
+          where: { macrocycleId },
+          orderBy: { startDate: 'asc' },
+          select: { id: true, trainingDaysPerWeek: true, trainingSplit: true },
+        })
+        const thisIndex = allPhases.findIndex((m) => m.id === id)
+        if (thisIndex <= 0) {
+          return NextResponse.json(
+            { error: 'No previous phase to repeat — this is the first phase' },
+            { status: 400 }
+          )
+        }
+        sourcePhase = allPhases[thisIndex - 1]
       }
-
-      const sourcePhase = allPhases[thisIndex - 1]
 
       // Fetch week 1 workouts of source phase
       const sourceWeek1 = await prisma.microcycle.findFirst({
