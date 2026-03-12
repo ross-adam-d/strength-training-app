@@ -88,6 +88,14 @@ export function WelcomeChecklist({ name }: { name: string | null | undefined }) 
       cta: 'Explore exercises',
       icon: null,
     },
+    {
+      number: 6,
+      title: 'Learn how pbX works',
+      description: 'New to periodised training? Read the How To guide — it explains the block/phase/week structure, how progressive overload suggestions work, and how to read your progress charts.',
+      href: '/how-to',
+      cta: 'Read the guide',
+      icon: null,
+    },
   ]
 
   return (

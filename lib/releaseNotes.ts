@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-12'
+export const CURRENT_RELEASE_ID = '2026-03-12b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-12b',
+    date: 'March 12, 2026',
+    title: 'How To Guide',
+    changes: [
+      'New How To page — full guide on app architecture, getting started, progressive overload, manual workouts, and reading your progress charts',
+      'How To link added to the navigation',
+      '"Learn how pbX works" step added to the welcome checklist',
+      'Progress page: "How to read this" link to the relevant guide section',
+    ],
+  },
   {
     id: '2026-03-12',
     date: 'March 12, 2026',

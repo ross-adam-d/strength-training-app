@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import VolumeTab from '@/components/progress/VolumeTab'
@@ -121,7 +122,16 @@ export default function ProgressPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
+          <Link
+            href="/how-to#progress"
+            className="text-xs text-gray-400 hover:text-primary-600 hover:underline transition"
+            title="How to read your progress"
+          >
+            ? How to read this
+          </Link>
+        </div>
         {isBasic ? (
           <span
             title="CSV export is a Premiere feature"

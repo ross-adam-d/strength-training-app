@@ -68,6 +68,7 @@ export function Navigation({
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
     { href: '/workout/start', label: 'Log Manual Workout' },
+    { href: '/how-to', label: 'How To' },
     { href: '/settings', label: 'Settings' },
     ...(role === 'USER' || !role ? [{ href: '/my-coach', label: 'My Coach' }] : []),
     ...(role === 'COACH' ? [{ href: '/coach', label: 'Coach Dashboard', hardNav: true }] : []),
