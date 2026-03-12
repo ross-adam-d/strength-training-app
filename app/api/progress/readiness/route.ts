@@ -102,7 +102,7 @@ export async function GET() {
     ? { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo }, workout: { microcycle: { mesocycleId: activeMicro.mesocycleId } } }, skipped: false, weight: { gt: 0 } }
     : { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } }
 
-  const [recentWorkoutLogs, priorWorkoutLogs, recentExerciseLogs, priorExerciseLogs, currentMicroLogs] =
+  const [recentWorkoutLogs, priorWorkoutLogs, recentExerciseLogs, priorExerciseLogs, phaseMicros] =
     await Promise.all([
       // Recent 2 weeks of logs for RPE trending
       prisma.workoutLog.findMany({
@@ -124,11 +124,14 @@ export async function GET() {
         where: priorExerciseWhere,
         select: exerciseLogSelect,
       }),
-      // Completed workout logs for current microcycle (for adherence)
-      activeMicro
-        ? prisma.workoutLog.findMany({
-            where: { userId, workout: { microcycleId: activeMicro.id } },
-            select: { workoutId: true },
+      // All started microcycles in the active phase (for phase-level adherence)
+      activeMicro?.mesocycleId
+        ? prisma.microcycle.findMany({
+            where: {
+              mesocycleId: activeMicro.mesocycleId,
+              startDate: { lte: now },
+            },
+            select: { workouts: { select: { id: true } } },
           })
         : Promise.resolve([]),
     ])
@@ -152,17 +155,18 @@ export async function GET() {
 
   const rpeDelta = recentRpe != null && priorRpe != null ? recentRpe - priorRpe : null
 
-  // Adherence — current microcycle workouts completed vs total planned this week
+  // Adherence — all workouts in started microcycles of the active phase vs completed
   let adherencePct: number | null = null
   let completedPlanned = 0
   let totalPlanned = 0
 
-  if (activeMicro && activeMicro.workouts.length > 0) {
-    const plannedWorkoutIds = new Set(activeMicro.workouts.map((w) => w.id))
-    totalPlanned = activeMicro.workouts.length
-    completedPlanned = currentMicroLogs.filter(
-      (l) => l.workoutId && plannedWorkoutIds.has(l.workoutId)
-    ).length
+  const phaseWorkoutIds = (phaseMicros as Array<{ workouts: { id: string }[] }>)
+    .flatMap((m) => m.workouts.map((w) => w.id))
+  totalPlanned = phaseWorkoutIds.length
+  if (totalPlanned > 0) {
+    completedPlanned = await prisma.workoutLog.count({
+      where: { userId, workoutId: { in: phaseWorkoutIds } },
+    })
     adherencePct = (completedPlanned / totalPlanned) * 100
   }
 

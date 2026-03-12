@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-12b'
+export const CURRENT_RELEASE_ID = '2026-03-13'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-13',
+    date: 'March 13, 2026',
+    title: 'UI Polish',
+    changes: [
+      'Register page: dark theme now matches the login page',
+      'Subscription expiry banner: dismiss button more prominent',
+      'Deep Analytics: training readiness stats displayed in a cleaner horizontal layout',
+      'Deep Analytics: adherence now reflects the full phase to date, not just the current week',
+    ],
+  },
   {
     id: '2026-03-12b',
     date: 'March 12, 2026',

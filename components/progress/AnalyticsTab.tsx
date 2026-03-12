@@ -140,33 +140,33 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-3 bg-gray-50 rounded-lg p-4">
-                <div className="text-center">
+              <div className="flex bg-gray-50 rounded-lg divide-x divide-gray-200">
+                <div className="flex-1 text-center px-3 py-3">
                   <p className="text-xs text-gray-500 mb-1">Recent RPE</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-xl font-bold text-gray-900">
                     {readiness.rpeTrend.recent != null ? readiness.rpeTrend.recent.toFixed(1) : '—'}
                   </p>
                   <p className="text-xs text-gray-400">past 2 wks</p>
                 </div>
-                <div className="text-center">
+                <div className="flex-1 text-center px-3 py-3">
                   <p className="text-xs text-gray-500 mb-1">Prior RPE</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-xl font-bold text-gray-900">
                     {readiness.rpeTrend.prior != null ? readiness.rpeTrend.prior.toFixed(1) : '—'}
                   </p>
                   <p className="text-xs text-gray-400">prior 2 wks</p>
                 </div>
-                <div className="text-center">
+                <div className="flex-1 text-center px-3 py-3">
                   <p className="text-xs text-gray-500 mb-1">Adherence</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-xl font-bold text-gray-900">
                     {readiness.adherence.percentage != null ? `${readiness.adherence.percentage}%` : '—'}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {readiness.adherence.completed}/{readiness.adherence.planned} done
+                    {readiness.adherence.completed}/{readiness.adherence.planned} this phase
                   </p>
                 </div>
-                <div className="text-center">
+                <div className="flex-1 text-center px-3 py-3">
                   <p className="text-xs text-gray-500 mb-1">Lifts</p>
-                  <p className={`text-lg font-bold ${
+                  <p className={`text-xl font-bold ${
                     readiness.progressionTrend === 'improving' ? 'text-green-600' :
                     readiness.progressionTrend === 'declining' ? 'text-red-500' :
                     'text-gray-900'
