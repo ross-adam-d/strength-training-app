@@ -1,15 +1,11 @@
 import Link from 'next/link'
-import Image from 'next/image'
 
 // ── Reusable primitives ─────────────────────────────────────────────────────
 
 function BackToTop() {
   return (
     <div className="flex justify-end pt-2">
-      <a
-        href="#top"
-        className="text-xs text-gray-400 hover:text-primary-600 transition"
-      >
+      <a href="#top" className="text-xs text-gray-400 hover:text-primary-600 transition">
         ↑ Back to top
       </a>
     </div>
@@ -17,29 +13,6 @@ function BackToTop() {
 }
 
 /** Drop a PNG into public/how-to/<filename> to replace the placeholder */
-function Screenshot({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
-  return (
-    <figure className="my-4">
-      <div className="relative rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-gray-50">
-        <Image
-          src={src}
-          alt={alt}
-          width={1200}
-          height={675}
-          className="w-full h-auto"
-          // Show a placeholder box if the image hasn't been added yet
-          onError={() => {}}
-          style={{ display: 'block' }}
-        />
-      </div>
-      {caption && (
-        <figcaption className="text-xs text-gray-400 text-center mt-2 italic">{caption}</figcaption>
-      )}
-    </figure>
-  )
-}
-
-/** Shown while real screenshots haven't been added yet */
 function ScreenshotPlaceholder({ label, aspectRatio = '16/9' }: { label: string; aspectRatio?: string }) {
   return (
     <figure className="my-4">
@@ -53,7 +26,6 @@ function ScreenshotPlaceholder({ label, aspectRatio = '16/9' }: { label: string;
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 15l-5-5L5 21" />
         </svg>
         <p className="text-xs text-gray-400 font-medium">{label}</p>
-        <p className="text-xs text-gray-300">Add PNG to <code className="font-mono">public/how-to/</code></p>
       </div>
     </figure>
   )
@@ -81,25 +53,26 @@ function TipBox({ children }: { children: React.ReactNode }) {
 }
 
 // ── Hierarchy layer card ─────────────────────────────────────────────────────
+// Orange header on every card, stacked title + example, gray-100 body
 
 function HierarchyLayer({
   label,
   example,
   description,
-  isTop,
 }: {
   label: string
   example: string
   description: string
-  isTop?: boolean
 }) {
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isTop ? 'border-primary-200 ring-1 ring-primary-100' : 'border-gray-200'}`}>
-      <div className={`flex items-center gap-3 px-4 py-3 border-b ${isTop ? 'bg-primary-50 border-primary-100' : 'bg-gray-50 border-gray-100'}`}>
-        <p className={`font-semibold text-sm ${isTop ? 'text-primary-700' : 'text-gray-800'}`}>{label}</p>
-        <span className="text-xs text-gray-400 italic">{example}</span>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 bg-primary-600">
+        <p className="font-bold text-white text-sm">{label}</p>
+        <p className="text-primary-100 text-xs mt-0.5 italic">{example}</p>
       </div>
-      <p className="text-sm text-gray-600 leading-relaxed px-4 py-3">{description}</p>
+      <div className="px-4 py-3 bg-gray-100">
+        <p className="text-sm text-gray-700 leading-relaxed">{description}</p>
+      </div>
     </div>
   )
 }
@@ -160,57 +133,47 @@ export default function HowToPage() {
           Your training is organised into layers that build on each other. Every set you log contributes to a bigger picture.
         </InfoBox>
 
-        {/* Hierarchy */}
         <div className="space-y-2">
           <HierarchyLayer
             label="Training Block"
             example='e.g. "Hypertrophy 2026"'
             description="Your overarching training goal — typically 3–6 months. A block contains multiple phases and gives your training direction over time. Only one block is active at a time."
-            isTop
           />
-
           <div className="flex justify-center py-1">
             <svg className="w-4 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 16 20">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 0v20M3 15l5 5 5-5" />
             </svg>
           </div>
-
           <HierarchyLayer
             label="Phase (Mesocycle)"
             example='e.g. "Accumulation — 6 weeks"'
             description="A focused training period inside your block — typically 4–8 weeks. Each phase has a goal: accumulating volume, intensifying load, or recovering. Phases stack progressively."
           />
-
           <div className="flex justify-center py-1">
             <svg className="w-4 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 16 20">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 0v20M3 15l5 5 5-5" />
             </svg>
           </div>
-
           <HierarchyLayer
             label="Week (Microcycle)"
             example='e.g. "Week 3 of 6"'
-            description="Each phase is broken into weeks. pbX tracks which week you're in and adjusts progressive overload suggestions accordingly. Recovery weeks are programmed at reduced volume."
+            description="Each phase is broken into weeks. pbX tracks which week you're in and adjusts progressive overload suggestions accordingly. Recovery weeks are programmed at reduced volume automatically."
           />
-
           <div className="flex justify-center py-1">
             <svg className="w-4 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 16 20">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 0v20M3 15l5 5 5-5" />
             </svg>
           </div>
-
           <HierarchyLayer
             label="Workout"
             example='e.g. "Push A — Monday"'
             description="A single training session within the week. Workouts contain exercises with prescribed sets, reps, and RIR (Reps in Reserve). You log each workout as you complete it."
           />
-
           <div className="flex justify-center py-1">
             <svg className="w-4 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 16 20">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 0v20M3 15l5 5 5-5" />
             </svg>
           </div>
-
           <HierarchyLayer
             label="Exercise"
             example='e.g. "Barbell Squat — 4×8 @ 2 RIR"'
@@ -220,7 +183,7 @@ export default function HowToPage() {
 
         <ScreenshotPlaceholder label="Screenshot: Training Blocks overview page" />
 
-        <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-sm leading-relaxed text-gray-700">
+        <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-4 text-sm leading-relaxed text-gray-700">
           <p className="font-semibold text-gray-900 mb-1">The big picture</p>
           <p>
             <span className="text-primary-600 font-medium">Block → Phase → Week → Workout → Exercise.</span>{' '}
@@ -234,7 +197,7 @@ export default function HowToPage() {
       </section>
 
       {/* ── 2. Getting Started ──────────────────────────────────────────────── */}
-      <section className="space-y-5">
+      <section className="space-y-6">
         <div id="getting-started" className="-mt-4 pt-4" />
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Section 2</p>
@@ -242,55 +205,118 @@ export default function HowToPage() {
           <p className="text-gray-500 text-sm mt-1">The fastest path from sign-up to first logged workout.</p>
         </div>
 
-        <ol className="space-y-6">
-          {[
-            {
-              step: '1',
-              title: 'Create a Training Block',
-              body: 'Go to Training Blocks → New Training Block. Give it a name and set your start date. This is your overarching goal container.',
-              href: '/macrocycles/setup',
-              cta: 'Create your first block',
-              screenshot: 'Screenshot: New Training Block setup form',
-            },
-            {
-              step: '2',
-              title: 'Add a Phase',
-              body: 'Inside your block, add your first phase. Choose a type (Accumulation, Intensification, or Deload), set the number of weeks, and pick your training split (e.g. Push/Pull/Legs). pbX will scaffold your weekly workout structure automatically.',
-              href: '/macrocycles',
-              cta: 'Go to Training Blocks',
-              screenshot: 'Screenshot: Phase setup — split selection and week count',
-            },
-            {
-              step: '3',
-              title: 'Fill in your workouts',
-              body: 'Each phase generates empty workout shells. Open each workout and add exercises with sets, reps, and target RIR. Use the built-in exercise library or create custom movements.',
-              href: '/exercises',
-              cta: 'Browse exercises',
-              screenshot: 'Screenshot: Workout editor with exercises',
-            },
-            {
-              step: '4',
-              title: 'Activate and start logging',
-              body: "Mark your phase as active. Your dashboard shows this week's workouts. Tap a workout, hit Log, and fill in your sets as you train. Rate RPE at the end of each session — it powers your readiness score.",
-              href: '/dashboard',
-              cta: 'Go to dashboard',
-              screenshot: 'Screenshot: Active workout log screen',
-            },
-          ].map(({ step, title, body, href, cta, screenshot }) => (
-            <li key={step} className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">
-                {step}
+        <ol className="space-y-8">
+
+          {/* Step 1 */}
+          <li className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">1</div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-gray-900">Create a Training Block</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Go to Training Blocks → New Training Block. Give it a name, set your start date, and choose your primary focus (Hypertrophy, Strength, Power, or Endurance). This is your overarching goal container.
+              </p>
+              <Link href="/macrocycles/setup" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
+                Create your first block →
+              </Link>
+              <ScreenshotPlaceholder label="Screenshot: New Training Block setup form" aspectRatio="16/7" />
+            </div>
+          </li>
+
+          {/* Step 2 */}
+          <li className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">2</div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-gray-900">Add a Phase</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Inside your block, add your first phase. Choose a focus (Accumulation, Intensification, or Deload),
+                set the number of weeks, and pick your training split (e.g. Push/Pull/Legs, Upper/Lower, Full Body).
+                pbX scaffolds your weekly workout structure automatically.
+              </p>
+
+              <p className="text-sm font-medium text-gray-800 mt-3">Populating your phase — four options:</p>
+              <div className="space-y-2 mt-1">
+                {[
+                  {
+                    label: 'Manual add',
+                    desc: 'Build from scratch — open each generated workout and add exercises one by one. Full control over every movement, set, rep, and RIR target.',
+                  },
+                  {
+                    label: 'Generate defaults',
+                    desc: 'Let pbX suggest a starting set of exercises based on your split and phase focus. A good starting point you can then edit to suit your equipment and preferences.',
+                  },
+                  {
+                    label: 'Repeat a prior phase',
+                    desc: 'Copy the workout structure from a previous phase in this block. Useful when you want to run the same programme with progressed loads.',
+                  },
+                  {
+                    label: 'Use a phase template (coach-assigned)',
+                    desc: 'If you\'re working with a coach, they can build and apply phase templates directly to your block. Your workouts will be pre-populated — just log and go.',
+                  },
+                ].map(({ label, desc }) => (
+                  <div key={label} className="bg-gray-100 rounded-lg px-4 py-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-900">{label}</p>
+                    <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                ))}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-900 mb-1">{title}</p>
-                <p className="text-sm text-gray-600 leading-relaxed mb-2">{body}</p>
-                <Link href={href} className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
-                  {cta} →
-                </Link>
-                <ScreenshotPlaceholder label={screenshot} aspectRatio="16/7" />
-              </div>
-            </li>
-          ))}
+              <ScreenshotPlaceholder label="Screenshot: Phase setup — split + weeks + populate options" aspectRatio="16/7" />
+            </div>
+          </li>
+
+          {/* Step 3 */}
+          <li className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">3</div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-gray-900">Build out your workouts</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Whether you generated defaults or started blank, each workout can be edited to match exactly how you want to train.
+                Open any workout and add, remove, or reorder exercises using the exercise library or by creating a custom movement.
+              </p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                For each exercise, dial in the specifics:
+              </p>
+              <ul className="space-y-1.5 mt-1">
+                {[
+                  ['Sets', 'How many working sets per exercise.'],
+                  ['Reps', 'Target rep count — driven by your phase focus. Accumulation phases use higher reps (8–15+); Intensification phases use lower reps (3–6). pbX pre-fills sensible defaults based on your focus choice.'],
+                  ['RIR target', 'Reps in Reserve — how many reps you should have left at the end of each set. RIR 2 means stopping 2 reps short of failure. This controls intensity without requiring you to go to absolute failure.'],
+                  ['Rest period', 'Rest time between sets in seconds. Compound movements typically need longer rest (2–3 min); isolation exercises less.'],
+                  ['Rep range', 'Set a minimum and maximum rep target (e.g. 8–12). When you hit the top of the range consistently, pbX will suggest a weight increase.'],
+                ].map(([term, desc]) => (
+                  <li key={term as string} className="flex gap-2 text-sm text-gray-600">
+                    <span className="text-primary-600 mt-0.5 shrink-0 font-bold">→</span>
+                    <span><strong className="text-gray-800">{term}</strong> — {desc}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/exercises" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
+                Browse exercises →
+              </Link>
+              <ScreenshotPlaceholder label="Screenshot: Workout editor with exercises + set/rep/RIR fields" aspectRatio="16/7" />
+            </div>
+          </li>
+
+          {/* Step 4 */}
+          <li className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">4</div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-gray-900">Start logging</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Your dashboard shows this week&apos;s scheduled workouts. Tap a workout and hit Log — your phase activates automatically on your first logged session, no manual step required.
+              </p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Log your sets as you train: enter weight, reps completed, and RIR. Rate your overall session effort (RPE) at the end — this feeds your Training Readiness score in the Progress tab.
+              </p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                After your first session, pbX will start generating progressive overload suggestions for your next visit to each exercise.
+              </p>
+              <Link href="/dashboard" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
+                Go to dashboard →
+              </Link>
+              <ScreenshotPlaceholder label="Screenshot: Active workout log screen" aspectRatio="16/7" />
+            </div>
+          </li>
+
         </ol>
 
         <SectionDivider />
@@ -321,13 +347,21 @@ export default function HowToPage() {
               body: 'When you open a workout to log it, pbX shows suggested weights and reps based on your last performance. These are conservative — designed to keep you progressing without grinding into fatigue. Override them if needed, but if it feels right, use it.',
             },
             {
+              title: 'Edit your workouts to suit you',
+              body: 'The generated defaults are a starting point, not a prescription. Swap exercises you can\'t do for equipment reasons, adjust rep ranges to match how your body responds, or tighten the RIR target as you approach the end of a phase. The more tailored your programme, the better the progressive overload suggestions.',
+            },
+            {
               title: 'Review progress at the end of each phase',
-              body: 'The Progress section becomes more useful the more data you have. At the end of a phase, check Volume & Intensity to see how your training load evolved, and Exercise Metrics to see which lifts moved. Use this to inform your next phase.',
+              body: 'The Progress section becomes more useful the more data you have. At the end of a phase, check Volume & Intensity to see how your training load evolved, and Exercise Metrics to see which lifts moved. Use this to inform how you set up the next phase.',
             },
           ].map(({ title, body }) => (
-            <div key={title} className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-1.5">
-              <p className="font-semibold text-gray-900 text-sm">{title}</p>
-              <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+            <div key={title} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+                <p className="font-semibold text-gray-900 text-sm">{title}</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              </div>
             </div>
           ))}
 
@@ -350,15 +384,16 @@ export default function HowToPage() {
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Section 4</p>
           <h2 className="text-xl font-bold text-gray-900">Manual Workouts & History</h2>
-          <p className="text-gray-500 text-sm mt-1">For sessions that live outside your structured plan.</p>
+          <p className="text-gray-500 text-sm mt-1">For when you want to turn up and train without a plan.</p>
         </div>
 
         <p className="text-sm text-gray-600 leading-relaxed">
-          Not every session fits neatly into a training block. Use{' '}
+          Sometimes you just want to get under the bar without following a programme — a spontaneous session, an off-plan
+          lift with a gym buddy, or a week where your schedule doesn&apos;t match your block. That&apos;s what{' '}
           <Link href="/workout/start" className="font-medium text-primary-600 hover:text-primary-700 transition">
             Log Manual Workout
           </Link>{' '}
-          for any session you want to record outside your plan — cardio, mobility, a casual gym hit, or training while travelling.
+          is for. Still strength training — same exercises, sets, reps, and weight logging — just without the structure of a planned phase.
         </p>
 
         <p className="text-sm text-gray-600 leading-relaxed">
@@ -366,10 +401,10 @@ export default function HowToPage() {
           <Link href="/workout-history" className="font-medium text-primary-600 hover:text-primary-700 transition">
             History
           </Link>{' '}
-          alongside your structured sessions. They count toward your overall volume and progress charts — nothing is lost.
+          alongside your structured sessions, and the data flows into your progress charts and exercise metric history.
         </p>
 
-        <ScreenshotPlaceholder label="Screenshot: Workout history list" aspectRatio="16/7" />
+        <ScreenshotPlaceholder label="Screenshot: Manual workout log + workout history list" aspectRatio="16/7" />
 
         <div className="flex gap-3">
           <Link
@@ -401,17 +436,17 @@ export default function HowToPage() {
 
         {/* Tab 1 */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-            <span className="px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Tab 1</span>
-            <h3 className="font-semibold text-gray-900">Volume & Intensity</h3>
+          <div className="flex items-center gap-3 px-5 py-3 bg-primary-600">
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">Tab 1</span>
+            <h3 className="font-semibold text-white">Volume &amp; Intensity</h3>
           </div>
-          <div className="px-5 py-4 space-y-3">
+          <div className="px-5 py-4 bg-gray-100 space-y-3">
             <p className="text-sm text-gray-600 leading-relaxed">The overall shape of your training load over time.</p>
             <ul className="space-y-2">
               {[
-                ['Session volume', 'Total weight lifted per session (sets × reps × weight). A good proxy for how much work you did.'],
-                ['RPE trend', 'How hard your sessions felt over time. Rising RPE with flat volume signals accumulating fatigue.'],
-                ['Block comparison', 'Week-by-week volume across phases in your current block — validates that your phases are actually progressing.'],
+                ['Session volume', 'Total weight lifted per session (sets × reps × weight). A clear proxy for how much work you did each day.'],
+                ['RPE trend', 'How hard your sessions felt over time. Rising RPE with flat volume signals accumulating fatigue — a sign to consider a deload.'],
+                ['Block, phase & week comparison', 'Zoom in or out on your training volume. Compare week-on-week to see short-term trends, phase-on-phase to validate your mesocycles are building, or block-on-block for the long view on how your training has evolved.'],
               ].map(([term, desc]) => (
                 <li key={term as string} className="flex gap-2 text-sm text-gray-600">
                   <span className="text-primary-600 mt-0.5 shrink-0 font-bold">→</span>
@@ -419,24 +454,24 @@ export default function HowToPage() {
                 </li>
               ))}
             </ul>
-            <ScreenshotPlaceholder label="Screenshot: Volume & Intensity tab — session volume chart" aspectRatio="16/7" />
+            <ScreenshotPlaceholder label="Screenshot: Volume & Intensity tab — session volume chart + block comparison" aspectRatio="16/7" />
           </div>
         </div>
 
         {/* Tab 2 */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-            <span className="px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Tab 2</span>
-            <h3 className="font-semibold text-gray-900">Exercise Metrics</h3>
+          <div className="flex items-center gap-3 px-5 py-3 bg-primary-600">
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">Tab 2</span>
+            <h3 className="font-semibold text-white">Exercise Metrics</h3>
           </div>
-          <div className="px-5 py-4 space-y-3">
+          <div className="px-5 py-4 bg-gray-100 space-y-3">
             <p className="text-sm text-gray-600 leading-relaxed">Search any exercise you&apos;ve logged and see its full history.</p>
             <ul className="space-y-2">
               {[
-                ['Weight over time', "One bar per session — the weight you moved. A clear visual of whether you're progressing."],
-                ['Estimated 1RM', 'Calculated from your best set each session. Tracks strength even when training in higher rep ranges.'],
-                ['PR badges', '"New PR!" appears in your workout log when you set a new estimated 1RM for an exercise that session.'],
-                ['Performance summary', 'Max weight, best estimated 1RM, and total volume for the selected period.'],
+                ['Weight over time', "One bar per session — the weight you moved. A clear visual of whether you're progressing on each lift."],
+                ['Estimated 1RM', 'Calculated from your best set each session using an Epley-style formula. Tracks strength even when training in higher rep ranges.'],
+                ['PR badges', '"New PR!" appears in your workout log when you set a new estimated 1RM for an exercise in that session.'],
+                ['Performance summary', 'Max weight, best estimated 1RM, and total volume logged for the selected period.'],
               ].map(([term, desc]) => (
                 <li key={term as string} className="flex gap-2 text-sm text-gray-600">
                   <span className="text-primary-600 mt-0.5 shrink-0 font-bold">→</span>
@@ -444,7 +479,7 @@ export default function HowToPage() {
                 </li>
               ))}
             </ul>
-            <ScreenshotPlaceholder label="Screenshot: Exercise Metrics — squat weight history chart" aspectRatio="16/7" />
+            <ScreenshotPlaceholder label="Screenshot: Exercise Metrics — squat weight history + 1RM chart" aspectRatio="16/7" />
             <TipBox>
               The 1RM estimate is most accurate when you log sets close to failure (low RIR). If you&apos;re always leaving 4+ reps in the tank, the estimate will undervalue your true strength.
             </TipBox>
@@ -453,20 +488,20 @@ export default function HowToPage() {
 
         {/* Tab 3 */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-            <span className="px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Tab 3</span>
-            <h3 className="font-semibold text-gray-900">Deep Analytics</h3>
-            <span className="px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-medium border border-primary-100">Premiere</span>
+          <div className="flex items-center gap-3 px-5 py-3 bg-primary-600">
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">Tab 3</span>
+            <h3 className="font-semibold text-white">Deep Analytics</h3>
+            <span className="ml-auto px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium border border-white/30">Premiere</span>
           </div>
-          <div className="px-5 py-4 space-y-3">
+          <div className="px-5 py-4 bg-gray-100 space-y-3">
             <p className="text-sm text-gray-600 leading-relaxed">
-              Goes beyond raw numbers to give you an interpretation of your training state. Requires at least 10 logged workouts.
+              Goes beyond raw numbers to interpret your training state. Requires at least 10 logged workouts to activate.
             </p>
             <ul className="space-y-2">
               {[
-                ['Training Readiness', 'A traffic-light score (green / amber / red) based on your RPE trend, weekly adherence, and whether your lifts are progressing. Green = keep pushing. Amber = monitor fatigue. Red = consider a deload.'],
-                ['Weak Point Analysis', 'Compares your average weekly sets per muscle group against Minimum Effective Volume (MEV) thresholds. Red bars are below MEV — muscle groups your current plan is under-serving.'],
-                ['Adherence & RPE metrics', 'Workouts completed vs. planned this week, average RPE over the past two weeks vs. the prior two weeks, and a lift trend indicator.'],
+                ['Training Readiness', 'A traffic-light score (green / amber / red) based on your recent RPE trend, weekly adherence, and whether your lifts are progressing. Green = keep pushing. Amber = monitor fatigue. Red = consider a deload.'],
+                ['Weak Point Analysis', 'Compares your average weekly sets per muscle group against Minimum Effective Volume (MEV) thresholds. Red bars are below MEV — muscle groups your current plan is under-serving. Use this to inform exercise selection in your next phase.'],
+                ['Adherence & RPE metrics', 'Workouts completed vs. planned this week, average RPE over the past two weeks vs. the prior two, and a lift trend indicator (improving / stable / declining).'],
               ].map(([term, desc]) => (
                 <li key={term as string} className="flex gap-2 text-sm text-gray-600">
                   <span className="text-primary-600 mt-0.5 shrink-0 font-bold">→</span>
