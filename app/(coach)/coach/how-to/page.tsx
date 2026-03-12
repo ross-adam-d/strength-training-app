@@ -106,15 +106,11 @@ export default function CoachHowToPage() {
             <li key={item.id}>
               <a
                 href={`#${item.id}`}
-                className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-700 transition group"
+                className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 hover:text-primary-600 transition"
               >
-                <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0 group-hover:bg-primary-600 group-hover:text-white transition">
-                  {i + 1}
-                </span>
-                <span className="underline underline-offset-2 decoration-primary-300 group-hover:decoration-primary-600">
-                  {item.label}
-                </span>
-                <svg className="w-4 h-4 ml-auto text-primary-400 group-hover:text-primary-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-gray-400 text-xs w-4 shrink-0">{i + 1}.</span>
+                {item.label}
+                <svg className="w-3.5 h-3.5 ml-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </a>
