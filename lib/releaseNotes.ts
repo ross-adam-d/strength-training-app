@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-13'
+export const CURRENT_RELEASE_ID = '2026-03-13b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-13b',
+    date: 'March 13, 2026',
+    title: 'Consistent Exercise Picker',
+    changes: [
+      'Exercise library: muscle group filter now uses chip buttons matching the workout exercise picker',
+      'Swap exercise during a planned workout: now uses the same search + muscle group chip picker instead of a plain dropdown',
+    ],
+  },
   {
     id: '2026-03-13',
     date: 'March 13, 2026',

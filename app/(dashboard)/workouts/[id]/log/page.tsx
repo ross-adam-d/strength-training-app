@@ -187,10 +187,7 @@ export default function WorkoutLogPage() {
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
   // Exercise swap state
-  const [showSwapModal, setShowSwapModal] = useState(false)
   const [exerciseToSwap, setExerciseToSwap] = useState<{ workoutExerciseId: string; exerciseId: string; name: string } | null>(null)
-  const [allExercises, setAllExercises] = useState<Array<{ id: string; name: string }>>([])
-  const [selectedNewExercise, setSelectedNewExercise] = useState('')
 
   // Rest timer state
   const [activeTimerKey, setActiveTimerKey] = useState<string | null>(null)
@@ -389,17 +386,6 @@ export default function WorkoutLogPage() {
     }
   }, [params.id, loadDraft])
 
-  const fetchExercises = useCallback(async () => {
-    try {
-      const response = await fetch('/api/exercises')
-      if (response.ok) {
-        const data = await response.json()
-        setAllExercises(data)
-      }
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    }
-  }, [])
 
   // Compute which sets are PRs (new all-time best estimated 1RM)
   // Track session best per exercise so only the highest set in this session is flagged
@@ -445,8 +431,7 @@ export default function WorkoutLogPage() {
 
   useEffect(() => {
     fetchWorkout()
-    fetchExercises()
-  }, [fetchWorkout, fetchExercises])
+  }, [fetchWorkout])
 
   // Rest timer tick effect — keyed on activeTimerKey only; uses wall clock to survive backgrounding
   useEffect(() => {
@@ -600,43 +585,6 @@ export default function WorkoutLogPage() {
 
   function handleSwapExercise(workoutExerciseId: string, exerciseId: string, name: string) {
     setExerciseToSwap({ workoutExerciseId, exerciseId, name })
-    setSelectedNewExercise('')
-    setShowSwapModal(true)
-  }
-
-  async function confirmSwap() {
-    if (!exerciseToSwap || !selectedNewExercise) return
-
-    try {
-      const payload = {
-        exerciseId: selectedNewExercise,
-      }
-
-      const response = await fetch(`/api/workout-exercises/${exerciseToSwap.workoutExerciseId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (response.ok) {
-        // Refresh workout data to show the new exercise
-        await fetchWorkout()
-        setShowSwapModal(false)
-        setExerciseToSwap(null)
-        setSelectedNewExercise('')
-      }
-    } catch (error) {
-      console.error('Error swapping exercise:', error)
-      alert('Failed to swap exercise')
-    }
-  }
-
-  async function proceedWithSwap() {
-    if (!selectedNewExercise) {
-      alert('Please select an exercise')
-      return
-    }
-    await confirmSwap()
   }
 
   async function handleAddExercise(result: ExercisePickerResult) {
@@ -1948,57 +1896,32 @@ export default function WorkoutLogPage() {
         </div>
       </Modal>
 
-      {/* Exercise Swap Modal - Exercise Picker */}
-      {showSwapModal && exerciseToSwap && (
-        <Modal
-          isOpen={true}
-          onClose={() => {
-            setShowSwapModal(false)
-            setExerciseToSwap(null)
-            setSelectedNewExercise('')
-          }}
-          title={`Swap ${exerciseToSwap.name}`}
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Select a replacement exercise for this workout:
-            </p>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Exercise
-              </label>
-              <select
-                value={selectedNewExercise}
-                onChange={(e) => setSelectedNewExercise(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">Select an exercise...</option>
-                {allExercises.map((ex) => (
-                  <option key={ex.id} value={ex.id}>
-                    {ex.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={proceedWithSwap} disabled={!selectedNewExercise} className="flex-1">
-                Swap Exercise
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowSwapModal(false)
-                  setExerciseToSwap(null)
-                  setSelectedNewExercise('')
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      {/* Exercise Swap Modal */}
+      <ExercisePickerModal
+        open={exerciseToSwap !== null}
+        onClose={() => setExerciseToSwap(null)}
+        onAdd={async (result) => {
+          if (!exerciseToSwap) return
+          try {
+            const response = await fetch(`/api/workout-exercises/${exerciseToSwap.workoutExerciseId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ exerciseId: result.exercise.id }),
+            })
+            if (response.ok) {
+              await fetchWorkout()
+              setExerciseToSwap(null)
+            } else {
+              alert('Failed to swap exercise')
+            }
+          } catch {
+            alert('Failed to swap exercise')
+          }
+        }}
+        mode="log"
+        existingExerciseIds={workout?.workoutExercises.filter(we => we.exercise.id !== exerciseToSwap?.exerciseId).map(we => we.exercise.id) ?? []}
+        title={exerciseToSwap ? `Swap: ${exerciseToSwap.name}` : 'Swap Exercise'}
+      />
 
       <ExercisePickerModal
         open={showExercisePicker}

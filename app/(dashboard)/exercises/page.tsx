@@ -342,23 +342,34 @@ export default function ExercisesPage() {
       </div>
 
       <Card className="mb-6">
-        <CardBody>
-          <div className="grid md:grid-cols-3 gap-4">
+        <CardBody className="space-y-3">
+          <div className="grid md:grid-cols-2 gap-4">
             <Input
               placeholder="Search exercises..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Select
-              options={MUSCLE_GROUPS}
-              value={muscleFilter}
-              onChange={(e) => setMuscleFilter(e.target.value)}
-            />
-            <Select
               options={EQUIPMENT_OPTIONS}
               value={equipmentFilter}
               onChange={(e) => setEquipmentFilter(e.target.value)}
             />
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
+            {MUSCLE_GROUPS.filter(mg => mg.value !== '').map((mg) => (
+              <button
+                key={mg.value}
+                type="button"
+                onClick={() => setMuscleFilter(muscleFilter === mg.value ? '' : mg.value)}
+                className={`flex-shrink-0 px-2.5 py-1 text-xs rounded-full font-medium transition ${
+                  muscleFilter === mg.value
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {mg.label}
+              </button>
+            ))}
           </div>
         </CardBody>
       </Card>
