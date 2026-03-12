@@ -37,7 +37,7 @@ function SectionDivider() {
 
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-primary-50 border border-primary-100 rounded-lg px-4 py-3 text-sm text-gray-700 leading-relaxed">
+    <div className="bg-gray-900 rounded-xl px-5 py-4 text-sm text-gray-200 leading-relaxed">
       {children}
     </div>
   )
@@ -100,19 +100,26 @@ export default function HowToPage() {
       </div>
 
       {/* Table of contents */}
-      <nav className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">On this page</p>
-        <ol className="space-y-2">
+      <nav className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 bg-gray-900 rounded-t-xl">
+          <p className="text-sm font-bold text-white uppercase tracking-wider">On this page</p>
+        </div>
+        <ol className="divide-y divide-gray-100">
           {toc.map((item, i) => (
             <li key={item.id}>
               <a
                 href={`#${item.id}`}
-                className="flex items-center gap-3 text-sm text-gray-700 hover:text-primary-600 transition group"
+                className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-700 transition group"
               >
-                <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0 group-hover:bg-primary-100 group-hover:text-primary-700 transition">
+                <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0 group-hover:bg-primary-600 group-hover:text-white transition">
                   {i + 1}
                 </span>
-                {item.label}
+                <span className="underline underline-offset-2 decoration-primary-300 group-hover:decoration-primary-600">
+                  {item.label}
+                </span>
+                <svg className="w-4 h-4 ml-auto text-primary-400 group-hover:text-primary-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </a>
             </li>
           ))}
@@ -129,7 +136,7 @@ export default function HowToPage() {
         </div>
 
         <InfoBox>
-          pbX is built around <strong>periodisation</strong> — the training science used by elite coaches.
+          pbX is built around <strong className="text-white font-semibold">periodisation</strong> — the training science used by elite coaches.
           Your training is organised into layers that build on each other. Every set you log contributes to a bigger picture.
         </InfoBox>
 
