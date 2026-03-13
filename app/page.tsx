@@ -158,9 +158,9 @@ export default function Home() {
               </div>
               <ul className="space-y-3 mb-8 flex-1">
                 {[
-                  'Full access to all features',
-                  'Unlimited training blocks',
-                  'Unlimited workout logs',
+                  'Full Elite access for 14 days',
+                  'All features unlocked',
+                  'Unlimited training blocks & logs',
                   'No credit card required',
                 ].map((item) => (
                   <li key={item} className="flex gap-2 text-sm">
@@ -194,10 +194,10 @@ export default function Home() {
                 </div>
                 <ul className="space-y-3 mb-8 flex-1">
                   {[
-                    'Training block planning',
-                    'Workout logging',
-                    'Progress tracking',
-                    'Exercise library',
+                    'Training block planning (1 active)',
+                    'Workout logging & progressive overload',
+                    'Progress tracking — last 90 days',
+                    'Exercise library (60+ exercises)',
                   ].map((item) => (
                     <li key={item} className="flex gap-2 text-sm text-gray-600">
                       <CheckIcon />
@@ -227,10 +227,10 @@ export default function Home() {
                 <ul className="space-y-3 mb-8 flex-1">
                   {[
                     'Everything in Core',
+                    'Full history & all-time PRs',
                     'Unlimited training blocks',
-                    'Deep analytics',
-                    'Training readiness score',
-                    'Own your data, export your training history at any time',
+                    'Deep analytics & readiness score',
+                    'Export your data any time',
                   ].map((item) => (
                     <li key={item} className="flex gap-2 text-sm text-gray-600">
                       <CheckIcon />

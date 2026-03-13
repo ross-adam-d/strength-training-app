@@ -6,6 +6,8 @@ import { z } from 'zod'
 
 const patchSchema = z.object({
   unitPreference: z.enum(['metric', 'imperial']).optional(),
+  overloadTrigger: z.enum(['topOfRange', 'allSetsTop', 'combo']).optional(),
+  rpeAutoDeload: z.boolean().optional(),
 })
 
 export async function GET() {
@@ -16,7 +18,7 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { email: true, unitPreference: true },
+    select: { email: true, unitPreference: true, overloadTrigger: true, rpeAutoDeload: true },
   })
 
   if (!user) {
@@ -41,7 +43,7 @@ export async function PATCH(request: Request) {
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: parsed.data,
-    select: { email: true, unitPreference: true },
+    select: { email: true, unitPreference: true, overloadTrigger: true, rpeAutoDeload: true },
   })
 
   return NextResponse.json(user)

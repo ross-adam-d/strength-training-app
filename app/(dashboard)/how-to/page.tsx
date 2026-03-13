@@ -494,7 +494,7 @@ export default function HowToPage() {
           <div className="flex items-center gap-3 px-5 py-3 bg-primary-600">
             <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">Tab 3</span>
             <h3 className="font-semibold text-white">Deep Analytics</h3>
-            <span className="ml-auto px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium border border-white/30">Premiere</span>
+            <span className="ml-auto px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium border border-white/30">Elite</span>
           </div>
           <div className="px-5 py-4 bg-gray-100 space-y-3">
             <p className="text-sm text-gray-600 leading-relaxed">

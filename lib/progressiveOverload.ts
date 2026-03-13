@@ -20,61 +20,94 @@ export function getWeightIncrement(equipment: string[], isBodyweight: boolean): 
 }
 
 export function calculateSuggestedReps(
-  oneRM: number,
+  lastWeight: number,
+  lastReps: number,
   newWeight: number,
   repRange: { min: number; max: number }
 ): number {
-  if (newWeight <= 0) return repRange.min
-  const reps = Math.floor((oneRM / newWeight - 1) * 30)
+  if (newWeight <= 0 || lastWeight <= 0) return repRange.min
+  const reps = Math.round(lastReps * lastWeight / newWeight)
   return Math.max(repRange.min, Math.min(repRange.max, reps))
 }
 
 export function getSuggestion(
-  lastSet: { weight: number; reps: number; repsLeft?: number | null; repsRight?: number | null; rir?: number | null } | undefined,
+  lastSets: Array<{ setNumber: number; weight: number; reps: number; repsLeft?: number | null; repsRight?: number | null; rir?: number | null }>,
   targetReps: string | null | undefined,
   equipment: string[],
-  isBodyweight: boolean
-): { weight: string; reps: string } {
+  isBodyweight: boolean,
+  options?: {
+    overloadTrigger?: 'topOfRange' | 'allSetsTop' | 'combo';
+    rpeAutoDeload?: boolean;
+    lastExerciseRpe?: number;
+  }
+): { weight: string; reps: string; progressionType: 'none' | 'rep' | 'weight' | 'deload' } {
   const repRange = parseRepRange(targetReps)
+  const trigger = options?.overloadTrigger ?? 'topOfRange'
 
   // No history: show plan's target reps only, no weight
-  if (!lastSet) {
-    return { weight: '', reps: String(repRange.min) }
+  if (!lastSets || lastSets.length === 0) {
+    return { weight: '', reps: String(repRange.min), progressionType: 'none' }
   }
 
-  const { weight: lastWeight, rir } = lastSet
+  const set1 = lastSets.find((s) => s.setNumber === 1) ?? lastSets[0]
+  const lastWeight = set1.weight
   // For unilateral exercises reps is stored as 0; use repsLeft (per-side count) instead
-  const lastReps = lastSet.reps > 0 ? lastSet.reps : (lastSet.repsLeft || lastSet.repsRight || 0)
+  const lastReps = set1.reps > 0 ? set1.reps : (set1.repsLeft || set1.repsRight || 0)
+  const rir = set1.rir
+
+  // RPE auto-deload: if last session rated 5/5 (Too Much), reduce weight
+  if (options?.rpeAutoDeload && options?.lastExerciseRpe === 5) {
+    const increment = getWeightIncrement(equipment, isBodyweight)
+    if (increment > 0) {
+      const deloadWeight = Math.max(0, lastWeight - increment)
+      return { weight: String(deloadWeight), reps: String(lastReps), progressionType: 'deload' }
+    }
+  }
 
   // Determine eligibility for progression
   let eligible: boolean
   if (rir !== null && rir !== undefined) {
     eligible = rir >= 1
   } else {
-    // No RIR recorded: eligible if they hit at least the minimum target reps
     eligible = lastReps >= repRange.min
   }
 
   if (!eligible) {
-    // Not ready to progress — suggest same as last time
-    return { weight: String(lastWeight), reps: String(lastReps) }
+    return { weight: String(lastWeight), reps: String(lastReps), progressionType: 'none' }
   }
 
-  // Rep progression: haven't hit the top of the range yet
-  if (lastReps < repRange.max) {
-    return { weight: String(lastWeight), reps: String(lastReps + 1) }
+  // Determine if weight progression trigger is met
+  const effectiveReps = (s: typeof set1) =>
+    s.reps > 0 ? s.reps : (s.repsLeft || s.repsRight || 0)
+
+  let triggerMet = false
+  if (trigger === 'topOfRange') {
+    triggerMet = lastReps >= repRange.max
+  } else if (trigger === 'allSetsTop') {
+    triggerMet = lastSets.every((s) => effectiveReps(s) >= repRange.max)
+  } else if (trigger === 'combo') {
+    const anyAtTop = lastSets.some((s) => effectiveReps(s) >= repRange.max)
+    const allAboveMin = lastSets.every((s) => effectiveReps(s) >= repRange.min)
+    triggerMet = anyAtTop && allAboveMin
   }
 
-  // Weight progression: hit the top of the range
+  if (!triggerMet) {
+    // Rep progression: haven't met trigger yet
+    if (lastReps < repRange.max) {
+      return { weight: String(lastWeight), reps: String(lastReps + 1), progressionType: 'rep' }
+    }
+    // At top but trigger not met (e.g. allSetsTop and other sets aren't there) — keep same
+    return { weight: String(lastWeight), reps: String(lastReps), progressionType: 'none' }
+  }
+
+  // Weight progression: trigger met
   const increment = getWeightIncrement(equipment, isBodyweight)
   if (increment === 0) {
-    // Bodyweight: can only add reps
-    return { weight: String(lastWeight), reps: String(lastReps + 1) }
+    return { weight: String(lastWeight), reps: String(lastReps + 1), progressionType: 'rep' }
   }
 
   const newWeight = lastWeight + increment
-  const oneRM = estimate1RM(lastWeight, lastReps)
-  const suggestedReps = calculateSuggestedReps(oneRM, newWeight, repRange)
+  const suggestedReps = calculateSuggestedReps(lastWeight, lastReps, newWeight, repRange)
 
-  return { weight: String(newWeight), reps: String(suggestedReps) }
+  return { weight: String(newWeight), reps: String(suggestedReps), progressionType: 'weight' }
 }

@@ -289,7 +289,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
               <h2 className="text-base font-semibold text-gray-900">Personal Records</h2>
               {isBasic && prData.length > 5 && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Showing top 5 of {prData.length} — Premiere for full table
+                  Showing top 5 of {prData.length} — Elite for full table
                 </p>
               )}
             </div>
@@ -349,7 +349,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
               </table>
               {isBasic && prData.length > 5 && (
                 <p className="text-xs text-gray-400 text-center mt-4 pb-1">
-                  + {prData.length - 5} more exercises — upgrade to Premiere to see all
+                  + {prData.length - 5} more exercises — upgrade to Elite to see all
                 </p>
               )}
             </div>
@@ -357,14 +357,14 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
         </CardBody>
       </Card>
 
-      {/* Exercise Progress Charts — Premiere only */}
+      {/* Exercise Progress Charts — Elite only */}
       {isBasic ? (
         <Card>
           <CardBody>
             <div className="flex flex-col items-center py-10 text-center">
               <p className="text-sm font-medium text-gray-600 mb-1">Exercise Progression Charts</p>
               <p className="text-xs text-gray-400">
-                Upgrade to Premiere to see weight trends, volume, and RPE charts per exercise.
+                Upgrade to Elite to see weight trends, volume, and RPE charts per exercise.
               </p>
             </div>
           </CardBody>

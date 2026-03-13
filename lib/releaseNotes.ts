@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-13b'
+export const CURRENT_RELEASE_ID = '2026-03-13e'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,38 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-13e',
+    date: 'March 13, 2026',
+    title: 'Smarter Progressive Overload',
+    changes: [
+      'Fixed rep suggestions after weight increase — no longer defaults to bottom of range',
+      'Fixed rep suggestion when manually changing weight back to last session\'s value',
+      'New overload settings: choose when weight increases trigger (top of range, all sets at top, or combo)',
+      'RPE auto-deload: automatically reduce weight next session when you rate an exercise "Too Much"',
+    ],
+  },
+  {
+    id: '2026-03-13d',
+    date: 'March 13, 2026',
+    title: 'Core & Elite Plans',
+    changes: [
+      'Core plan: training block planning, workout logging, progressive overload, and workout history',
+      'Elite plan: adds full progress tracking, volume & intensity charts, 1RM trends, deep analytics, and data export',
+      'Core plan limit updated to 2 training blocks',
+    ],
+  },
+  {
+    id: '2026-03-13c',
+    date: 'March 13, 2026',
+    title: 'Workout Log Bug Fixes',
+    changes: [
+      'PR badge now appears correctly on unilateral exercises (e.g. dumbbell curls)',
+      'Resuming a saved workout session now restores progressive overload suggestions',
+      'Rest timer resumes where it left off if you navigate away mid-countdown',
+      'Sets logged count in the workout summary only counts sets with data entered, and ignores removed exercises',
+    ],
+  },
   {
     id: '2026-03-13b',
     date: 'March 13, 2026',

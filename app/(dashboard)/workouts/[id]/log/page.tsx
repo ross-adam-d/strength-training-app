@@ -150,6 +150,8 @@ export default function WorkoutLogPage() {
   const unitPref = ((session?.user as any)?.unitPreference ?? 'metric') as 'metric' | 'imperial'
   const unitPrefRef = useRef<'metric' | 'imperial'>('metric')
   useEffect(() => { unitPrefRef.current = unitPref }, [unitPref])
+  const sessionRef = useRef(session)
+  useEffect(() => { sessionRef.current = session }, [session])
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
   const [startTime] = useState(new Date())
@@ -226,6 +228,7 @@ export default function WorkoutLogPage() {
   // Progressive overload suggestions and all-time PR bests
   const [suggestions, setSuggestions] = useState<Map<string, Map<number, { weight: string; reps: string; duration?: string }>>>(new Map())
   const [allTimeBests, setAllTimeBests] = useState<Record<string, number>>({})
+  const lastSessionSet1 = useRef<Map<string, { weight: number; reps: number }>>(new Map())
 
   // Add exercise modal state
   const [showExercisePicker, setShowExercisePicker] = useState(false)
@@ -255,9 +258,9 @@ export default function WorkoutLogPage() {
         if (draft) {
           setHasDraft(true)
           setShowDraftModal(true)
-          // Don't populate yet - wait for user to choose resume or start fresh
-          setLoading(false)
-          return
+          // Don't initialise blank logs — draft restore will supply exerciseLogs.
+          // But we still run suggestion computation + fetch bests below so they're
+          // ready immediately when the user clicks "Resume".
         }
 
         // Build lookup from most recent exercise logs (cross-week, by exercise ID)
@@ -284,29 +287,48 @@ export default function WorkoutLogPage() {
         setExerciseNotes(lastExerciseNotes)
         setExerciseRpes(lastExerciseRpes)
 
+        // Read overload settings from session
+        const userOverloadTrigger = ((sessionRef.current?.user as any)?.overloadTrigger ?? 'topOfRange') as 'topOfRange' | 'allSetsTop' | 'combo'
+        const userRpeAutoDeload = (sessionRef.current?.user as any)?.rpeAutoDeload ?? false
+
         // Compute progressive overload suggestions per exercise × set
-        // Set 1 governs the progression type (weight vs rep); subsequent sets follow that decision:
-        //   Weight progression → all sets get new weight; only set 1 shows a rep target (1RM-derived); rest blank
-        //   Rep progression   → each set adds 1 rep vs its own last performance (same weight)
         const newSuggestions = new Map<string, Map<number, { weight: string; reps: string; duration?: string }>>()
         for (const we of data.workoutExercises) {
           const setMap = new Map<number, { weight: string; reps: string; duration?: string }>()
           const exerciseSets = lastLogSets.get(we.exercise.id) ?? []
           const representativeSet = exerciseSets.find((s) => s.setNumber === 1) ?? exerciseSets[0]
 
-          // Determine progression type from set 1
-          const effectiveRepresentativeSet = representativeSet && we.exercise.isUnilateral && representativeSet.repsLeft
-            ? { ...representativeSet, reps: representativeSet.repsLeft }
-            : representativeSet
+          // Store last session set 1 data for cleanOnBlur
+          if (representativeSet) {
+            const effectiveReps = we.exercise.isUnilateral && representativeSet.repsLeft
+              ? representativeSet.repsLeft
+              : (representativeSet.reps > 0 ? representativeSet.reps : 0)
+            lastSessionSet1.current.set(we.exercise.id, {
+              weight: representativeSet.weight,
+              reps: effectiveReps,
+            })
+          }
+
+          // Prepare effective sets (handle unilateral reps)
+          const effectiveSets = exerciseSets.map((s) =>
+            we.exercise.isUnilateral && s.repsLeft
+              ? { ...s, reps: s.repsLeft }
+              : s
+          )
+
           const set1Suggestion = we.exercise.isTimed ? null : getSuggestion(
-            effectiveRepresentativeSet,
+            effectiveSets,
             we.targetReps,
             we.exercise.equipment ?? [],
-            we.exercise.isBodyweight
+            we.exercise.isBodyweight,
+            {
+              overloadTrigger: userOverloadTrigger,
+              rpeAutoDeload: userRpeAutoDeload,
+              lastExerciseRpe: lastExerciseRpes[we.exercise.id],
+            }
           )
-          const isWeightProgression = set1Suggestion !== null && representativeSet !== undefined &&
-            !we.exercise.isBodyweight &&
-            parseFloat(set1Suggestion.weight) > representativeSet.weight
+          const isWeightProgression = set1Suggestion !== null &&
+            (set1Suggestion.progressionType === 'weight' || set1Suggestion.progressionType === 'deload')
 
           for (let i = 0; i < we.targetSets; i++) {
             const setNum = i + 1
@@ -318,10 +340,8 @@ export default function WorkoutLogPage() {
                 duration: lastSet?.duration ? String(lastSet.duration) : '',
               })
             } else if (setNum === 1 || !representativeSet) {
-              // Set 1 (or no history): use the computed suggestion directly
               setMap.set(setNum, set1Suggestion!)
             } else if (isWeightProgression) {
-              // Weight increased: show new weight for all sets, blank reps (user fills from feel)
               setMap.set(setNum, { weight: set1Suggestion!.weight, reps: '' })
             } else {
               // Rep progression: each set adds 1 rep vs its own last performance
@@ -357,20 +377,24 @@ export default function WorkoutLogPage() {
         }
         setSuggestions(newSuggestions)
 
-        // Initialise empty sets (ghost placeholders handle the suggestions)
-        const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
-          Array.from({ length: we.targetSets }, (_, i) => ({
-            exerciseId: we.exercise.id,
-            setNumber: i + 1,
-            reps: '',
-            weight: '',
-            rir: undefined,
-            notes: '',
-            skipped: false,
-          }))
-        )
-        setExerciseLogs(prepopulated)
+        // Always set display order (needed even on resume so exercises render correctly)
         setExerciseDisplayOrder(data.workoutExercises.map((we: WorkoutExercise) => we.id))
+
+        // Only initialise blank sets on a fresh start; draft restore supplies exerciseLogs
+        if (!draft) {
+          const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
+            Array.from({ length: we.targetSets }, (_, i) => ({
+              exerciseId: we.exercise.id,
+              setNumber: i + 1,
+              reps: '',
+              weight: '',
+              rir: undefined,
+              notes: '',
+              skipped: false,
+            }))
+          )
+          setExerciseLogs(prepopulated)
+        }
 
         // Fetch all-time PR bests for PR detection
         const exerciseIds = data.workoutExercises.map((we: WorkoutExercise) => we.exercise.id)
@@ -395,7 +419,8 @@ export default function WorkoutLogPage() {
     for (const log of exerciseLogs) {
       if (log.skipped) continue
       const weightDisplay = parseFloat(String(log.weight))
-      const reps = parseInt(String(log.reps))
+      // For unilateral exercises reps live in repsLeft; fall back to it if reps is 0
+      const reps = parseInt(String(log.reps)) || parseInt(String(log.repsLeft)) || 0
       if (!weightDisplay || !reps || weightDisplay <= 0 || reps <= 0) continue
       const weightKg = displayToKg(weightDisplay, unitPref)
       const oneRM = estimate1RM(weightKg, reps)
@@ -423,6 +448,9 @@ export default function WorkoutLogPage() {
       overallRating,
       startTime: startTime.toISOString(),
       savedAt: new Date().toISOString(),
+      // Timer persistence: save wall-clock end time so it can resume across navigation
+      timerEndTime: activeTimerKey ? timerEndTimeRef.current : null,
+      activeTimerKey: activeTimerKey,
     }
 
     localStorage.setItem(draftKey, JSON.stringify(draft))
@@ -574,6 +602,14 @@ export default function WorkoutLogPage() {
     setOverallNotes(draft.overallNotes)
     setOverallRating(draft.overallRating)
     setLastSavedAt(new Date(draft.savedAt))
+
+    // Restore rest timer if it was still running when the user navigated away
+    if (draft.timerEndTime && draft.activeTimerKey && draft.timerEndTime > Date.now()) {
+      timerEndTimeRef.current = draft.timerEndTime
+      setTimerSecondsLeft(Math.ceil((draft.timerEndTime - Date.now()) / 1000))
+      setActiveTimerKey(draft.activeTimerKey)
+    }
+
     setShowDraftModal(false)
     setHasDraft(false)
   }
@@ -889,11 +925,11 @@ export default function WorkoutLogPage() {
       if (!isNaN(weightVal) && weightVal > 0) {
         const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
         if (we && !we.exercise.isBodyweight && !we.exercise.isTimed) {
-          const oneRM = allTimeBests[exerciseId]
-          if (oneRM && oneRM > 0) {
+          const lastData = lastSessionSet1.current.get(exerciseId)
+          if (lastData && lastData.weight > 0 && lastData.reps > 0) {
             const repRange = parseRepRange(we.targetReps)
             const weightKg = displayToKg(weightVal, unitPref)
-            const suggestedReps = calculateSuggestedReps(oneRM, weightKg, repRange)
+            const suggestedReps = calculateSuggestedReps(lastData.weight, lastData.reps, weightKg, repRange)
             setSuggestions((prev) => {
               const exerciseMap = new Map(prev.get(exerciseId) ?? [])
               exerciseMap.forEach((val, key) => {
@@ -1693,12 +1729,31 @@ export default function WorkoutLogPage() {
           </div>
 
           <div className="pt-4 border-t">
-            <p className="text-sm text-gray-600">
-              Total Sets Logged: {exerciseLogs.filter((l) => !l.skipped).length}
-              {exerciseLogs.some((l) => l.skipped) && (
-                <span className="text-gray-400"> ({exerciseLogs.filter((l) => l.skipped).length} skipped)</span>
-              )}
-            </p>
+            {(() => {
+              // Only count sets from exercises that haven't been removed
+              const activeExerciseIds = new Set(
+                workout.workoutExercises
+                  .filter((we) => !removedExercises.has(we.id))
+                  .map((we) => we.exercise.id)
+              )
+              const activeLogs = exerciseLogs.filter((l) => activeExerciseIds.has(l.exerciseId))
+              // A set is "logged" if the user explicitly skipped it OR entered at least one value
+              const hasData = (l: ExerciseLog) =>
+                parseFloat(String(l.weight)) > 0 ||
+                parseInt(String(l.reps)) > 0 ||
+                parseInt(String(l.repsLeft)) > 0 ||
+                parseInt(String(l.duration)) > 0
+              const loggedSets = activeLogs.filter((l) => l.skipped || hasData(l))
+              const skippedCount = activeLogs.filter((l) => l.skipped).length
+              return (
+                <p className="text-sm text-gray-600">
+                  Total Sets Logged: {loggedSets.length}
+                  {skippedCount > 0 && (
+                    <span className="text-gray-400"> ({skippedCount} skipped)</span>
+                  )}
+                </p>
+              )
+            })()}
             <p className="text-sm text-gray-600">
               Duration: {Math.round((new Date().getTime() - startTime.getTime()) / 1000 / 60)} minutes
             </p>

@@ -9,9 +9,13 @@ export default function SettingsPage() {
   const [billingLoading, setBillingLoading] = useState(false)
   const [unitSaving, setUnitSaving] = useState(false)
   const [unitError, setUnitError] = useState<string | null>(null)
+  const [overloadSaving, setOverloadSaving] = useState(false)
+  const [overloadError, setOverloadError] = useState<string | null>(null)
 
   const user = session?.user
   const unitPreference = (user?.unitPreference ?? 'metric') as 'metric' | 'imperial'
+  const overloadTrigger = ((user as any)?.overloadTrigger ?? 'topOfRange') as 'topOfRange' | 'allSetsTop' | 'combo'
+  const rpeAutoDeload = (user as any)?.rpeAutoDeload ?? false
   const subscriptionStatus = user?.subscriptionStatus
   const tier = user?.tier ?? 'PREMIERE'
 
@@ -60,6 +64,43 @@ export default function SettingsPage() {
       setUnitError('Failed to save preference. Please try again.')
     } finally {
       setUnitSaving(false)
+    }
+  }
+
+  async function setTrigger(val: 'topOfRange' | 'allSetsTop' | 'combo') {
+    if (val === overloadTrigger) return
+    setOverloadSaving(true)
+    setOverloadError(null)
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overloadTrigger: val }),
+      })
+      if (!res.ok) { setOverloadError('Failed to save. Please try again.'); return }
+      await update()
+    } catch {
+      setOverloadError('Failed to save. Please try again.')
+    } finally {
+      setOverloadSaving(false)
+    }
+  }
+
+  async function toggleDeload() {
+    setOverloadSaving(true)
+    setOverloadError(null)
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rpeAutoDeload: !rpeAutoDeload }),
+      })
+      if (!res.ok) { setOverloadError('Failed to save. Please try again.'); return }
+      await update()
+    } catch {
+      setOverloadError('Failed to save. Please try again.')
+    } finally {
+      setOverloadSaving(false)
     }
   }
 
@@ -170,6 +211,71 @@ export default function SettingsPage() {
           )}
           {unitError && (
             <p className="mt-2 text-sm text-red-600">{unitError}</p>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Progressive Overload */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-gray-900">Progressive Overload</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Control when weight increases are suggested during your workouts.
+          </p>
+        </CardHeader>
+        <CardBody className="space-y-5">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Weight increase trigger</p>
+            <div className="flex gap-2">
+              {([
+                { value: 'topOfRange' as const, label: 'Top of range', desc: 'Set 1 hits the top' },
+                { value: 'allSetsTop' as const, label: 'All sets at top', desc: 'Every set hits the top' },
+                { value: 'combo' as const, label: 'Combo', desc: 'One at top + all above min' },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTrigger(opt.value)}
+                  disabled={overloadSaving}
+                  className={`flex-1 py-3 px-2 rounded-lg border-2 text-sm font-semibold transition ${
+                    overloadTrigger === opt.value
+                      ? 'border-primary-600 bg-primary-600 text-white'
+                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                  } disabled:opacity-60`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              {overloadTrigger === 'topOfRange' && 'Increase weight when set 1 hits the top of your rep range.'}
+              {overloadTrigger === 'allSetsTop' && 'Increase weight only when every set hits the top of the range.'}
+              {overloadTrigger === 'combo' && 'Increase weight when at least one set hits the top and all sets are at or above the minimum.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Auto-deload on &quot;Too Much&quot;</p>
+              <p className="text-xs text-gray-500">Reduce weight next session when you rate an exercise 5/5</p>
+            </div>
+            <button
+              onClick={toggleDeload}
+              disabled={overloadSaving}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                rpeAutoDeload ? 'bg-primary-600' : 'bg-gray-200'
+              } disabled:opacity-60`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  rpeAutoDeload ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          {overloadSaving && (
+            <p className="text-sm text-gray-500">Saving…</p>
+          )}
+          {overloadError && (
+            <p className="text-sm text-red-600">{overloadError}</p>
           )}
         </CardBody>
       </Card>

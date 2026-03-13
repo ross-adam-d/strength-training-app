@@ -58,9 +58,9 @@ export async function POST(request: Request) {
     const tier = token?.tier ?? 'PREMIERE'
     if (tier === 'BASIC') {
       const count = await prisma.macrocycle.count({ where: { userId: session.user.id } })
-      if (count >= 3) {
+      if (count >= 2) {
         return NextResponse.json(
-          { error: 'Basic plan is limited to 3 training blocks. Upgrade to Premiere for unlimited.' },
+          { error: 'Core plan is limited to 2 training blocks. Upgrade to Elite for unlimited.' },
           { status: 403 }
         )
       }

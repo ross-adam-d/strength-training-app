@@ -85,10 +85,10 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
           <span className="text-xl text-gray-400">🔒</span>
         </div>
-        <p className="text-base font-medium text-gray-700 mb-1">Premiere Feature</p>
+        <p className="text-base font-medium text-gray-700 mb-1">Elite Feature</p>
         <p className="text-sm text-gray-500 max-w-xs">
           Deep Analytics — weak point identification, training readiness, and fatigue indicators —
-          is available on the Premiere plan.
+          is available on the Elite plan.
         </p>
       </div>
     )

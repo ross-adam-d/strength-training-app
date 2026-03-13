@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const tier = token?.tier ?? 'PREMIERE'
     if (tier === 'BASIC') {
       return NextResponse.json(
-        { error: 'CSV export is a Premiere feature. Upgrade to access data export.' },
+        { error: 'CSV export is an Elite feature. Upgrade to access data export.' },
         { status: 403 }
       )
     }

@@ -12,6 +12,8 @@ declare module 'next-auth' {
       subscriptionStatus?: string | null
       trialEndsAt?: string | null
       unitPreference?: string
+      overloadTrigger?: string
+      rpeAutoDeload?: boolean
     }
   }
 
@@ -34,5 +36,7 @@ declare module 'next-auth/jwt' {
     trialEndsAt?: string | null
     manualAccessGrantedUntil?: string | null
     unitPreference?: string
+    overloadTrigger?: string
+    rpeAutoDeload?: boolean
   }
 }

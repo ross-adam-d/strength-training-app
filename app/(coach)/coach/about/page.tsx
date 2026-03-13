@@ -79,7 +79,7 @@ export default function CoachAboutPage() {
 
     if (res.ok) {
       const data = await res.json()
-      setPhotoUrl(data.photoUrl)
+      setPhotoUrl(`${data.photoUrl}?t=${Date.now()}`)
     } else {
       const data = await res.json()
       setPhotoError(data.error ?? 'Upload failed')

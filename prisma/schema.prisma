@@ -54,6 +54,8 @@ model User {
 
   lastSeenReleaseId String?
   unitPreference    String  @default("metric")
+  overloadTrigger   String  @default("topOfRange")
+  rpeAutoDeload     Boolean @default(false)
 
   profile       Profile?
   macrocycles   Macrocycle[]
