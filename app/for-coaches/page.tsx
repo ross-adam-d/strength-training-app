@@ -144,54 +144,74 @@ export default function ForCoachesPage() {
         <div className="container mx-auto max-w-2xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Coach pricing</h2>
-            <p className="text-gray-600">One flat rate. No per-seat fees for your clients.</p>
+            <p className="text-gray-600">Flat rate. No per-seat fees for your clients.</p>
           </div>
-          <div className="bg-white border-2 border-gray-900 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-              <div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">Coach Plan</div>
-                <div className="text-4xl font-extrabold text-gray-900">
-                  from $29<span className="text-xl font-normal text-gray-500">/mo</span>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* Starter */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col">
+              <div className="mb-6">
+                <div className="text-sm font-medium text-gray-500 mb-1">Up to 5 clients</div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">Starter Coach</div>
+                <div className="text-4xl font-extrabold text-gray-900 mb-1">
+                  $19<span className="text-xl font-normal text-gray-500">/mo</span>
                 </div>
-                <div className="text-gray-400 text-sm mt-1">AUD · contact us for USD pricing</div>
+                <div className="text-gray-400 text-sm">AUD</div>
               </div>
-              <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                Includes up to 5 clients
-              </span>
-            </div>
-            <ul className="space-y-3 mb-8">
-              {[
-                'Manage up to 5 clients (expandable)',
-                'Build and assign training blocks',
-                'In-app messaging with each client',
-                'Full progress and compliance tracking',
-                'Clients get full Elite access at no extra cost',
-                'Coach profile page for your clients',
-                'Priority support',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-col sm:flex-row gap-3">
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  'Up to 5 clients',
+                  'Build and assign training blocks',
+                  'In-app messaging',
+                  'Progress and compliance tracking',
+                  'Clients get full Elite access',
+                  'Coach profile page',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                    <Check />
+                    {item}
+                  </li>
+                ))}
+              </ul>
               <Link
                 href="/register"
-                className="flex-1 block text-center px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
+                className="block text-center px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
                 style={{ backgroundColor: '#FF8000' }}
               >
                 Start free trial
               </Link>
+            </div>
+
+            {/* Unlimited */}
+            <div className="bg-white border-2 border-gray-900 rounded-2xl p-8 shadow-sm flex flex-col">
+              <div className="mb-6">
+                <div className="text-sm font-medium text-gray-500 mb-1">Unlimited clients</div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">Pro Coach</div>
+                <div className="text-4xl font-extrabold text-gray-900 mb-1">
+                  $35<span className="text-xl font-normal text-gray-500">/mo</span>
+                </div>
+                <div className="text-gray-400 text-sm">AUD</div>
+              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  'Unlimited clients',
+                  'Everything in Starter Coach',
+                  'Priority support',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                    <Check />
+                    {item}
+                  </li>
+                ))}
+              </ul>
               <Link
-                href="mailto:adam@pbxstrength.com.au"
-                className="flex-1 block text-center px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
+                href="/register"
+                className="block text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition"
               >
-                Contact us
+                Start free trial
               </Link>
             </div>
-            <p className="text-xs text-gray-400 text-center mt-4">14-day free trial · no credit card required · cancel any time</p>
           </div>
+          <p className="text-xs text-gray-400 text-center mt-6">14-day free trial · no credit card required · cancel any time</p>
         </div>
       </section>
 
