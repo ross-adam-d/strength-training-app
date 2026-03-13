@@ -93,7 +93,7 @@ export default function Home() {
                 step: '01',
                 label: 'PLAN',
                 title: 'Build your training block',
-                body: 'Set your mesocycle, phases, and weekly splits. Choose from proven templates or build from scratch.',
+                body: 'Set your macrocycle, phases, and weekly splits. Choose from proven templates or build from scratch.',
               },
               {
                 step: '02',
@@ -213,13 +213,14 @@ export default function Home() {
                 Run your clients like a professional operation.
               </h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                Build programmes once, assign to multiple clients. Monitor their progress, flag weak points, and adjust loads — all from your coach dashboard.
+                Manage all of your clients in the app — with in-app messaging, progress tracking, and your programming all in one place. Build a block once, assign it to multiple clients, and monitor compliance from your coach dashboard.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
                   'Build and assign training blocks to clients',
-                  'Monitor session compliance and progress',
-                  'Coach dashboard with athlete overview',
+                  'In-app messaging with each athlete',
+                  'Monitor session compliance and strength progress',
+                  'Coach dashboard with full athlete overview',
                   'Clients get full Elite access while coached',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
@@ -231,11 +232,11 @@ export default function Home() {
                 ))}
               </ul>
               <Link
-                href="/register"
+                href="/for-coaches"
                 className="inline-block px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
                 style={{ backgroundColor: '#FF8000' }}
               >
-                Get started as a coach
+                Learn more for coaches
               </Link>
             </div>
             <div className="rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden">

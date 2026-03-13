@@ -17,6 +17,7 @@ export function Navigation({
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<any>(null)
 
@@ -104,23 +105,50 @@ export function Navigation({
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="hidden md:inline text-sm text-gray-600 max-w-[10rem] truncate" title={email}>{email}</span>
+          <div className="flex items-center gap-3">
+            {/* Desktop: email dropdown */}
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition max-w-[10rem]"
+                title={email}
+              >
+                <span className="truncate">{email}</span>
+                <svg className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {profileOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
+                  <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                    {showBillingButton && (
+                      <button
+                        onClick={() => { setProfileOpen(false); manageBilling() }}
+                        disabled={billingLoading}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {billingLoading ? 'Loading…' : 'Manage Billing'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Mobile: install app + hamburger */}
             {installPrompt && (
               <button
                 onClick={installApp}
-                className="hidden md:inline px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition"
+                className="md:hidden px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition"
               >
                 Install App
-              </button>
-            )}
-            {showBillingButton && (
-              <button
-                onClick={manageBilling}
-                disabled={billingLoading}
-                className="hidden md:inline px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-md transition disabled:opacity-60"
-              >
-                {billingLoading ? 'Loading…' : 'Manage Billing'}
               </button>
             )}
             <button
@@ -135,12 +163,6 @@ export function Navigation({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 )}
               </svg>
-            </button>
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="hidden md:inline px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition"
-            >
-              Sign Out
             </button>
           </div>
         </div>
