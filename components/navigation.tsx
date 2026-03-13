@@ -63,20 +63,20 @@ export function Navigation({
 
   const links = [
     { href: '/dashboard', label: 'Dashboard', hardNav: true },
-    { href: '/macrocycles', label: 'Training Blocks' },
+    { href: '/macrocycles', label: 'Blocks' },
     { href: '/workout-history', label: 'History' },
     { href: '/exercises', label: 'Exercises' },
     { href: '/progress', label: 'Progress' },
-    { href: '/workout/start', label: 'Log Manual Workout' },
+    { href: '/workout/start', label: 'Log Workout' },
     { href: '/how-to', label: 'How To' },
     { href: '/settings', label: 'Settings' },
     ...(role === 'USER' || !role ? [{ href: '/my-coach', label: 'My Coach' }] : []),
-    ...(role === 'COACH' ? [{ href: '/coach', label: 'Coach Dashboard', hardNav: true }] : []),
+    ...(role === 'COACH' ? [{ href: '/coach', label: 'Coaching', hardNav: true }] : []),
     ...(role === 'ADMIN' ? [{ href: '/admin', label: 'Admin', hardNav: true }] : []),
   ]
 
   function navLinkClass(href: string) {
-    return `px-3 py-2 rounded-md text-sm font-medium transition ${
+    return `px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${
       pathname === href ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
     }`
   }
@@ -105,7 +105,7 @@ export function Navigation({
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="hidden md:inline text-sm text-gray-600">{email}</span>
+            <span className="hidden md:inline text-sm text-gray-600 max-w-[10rem] truncate" title={email}>{email}</span>
             {installPrompt && (
               <button
                 onClick={installApp}

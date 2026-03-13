@@ -80,6 +80,45 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="py-20 px-4 bg-gray-950">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-white mb-3">How it works</h2>
+            <p className="text-gray-400 text-lg">Three steps from zero to training like a pro.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '01',
+                label: 'PLAN',
+                title: 'Build your training block',
+                body: 'Set your mesocycle, phases, and weekly splits. Choose from proven templates or build from scratch.',
+              },
+              {
+                step: '02',
+                label: 'BUILD',
+                title: 'Load your programme',
+                body: 'Add exercises, set target weight and rep ranges, and let pbX calculate your progressive overload targets automatically.',
+              },
+              {
+                step: '03',
+                label: 'EXECUTE',
+                title: 'Log every session',
+                body: 'Hit the gym, log sets in real time, and track performance against your targets — week by week.',
+              },
+            ].map(({ step, label, title, body }) => (
+              <div key={step} className="relative">
+                <div className="text-xs font-bold tracking-widest mb-2" style={{ color: '#FF8000' }}>{label}</div>
+                <div className="text-5xl font-extrabold text-gray-800 mb-4">{step}</div>
+                <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-5xl">
@@ -135,6 +174,76 @@ export default function Home() {
                 <p className="text-gray-600 text-sm leading-relaxed">{body}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshots */}
+      <section className="py-20 px-4 bg-gray-950">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-white mb-3">See it in action</h2>
+            <p className="text-gray-400 text-lg">Every view designed for the gym floor.</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              { label: 'Workout log — sets, reps, RPE in real time', slot: 'workout-log' },
+              { label: 'Training block builder — phases and weekly splits', slot: 'training-block' },
+              { label: 'Progress charts — strength trends over time', slot: 'progress' },
+              { label: 'Deep analytics — readiness and weak points', slot: 'analytics' },
+            ].map(({ label, slot }) => (
+              <div key={slot} className="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden">
+                {/* Drop a PNG at /public/marketing/{slot}.png to replace this placeholder */}
+                <div className="aspect-[16/10] flex items-center justify-center text-center p-8">
+                  <p className="text-gray-600 text-sm">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* For coaches */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-5xl">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="text-xs font-bold tracking-widest mb-3" style={{ color: '#FF8000' }}>FOR COACHES</div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Run your clients like a professional operation.
+              </h2>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Build programmes once, assign to multiple clients. Monitor their progress, flag weak points, and adjust loads — all from your coach dashboard.
+              </p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Build and assign training blocks to clients',
+                  'Monitor session compliance and progress',
+                  'Coach dashboard with athlete overview',
+                  'Clients get full Elite access while coached',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                    <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#FF8000' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/register"
+                className="inline-block px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
+                style={{ backgroundColor: '#FF8000' }}
+              >
+                Get started as a coach
+              </Link>
+            </div>
+            <div className="rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden">
+              {/* Drop a PNG at /public/marketing/coach-dashboard.png to replace this placeholder */}
+              <div className="aspect-[4/3] flex items-center justify-center">
+                <p className="text-gray-400 text-sm">Coach dashboard screenshot</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -128,6 +128,7 @@ export default function ProgressPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
+          <span className="inline-block mb-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">Elite</span>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Progress tracking is an Elite feature</h2>
           <p className="text-gray-500 text-sm mb-6">
             Upgrade to Elite to unlock charts, trends, and deep analytics across your entire training history.
@@ -177,9 +178,10 @@ export default function ProgressPage() {
         {isBasic ? (
           <span
             title="CSV export is an Elite feature"
-            className="text-sm px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
           >
-            Export CSV 🔒
+            Export CSV
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-200">Elite</span>
           </span>
         ) : (
           <button

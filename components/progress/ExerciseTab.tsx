@@ -362,6 +362,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
         <Card>
           <CardBody>
             <div className="flex flex-col items-center py-10 text-center">
+              <span className="inline-block mb-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">Elite</span>
               <p className="text-sm font-medium text-gray-600 mb-1">Exercise Progression Charts</p>
               <p className="text-xs text-gray-400">
                 Upgrade to Elite to see weight trends, volume, and RPE charts per exercise.
