@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { PBeXLogo, PBeXLogoStacked } from '@/components/PBeXLogo'
 
 function CheckIcon() {
@@ -193,10 +194,13 @@ export default function Home() {
               { label: 'Deep analytics — readiness and weak points', slot: 'analytics' },
             ].map(({ label, slot }) => (
               <div key={slot} className="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden">
-                {/* Drop a PNG at /public/marketing/{slot}.png to replace this placeholder */}
-                <div className="aspect-[16/10] flex items-center justify-center text-center p-8">
-                  <p className="text-gray-600 text-sm">{label}</p>
-                </div>
+                <Image
+                  src={`/marketing/${slot}.jpg`}
+                  alt={label}
+                  width={800}
+                  height={500}
+                  className="w-full h-auto"
+                />
               </div>
             ))}
           </div>
@@ -240,10 +244,13 @@ export default function Home() {
               </Link>
             </div>
             <div className="rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden">
-              {/* Drop a PNG at /public/marketing/coach-dashboard.png to replace this placeholder */}
-              <div className="aspect-[4/3] flex items-center justify-center">
-                <p className="text-gray-400 text-sm">Coach dashboard screenshot</p>
-              </div>
+              <Image
+                src="/marketing/coach-dashboard.jpg"
+                alt="Coach dashboard"
+                width={800}
+                height={600}
+                className="w-full h-auto"
+              />
             </div>
           </div>
         </div>
