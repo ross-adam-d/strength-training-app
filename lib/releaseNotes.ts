@@ -11,8 +11,9 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: '2026-03-14',
     date: 'March 14, 2026',
-    title: 'Custom Split Fix',
+    title: 'Referrals + Custom Split Fix',
     changes: [
+      'Refer a friend — share your link from Settings and you both get 30 days free when they verify their email',
       'Custom split no longer generates Full Body exercises — "Create Default Workout Structure" is hidden for Custom splits',
       'Custom split workouts are now correctly named "Workout 1", "Workout 2" etc.',
     ],
