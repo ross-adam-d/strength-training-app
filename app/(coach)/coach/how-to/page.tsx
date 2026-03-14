@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 // ── Reusable primitives ─────────────────────────────────────────────────────
 
@@ -9,6 +10,14 @@ function BackToTop() {
         ↑ Back to top
       </a>
     </div>
+  )
+}
+
+function Screenshot({ src, alt }: { src: string; alt: string }) {
+  return (
+    <figure className="my-4">
+      <Image src={src} alt={alt} width={1200} height={750} className="w-full h-auto rounded-xl border border-gray-200 shadow-sm" />
+    </figure>
   )
 }
 
@@ -209,7 +218,7 @@ export default function CoachHowToPage() {
           />
         </ol>
 
-        <ScreenshotPlaceholder label="Screenshot: Coach Dashboard — pending invites + client list" aspectRatio="16/7" />
+        <Screenshot src="/how-to/coach dashboard pending clients.jpg" alt="Coach Dashboard — pending invites and client list" />
         <SectionDivider />
         <BackToTop />
       </section>
@@ -283,7 +292,7 @@ export default function CoachHowToPage() {
           />
         </ol>
 
-        <ScreenshotPlaceholder label="Screenshot: Client block view — phases + activate button" aspectRatio="16/7" />
+        <Screenshot src="/how-to/client block view.jpg" alt="Client block view — phases and activate button" />
         <TipBox>
           Build out Week 1 of a phase fully before applying it. The rest of the weeks are generated from Week 1,
           so a complete Week 1 means a complete phase.
@@ -352,7 +361,7 @@ export default function CoachHowToPage() {
           </div>
         </div>
 
-        <ScreenshotPlaceholder label="Screenshot: Phase template editor — week carousel + workout exercises" aspectRatio="16/7" />
+        <Screenshot src="/how-to/phase template editor week overview.jpg" alt="Phase template editor — week carousel and workout exercises" />
         <Link href="/coach/templates" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
           Go to Phase Templates →
         </Link>
@@ -427,7 +436,7 @@ export default function CoachHowToPage() {
           ))}
         </div>
 
-        <ScreenshotPlaceholder label="Screenshot: About Me page + client My Coach view" aspectRatio="16/7" />
+        <Screenshot src="/how-to/About me page.jpg" alt="About Me page and client My Coach view" />
         <Link href="/coach/about" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
           Set up your profile →
         </Link>

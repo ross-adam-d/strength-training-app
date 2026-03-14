@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 // ── Reusable primitives ─────────────────────────────────────────────────────
 
@@ -9,6 +10,14 @@ function BackToTop() {
         ↑ Back to top
       </a>
     </div>
+  )
+}
+
+function Screenshot({ src, alt }: { src: string; alt: string }) {
+  return (
+    <figure className="my-4">
+      <Image src={src} alt={alt} width={1200} height={750} className="w-full h-auto rounded-xl border border-gray-200 shadow-sm" />
+    </figure>
   )
 }
 
@@ -184,7 +193,7 @@ export default function HowToPage() {
           />
         </div>
 
-        <ScreenshotPlaceholder label="Screenshot: Training Blocks overview page" />
+        <Screenshot src="/how-to/block set up.jpg" alt="Training Blocks overview" />
 
         <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-4 text-sm leading-relaxed text-gray-700">
           <p className="font-semibold text-gray-900 mb-1">The big picture</p>
@@ -221,7 +230,7 @@ export default function HowToPage() {
               <Link href="/macrocycles/setup" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
                 Create your first block →
               </Link>
-              <ScreenshotPlaceholder label="Screenshot: New Training Block setup form" aspectRatio="16/7" />
+              <Screenshot src="/how-to/training block set up form.jpg" alt="New Training Block setup form" />
             </div>
           </li>
 
@@ -262,7 +271,7 @@ export default function HowToPage() {
                   </div>
                 ))}
               </div>
-              <ScreenshotPlaceholder label="Screenshot: Phase setup — split + weeks + populate options" aspectRatio="16/7" />
+              <Screenshot src="/how-to/Phase setup.jpg" alt="Phase setup — split, weeks and populate options" />
             </div>
           </li>
 
@@ -295,7 +304,7 @@ export default function HowToPage() {
               <Link href="/exercises" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
                 Browse exercises →
               </Link>
-              <ScreenshotPlaceholder label="Screenshot: Workout editor with exercises + set/rep/RIR fields" aspectRatio="16/7" />
+              <Screenshot src="/how-to/workout editor with exercises.jpg" alt="Workout editor with exercises, sets, reps and RIR fields" />
             </div>
           </li>
 
@@ -316,7 +325,7 @@ export default function HowToPage() {
               <Link href="/dashboard" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
                 Go to dashboard →
               </Link>
-              <ScreenshotPlaceholder label="Screenshot: Active workout log screen" aspectRatio="16/7" />
+              <Screenshot src="/how-to/active workout-log.jpg" alt="Active workout log screen" />
             </div>
           </li>
 
@@ -407,7 +416,7 @@ export default function HowToPage() {
           alongside your structured sessions, and the data flows into your progress charts and exercise metric history.
         </p>
 
-        <ScreenshotPlaceholder label="Screenshot: Manual workout log + workout history list" aspectRatio="16/7" />
+        <Screenshot src="/how-to/workout history calendar.jpg" alt="Workout history calendar" />
 
         <div className="flex gap-3">
           <Link
@@ -457,7 +466,7 @@ export default function HowToPage() {
                 </li>
               ))}
             </ul>
-            <ScreenshotPlaceholder label="Screenshot: Volume & Intensity tab — session volume chart + block comparison" aspectRatio="16/7" />
+            <Screenshot src="/how-to/volume and intesity tab.jpg" alt="Volume and Intensity tab — session volume chart and block comparison" />
           </div>
         </div>
 
@@ -482,7 +491,7 @@ export default function HowToPage() {
                 </li>
               ))}
             </ul>
-            <ScreenshotPlaceholder label="Screenshot: Exercise Metrics — squat weight history + 1RM chart" aspectRatio="16/7" />
+            <Screenshot src="/how-to/Exercise metrics - squat history chart.jpg" alt="Exercise Metrics — squat weight history and 1RM chart" />
             <TipBox>
               The 1RM estimate is most accurate when you log sets close to failure (low RIR). If you&apos;re always leaving 4+ reps in the tank, the estimate will undervalue your true strength.
             </TipBox>
@@ -512,7 +521,7 @@ export default function HowToPage() {
                 </li>
               ))}
             </ul>
-            <ScreenshotPlaceholder label="Screenshot: Deep Analytics — readiness score + weak point chart" aspectRatio="16/8" />
+            <Screenshot src="/how-to/deep analytics.jpg" alt="Deep Analytics — readiness score and weak point chart" />
           </div>
         </div>
 
