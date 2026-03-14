@@ -257,9 +257,9 @@ export default function Home() {
             <p className="text-gray-600 text-lg">Start with a free trial. No credit card needed to begin.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
             {/* Trial */}
-            <div className="rounded-2xl p-6 text-white shadow-lg md:col-span-1 flex flex-col" style={{ backgroundColor: '#FF8000' }}>
+            <div className="rounded-2xl p-6 text-white shadow-lg flex flex-col" style={{ backgroundColor: '#FF8000' }}>
               <div className="mb-6">
                 <div className="text-sm font-medium text-orange-100 mb-1">Right now</div>
                 <div className="text-2xl font-bold mb-1">Free Trial</div>
@@ -268,7 +268,7 @@ export default function Home() {
               </div>
               <ul className="space-y-3 mb-8 flex-1">
                 {[
-                  'Full Elite access for 14 days',
+                  'Full access for 14 days',
                   'All features unlocked',
                   'Unlimited training blocks & logs',
                   'No credit card required',
@@ -290,71 +290,36 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Paid tiers */}
-            <div className="md:col-span-2 grid sm:grid-cols-2 gap-6">
-              {/* Core */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col">
-                <div className="mb-6">
-                  <div className="text-sm font-medium text-gray-500 mb-1">After trial</div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">Core</div>
-                  <div className="text-3xl font-extrabold text-gray-900 mb-1">
-                    from $9<span className="text-lg font-normal text-gray-500">/mo</span>
-                  </div>
-                  <div className="text-gray-400 text-sm">AUD · or $7 USD</div>
+            {/* Single plan */}
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-900 shadow-sm flex flex-col">
+              <div className="mb-6">
+                <div className="text-sm font-medium text-gray-500 mb-1">After trial</div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">pbX Elite</div>
+                <div className="text-3xl font-extrabold text-gray-900 mb-1">
+                  $15<span className="text-lg font-normal text-gray-500">/mo</span>
                 </div>
-                <ul className="space-y-3 mb-8 flex-1">
-                  {[
-                    'Training block planning (1 active)',
-                    'Workout logging & progressive overload',
-                    'Progress tracking — last 90 days',
-                    'Exercise library (60+ exercises)',
-                  ].map((item) => (
-                    <li key={item} className="flex gap-2 text-sm text-gray-600">
-                      <CheckIcon />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register"
-                  className="block text-center px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
-                  style={{ backgroundColor: '#FF8000' }}
-                >
-                  Start free trial
-                </Link>
+                <div className="text-gray-400 text-sm">AUD · or $10 USD · cancel anytime</div>
               </div>
-
-              {/* Elite */}
-              <div className="bg-white rounded-2xl p-6 border-2 border-gray-900 shadow-sm flex flex-col">
-                <div className="mb-6">
-                  <div className="text-sm font-medium text-gray-500 mb-1">After trial</div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">Elite</div>
-                  <div className="text-3xl font-extrabold text-gray-900 mb-1">
-                    from $16<span className="text-lg font-normal text-gray-500">/mo</span>
-                  </div>
-                  <div className="text-gray-400 text-sm">AUD · or $12 USD</div>
-                </div>
-                <ul className="space-y-3 mb-8 flex-1">
-                  {[
-                    'Everything in Core',
-                    'Full history & all-time PRs',
-                    'Unlimited training blocks',
-                    'Deep analytics & readiness score',
-                    'Export your data any time',
-                  ].map((item) => (
-                    <li key={item} className="flex gap-2 text-sm text-gray-600">
-                      <CheckIcon />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register"
-                  className="block text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition"
-                >
-                  Start free trial
-                </Link>
-              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  'Training block planning — unlimited',
+                  'Workout logging & progressive overload',
+                  'Full history, all-time PRs & strength charts',
+                  'Deep analytics & readiness score',
+                  'Export your data any time',
+                ].map((item) => (
+                  <li key={item} className="flex gap-2 text-sm text-gray-600">
+                    <CheckIcon />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/register"
+                className="block text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition"
+              >
+                Start free trial
+              </Link>
             </div>
           </div>
         </div>

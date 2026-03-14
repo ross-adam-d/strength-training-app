@@ -21,14 +21,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
-    const tier = token?.tier ?? 'PREMIERE'
-    if (tier === 'BASIC') {
-      return NextResponse.json(
-        { error: 'CSV export is an Elite feature. Upgrade to access data export.' },
-        { status: 403 }
-      )
-    }
+    // Single tier — gate disabled. Re-enable if tiering reintroduced:
+    // const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+    // const tier = token?.tier ?? 'PREMIERE'
+    // if (tier === 'BASIC') { return NextResponse.json({ error: '...' }, { status: 403 }) }
 
     const logs = await prisma.workoutLog.findMany({
       where: { userId: session.user.id },

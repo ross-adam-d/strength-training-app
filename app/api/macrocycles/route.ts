@@ -57,18 +57,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Tier-based block limit (enforced post-beta; all users PREMIERE during beta)
-    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
-    const tier = token?.tier ?? 'PREMIERE'
-    if (tier === 'BASIC') {
-      const count = await prisma.macrocycle.count({ where: { userId: session.user.id } })
-      if (count >= 2) {
-        return NextResponse.json(
-          { error: 'Core plan is limited to 2 training blocks. Upgrade to Elite for unlimited.' },
-          { status: 403 }
-        )
-      }
-    }
+    // Single tier — block limit disabled. Re-enable if tiering reintroduced:
+    // const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+    // const tier = token?.tier ?? 'PREMIERE'
+    // if (tier === 'BASIC') { const count = ...; if (count >= 2) return 403 }
 
     const body = await request.json()
     const data = macrocycleSchema.parse(body)

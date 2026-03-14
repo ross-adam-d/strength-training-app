@@ -108,7 +108,7 @@ function SortButton({
 
 export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
   const { data: session } = useSession()
-  const isBasic = (session?.user as any)?.tier === 'BASIC'
+  const isBasic = false // single tier — re-enable if tiering reintroduced: (session?.user as any)?.tier === 'BASIC'
   const unitPref = (session?.user as any)?.unitPreference ?? 'metric'
   const unit = weightUnit(unitPref)
 

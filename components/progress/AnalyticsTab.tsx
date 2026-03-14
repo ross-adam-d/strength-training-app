@@ -52,7 +52,7 @@ function capitalize(s: string) {
 
 export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
   const { data: session } = useSession()
-  const isBasic = (session?.user as any)?.tier === 'BASIC'
+  const isBasic = false // single tier — re-enable if tiering reintroduced: (session?.user as any)?.tier === 'BASIC'
 
   const [readiness, setReadiness] = useState<ReadinessData | null | undefined>(undefined)
   const [loadingReadiness, setLoadingReadiness] = useState(true)

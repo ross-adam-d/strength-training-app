@@ -16,7 +16,7 @@ type PriceMap = {
 export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; priceIds: PriceMap }) {
   const [currency, setCurrency] = useState<'AUD' | 'USD'>('AUD')
   const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
-  const [loading, setLoading] = useState<string | null>(null) // priceId currently loading
+  const [loading, setLoading] = useState<string | null>(null)
 
   async function checkout(priceId: string) {
     setLoading(priceId)
@@ -38,27 +38,16 @@ export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; pri
   }
 
   const prices = {
-    core: {
-      monthly: currency === 'AUD'
-        ? { id: priceIds.CORE_AUD_MONTHLY,  display: '$9' }
-        : { id: priceIds.CORE_USD_MONTHLY,  display: '$7' },
-      annual: currency === 'AUD'
-        ? { id: priceIds.CORE_AUD_ANNUAL,   display: '$90' }
-        : { id: priceIds.CORE_USD_ANNUAL,   display: '$70' },
-    },
-    elite: {
-      monthly: currency === 'AUD'
-        ? { id: priceIds.ELITE_AUD_MONTHLY, display: '$16' }
-        : { id: priceIds.ELITE_USD_MONTHLY, display: '$12' },
-      annual: currency === 'AUD'
-        ? { id: priceIds.ELITE_AUD_ANNUAL,  display: '$160' }
-        : { id: priceIds.ELITE_USD_ANNUAL,  display: '$120' },
-    },
+    monthly: currency === 'AUD'
+      ? { id: priceIds.ELITE_AUD_MONTHLY, display: '$15' }
+      : { id: priceIds.ELITE_USD_MONTHLY, display: '$10' },
+    annual: currency === 'AUD'
+      ? { id: priceIds.ELITE_AUD_ANNUAL,  display: '$150' }
+      : { id: priceIds.ELITE_USD_ANNUAL,  display: '$100' },
   }
 
-  const corePrice  = prices.core[period]
-  const elitePrice = prices.elite[period]
-  const suffix     = period === 'monthly' ? '/mo' : '/yr'
+  const price  = prices[period]
+  const suffix = period === 'monthly' ? '/mo' : '/yr'
 
   return (
     <div className="space-y-4">
@@ -66,8 +55,8 @@ export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; pri
         {daysLeft === undefined
           ? 'Choose a plan to continue with pbX.'
           : daysLeft === 1
-            ? 'Last day of your free trial — choose a plan to keep your access.'
-            : `${daysLeft} days left in your free trial — choose a plan to keep your access.`}
+            ? 'Last day of your free trial — subscribe to keep your access.'
+            : `${daysLeft} days left in your free trial — subscribe to keep your access.`}
       </p>
 
       {/* Toggles */}
@@ -105,58 +94,20 @@ export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; pri
         </div>
       </div>
 
-      {/* Plan cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
-        {/* Core */}
-        <div className="bg-white border border-amber-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900">Core</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Plan, log, and track — 90 days history</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">
-            {corePrice.display}
-            <span className="text-sm font-normal text-gray-500"> {suffix} {currency}</span>
-          </p>
-          <ul className="mt-3 space-y-1.5 text-xs text-gray-600">
-            {[
-              'Training block planning (1 active)',
-              'Workout logging & progressive overload',
-              'Progress tracking — last 90 days',
-              'Exercise library',
-            ].map((f) => (
-              <li key={f} className="flex gap-1.5 items-start">
-                <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-                {f}
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={() => checkout(corePrice.id)}
-            disabled={loading !== null}
-            className="mt-4 w-full py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-md transition disabled:opacity-60"
-          >
-            {loading === corePrice.id ? 'Loading…' : 'Subscribe'}
-          </button>
-        </div>
-
-        {/* Elite */}
+      {/* Single plan card */}
+      <div className="max-w-sm">
         <div className="bg-amber-600 border border-amber-700 rounded-lg p-4 text-white">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold">Elite</h3>
-            <span className="text-xs bg-white text-amber-700 font-semibold rounded-full px-2 py-0.5 whitespace-nowrap">
-              Best value
-            </span>
-          </div>
-          <p className="text-xs text-amber-100 mt-0.5">Full history, deep analytics, unlimited blocks</p>
+          <h3 className="font-semibold">pbX Elite</h3>
+          <p className="text-xs text-amber-100 mt-0.5">Full access — everything included</p>
           <p className="mt-2 text-2xl font-bold">
-            {elitePrice.display}
+            {price.display}
             <span className="text-sm font-normal text-amber-200"> {suffix} {currency}</span>
           </p>
           <ul className="mt-3 space-y-1.5 text-xs text-amber-100">
             {[
-              'Everything in Core',
-              'Full history & all-time PRs',
-              'Unlimited training blocks',
+              'Training block planning — unlimited',
+              'Workout logging & progressive overload',
+              'Full history, all-time PRs & strength charts',
               'Deep analytics & readiness score',
               'Export your data any time',
             ].map((f) => (
@@ -169,11 +120,11 @@ export function PlanSelectionUI({ daysLeft, priceIds }: { daysLeft?: number; pri
             ))}
           </ul>
           <button
-            onClick={() => checkout(elitePrice.id)}
+            onClick={() => checkout(price.id)}
             disabled={loading !== null}
             className="mt-4 w-full py-2 text-sm font-medium bg-white hover:bg-amber-50 text-amber-700 rounded-md transition disabled:opacity-60"
           >
-            {loading === elitePrice.id ? 'Loading…' : 'Subscribe'}
+            {loading === price.id ? 'Loading…' : 'Subscribe'}
           </button>
         </div>
       </div>

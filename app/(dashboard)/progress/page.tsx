@@ -49,7 +49,7 @@ function getSinceDate(period: string): string | null {
 
 export default function ProgressPage() {
   const { data: session } = useSession()
-  const isBasic = (session?.user as any)?.tier === 'BASIC'
+  const isBasic = false // single tier — re-enable if tiering reintroduced: (session?.user as any)?.tier === 'BASIC'
 
   const [activeTab, setActiveTab] = useState<Tab>('volume')
   const [timePeriod, setTimePeriod] = useState('3m')
