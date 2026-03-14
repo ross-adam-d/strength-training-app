@@ -13,6 +13,7 @@ type InviteInfo = {
 function RegisterForm() {
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
+  const refCode = searchParams.get('ref')
 
   const [invite, setInvite] = useState<InviteInfo | null>(null)
   const [inviteError, setInviteError] = useState<string | null>(null)
@@ -59,7 +60,13 @@ function RegisterForm() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, ...(inviteToken ? { inviteToken } : {}) }),
+        body: JSON.stringify({
+        name,
+        email,
+        password,
+        ...(inviteToken ? { inviteToken } : {}),
+        ...(refCode ? { referralCode: refCode } : {}),
+      }),
       })
 
       const data = await response.json()
@@ -115,6 +122,12 @@ function RegisterForm() {
           <div className="mb-4 p-4 bg-gray-800 border border-primary-700 rounded-lg text-sm text-primary-300 text-center">
             <strong className="text-primary-200">{invite.coachName}</strong> has invited you to train together on pbX.
             Creating your account will automatically connect you as their client.
+          </div>
+        )}
+
+        {refCode && !inviteToken && (
+          <div className="mb-4 p-4 bg-gray-800 border border-green-700 rounded-lg text-sm text-green-300 text-center">
+            🎁 A friend referred you — you&apos;ll both get <strong className="text-green-200">30 days free</strong> when you verify your email.
           </div>
         )}
 

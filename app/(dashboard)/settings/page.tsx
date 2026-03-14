@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 
@@ -11,6 +11,19 @@ export default function SettingsPage() {
   const [unitError, setUnitError] = useState<string | null>(null)
   const [overloadSaving, setOverloadSaving] = useState(false)
   const [overloadError, setOverloadError] = useState<string | null>(null)
+  const [referralLink, setReferralLink] = useState<string | null>(null)
+  const [referralCount, setReferralCount] = useState<number>(0)
+  const [referralCopied, setReferralCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/referrals')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.referralLink) setReferralLink(d.referralLink)
+        setReferralCount(d.referralCount ?? 0)
+      })
+      .catch(() => {})
+  }, [])
 
   const user = session?.user
   const unitPreference = (user?.unitPreference ?? 'metric') as 'metric' | 'imperial'
@@ -101,6 +114,17 @@ export default function SettingsPage() {
       setOverloadError('Failed to save. Please try again.')
     } finally {
       setOverloadSaving(false)
+    }
+  }
+
+  async function copyReferralLink() {
+    if (!referralLink) return
+    try {
+      await navigator.clipboard.writeText(referralLink)
+      setReferralCopied(true)
+      setTimeout(() => setReferralCopied(false), 2000)
+    } catch {
+      // fallback: select the text
     }
   }
 
@@ -211,6 +235,44 @@ export default function SettingsPage() {
           )}
           {unitError && (
             <p className="mt-2 text-sm text-red-600">{unitError}</p>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Refer a Friend */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-gray-900">Refer a Friend</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Share your link — you both get 30 days free when they verify their email.
+          </p>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          {referralLink ? (
+            <>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={referralLink}
+                  className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md text-gray-700 truncate focus:outline-none"
+                />
+                <button
+                  onClick={copyReferralLink}
+                  className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-md hover:bg-primary-700 transition whitespace-nowrap"
+                >
+                  {referralCopied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500">
+                {referralCount === 0
+                  ? 'No one has signed up using your link yet.'
+                  : referralCount === 1
+                  ? '1 friend has joined using your link — nice!'
+                  : `${referralCount} friends have joined using your link — legend!`}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">Loading your referral link…</p>
           )}
         </CardBody>
       </Card>

@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { sendVerificationEmail } from '@/lib/email'
+import { grantReferralReward } from '@/lib/referral'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters').optional(),
   inviteToken: z.string().optional(),
+  referralCode: z.string().optional(),
 })
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, name, inviteToken } = registerSchema.parse(body)
+    const { email, password, name, inviteToken, referralCode } = registerSchema.parse(body)
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -48,6 +51,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validate referral code — find referrer (must exist and not be the same email)
+    let referrerId: string | undefined
+    if (referralCode) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode },
+        select: { id: true, email: true },
+      })
+      if (referrer && referrer.email.toLowerCase() !== email.toLowerCase()) {
+        referrerId = referrer.id
+      }
+    }
+
     // Create user, profile, and trial subscription
     const trialEndsAt = new Date()
     trialEndsAt.setDate(trialEndsAt.getDate() + 28)
@@ -55,12 +70,17 @@ export async function POST(request: Request) {
     // Invite registrations are auto-verified (email proven via invite link)
     const emailVerifiedAt = validInvite ? new Date() : undefined
 
+    // Generate a unique referral code for this new user
+    const newUserReferralCode = randomBytes(4).toString('hex').toUpperCase()
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         emailVerified: emailVerifiedAt,
+        referralCode: newUserReferralCode,
+        referredById: referrerId,
         profile: {
           create: {},
         },
@@ -93,6 +113,11 @@ export async function POST(request: Request) {
           },
         }),
       ])
+    }
+
+    // If email is auto-verified (invite path) and referred, grant reward immediately
+    if (validInvite && referrerId) {
+      await grantReferralReward(user.id, referrerId)
     }
 
     // Send verification email for regular (non-invite) registrations

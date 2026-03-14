@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { grantReferralReward } from '@/lib/referral'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
@@ -32,6 +33,15 @@ export async function GET(request: NextRequest) {
       data: { emailVerified: new Date() },
     }),
   ])
+
+  // Grant referral reward now that email is confirmed
+  const user = await prisma.user.findUnique({
+    where: { id: verificationToken.userId },
+    select: { id: true, referredById: true },
+  })
+  if (user?.referredById) {
+    await grantReferralReward(user.id, user.referredById)
+  }
 
   return NextResponse.redirect(new URL('/verify-email?status=success', request.url))
 }
