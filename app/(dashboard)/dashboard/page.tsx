@@ -388,7 +388,7 @@ export default async function DashboardPage({
       {currentMicro && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Phase header with progress — clickable link to phase details */}
-          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-gray-700 bg-gray-900 hover:bg-gray-800 transition">
+          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-primary-600 bg-gray-900 hover:bg-gray-800 transition">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-white">{currentMicro.mesocycle.name}</h2>
