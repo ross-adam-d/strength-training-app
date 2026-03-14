@@ -388,20 +388,20 @@ export default async function DashboardPage({
       {currentMicro && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Phase header with progress — clickable link to phase details */}
-          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-primary-700 bg-primary-800 hover:bg-primary-900 transition">
+          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-gray-700 bg-gray-900 hover:bg-gray-800 transition">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-white">{currentMicro.mesocycle.name}</h2>
-                <p className="text-sm text-primary-200">Week {weekNumber} of {totalWeeks}</p>
+                <p className="text-sm text-gray-400">Week {weekNumber} of {totalWeeks}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-primary-200">{progressPercent}%</span>
-                <svg className="w-4 h-4 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-sm font-medium text-gray-400">{progressPercent}%</span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
             </div>
-            <div className="w-full bg-primary-700 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-white h-full rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
