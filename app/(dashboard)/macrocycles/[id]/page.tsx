@@ -738,14 +738,16 @@ export default function MacrocycleDetailPage() {
 
               <div className="p-5">
                 <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => confirmRebuild('default')}
-                    className="w-full text-left p-4 rounded-lg border-2 border-primary-200 bg-primary-50 hover:bg-primary-100 transition"
-                  >
-                    <p className="font-semibold text-primary-800 text-sm">🎯 Create Default Workout Structure</p>
-                    <p className="text-xs text-primary-600 mt-0.5">Auto-populate exercises based on your split, training goal, and recovery weeks</p>
-                  </button>
+                  {rebuildModal.trainingSplit !== 'Custom' && (
+                    <button
+                      type="button"
+                      onClick={() => confirmRebuild('default')}
+                      className="w-full text-left p-4 rounded-lg border-2 border-primary-200 bg-primary-50 hover:bg-primary-100 transition"
+                    >
+                      <p className="font-semibold text-primary-800 text-sm">🎯 Create Default Workout Structure</p>
+                      <p className="text-xs text-primary-600 mt-0.5">Auto-populate exercises based on your split, training goal, and recovery weeks</p>
+                    </button>
+                  )}
 
                   <button
                     type="button"

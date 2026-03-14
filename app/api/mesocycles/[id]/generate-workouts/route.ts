@@ -19,7 +19,7 @@ function getSplitWorkoutTypes(trainingSplit: string): string[] {
     '4×Upper + 3×Lower': ['Upper', 'Upper', 'Upper', 'Upper', 'Lower', 'Lower', 'Lower'],
     '4×Lower + 3×Upper': ['Lower', 'Lower', 'Lower', 'Lower', 'Upper', 'Upper', 'Upper'],
     'Bro Split':         ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'],
-    'Custom':            ['Full Body'],
+    'Custom':            ['Workout'],
     // Legacy names (backwards compatibility for existing DB data)
     'Upper/Lower':       ['Upper', 'Lower'],
     'Push/Pull':         ['Push', 'Pull'],
@@ -30,7 +30,7 @@ function getSplitWorkoutTypes(trainingSplit: string): string[] {
     'Power':             ['Olympic A', 'Olympic B'],
   }
 
-  return splitMap[trainingSplit] || ['Full Body']
+  return splitMap[trainingSplit] || ['Workout']
 }
 
 // Goal-based set/rep overrides — applied when a phase has a training goal set
@@ -279,8 +279,11 @@ export async function POST(
         const total = workoutTypeTotal.get(workoutTypeName) || 1
         // Suppress suffix if the type name already ends in a letter designation (e.g. 'Olympic A')
         const alreadyHasSuffix = /\s[A-Z]$/.test(workoutTypeName)
+        // Custom split workouts use numeric suffix ("Workout 1", "Workout 2"); all others use letters
         const workoutName = (!alreadyHasSuffix && total > 1)
-          ? `${workoutTypeName} ${String.fromCharCode(64 + currentCount)}`
+          ? workoutTypeName === 'Workout'
+            ? `${workoutTypeName} ${currentCount}`
+            : `${workoutTypeName} ${String.fromCharCode(64 + currentCount)}`
           : workoutTypeName
 
         const workoutData: any = {
@@ -294,7 +297,9 @@ export async function POST(
           const workoutType = getWorkoutType(workoutTypeName)
 
           if (!workoutType) {
-            throw new Error(`Workout type template not found: "${workoutTypeName}". Available splits: Full Body, Upper/Lower, Push/Pull/Legs, Bro Split.`)
+            // Custom split — create empty workout shell, no exercises
+            await prisma.workout.create({ data: workoutData })
+            continue
           }
 
           const exerciseSlots = workoutType.slots.map((slot, slotIdx) => {

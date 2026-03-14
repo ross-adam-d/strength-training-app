@@ -28,6 +28,7 @@ interface Microcycle {
 interface Mesocycle {
   id: string
   name: string
+  trainingSplit: string | null
   macrocycle: {
     id: string
     name: string
@@ -298,17 +299,21 @@ export default function MesocycleDetailPage() {
                 </p>
 
                 <div className="max-w-2xl mx-auto space-y-4">
-                  <Button
-                    onClick={() => generateWorkouts('default')}
-                    disabled={generatingWorkouts}
-                    className="w-full py-4 text-lg"
-                    size="lg"
-                  >
-                    {generatingWorkouts ? 'Creating...' : '🎯 Create Default Workout Structure'}
-                  </Button>
-                  <p className="text-sm text-gray-600 -mt-2 mb-4">
-                    Auto-populate workouts with exercises based on your training split
-                  </p>
+                  {mesocycle.trainingSplit !== 'Custom' && (
+                    <>
+                      <Button
+                        onClick={() => generateWorkouts('default')}
+                        disabled={generatingWorkouts}
+                        className="w-full py-4 text-lg"
+                        size="lg"
+                      >
+                        {generatingWorkouts ? 'Creating...' : '🎯 Create Default Workout Structure'}
+                      </Button>
+                      <p className="text-sm text-gray-600 -mt-2 mb-4">
+                        Auto-populate workouts with exercises based on your training split
+                      </p>
+                    </>
+                  )}
 
                   <Button
                     onClick={() => generateWorkouts('manual')}

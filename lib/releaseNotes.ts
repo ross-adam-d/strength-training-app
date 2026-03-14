@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-13e'
+export const CURRENT_RELEASE_ID = '2026-03-14'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-14',
+    date: 'March 14, 2026',
+    title: 'Custom Split Fix',
+    changes: [
+      'Custom split no longer generates Full Body exercises — "Create Default Workout Structure" is hidden for Custom splits',
+      'Custom split workouts are now correctly named "Workout 1", "Workout 2" etc.',
+    ],
+  },
   {
     id: '2026-03-13e',
     date: 'March 13, 2026',
