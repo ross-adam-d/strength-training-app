@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-14'
+export const CURRENT_RELEASE_ID = '2026-03-15'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-15',
+    date: 'March 15, 2026',
+    title: 'Coach subscriptions',
+    changes: [
+      'Coaches can now subscribe to Starter ($19/mo, 5 clients) or Pro ($35/mo, unlimited) plans with a 14-day free trial',
+      'Coach billing page at /coach/billing — manage plan, upgrade to Pro, or cancel via Stripe portal',
+      'Subscribing to a coach plan automatically activates your COACH account and sets client seat limits',
+    ],
+  },
   {
     id: '2026-03-14',
     date: 'March 14, 2026',

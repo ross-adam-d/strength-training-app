@@ -14,6 +14,9 @@ declare module 'next-auth' {
       unitPreference?: string
       overloadTrigger?: string
       rpeAutoDeload?: boolean
+      coachPlan?: string | null
+      coachSubscriptionStatus?: string | null
+      coachTrialEndsAt?: string | null
     }
   }
 
@@ -38,5 +41,8 @@ declare module 'next-auth/jwt' {
     unitPreference?: string
     overloadTrigger?: string
     rpeAutoDeload?: boolean
+    coachPlan?: string | null
+    coachSubscriptionStatus?: string | null
+    coachTrialEndsAt?: string | null
   }
 }

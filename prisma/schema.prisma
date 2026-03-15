@@ -41,6 +41,11 @@ enum SubscriptionTier {
   PREMIERE
 }
 
+enum CoachPlan {
+  STARTER
+  PRO
+}
+
 // User authentication and profile
 model User {
   id            String    @id @default(cuid())
@@ -64,6 +69,7 @@ model User {
   exercises     Exercise[]
   workoutLogs   WorkoutLog[]
   subscription  Subscription?
+  coachSubscription CoachSubscription?
 
   coachProfile          CoachProfile?
   coachRelationships    CoachClientRelationship[] @relation("CoachRelationships")
@@ -336,6 +342,22 @@ model CoachProfile {
   updatedAt    DateTime @updatedAt
 
   @@map("coach_profiles")
+}
+
+model CoachSubscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 CoachPlan          @default(STARTER)
+  status               SubscriptionStatus @default(TRIALING)
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("coach_subscriptions")
 }
 
 model CoachClientRelationship {

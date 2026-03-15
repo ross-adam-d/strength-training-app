@@ -173,7 +173,7 @@ export default function ForCoachesPage() {
                 ))}
               </ul>
               <Link
-                href="/register"
+                href="/coach-subscribe?plan=starter"
                 className="block text-center px-6 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition"
                 style={{ backgroundColor: '#FF8000' }}
               >
@@ -204,7 +204,7 @@ export default function ForCoachesPage() {
                 ))}
               </ul>
               <Link
-                href="/register"
+                href="/coach-subscribe?plan=pro"
                 className="block text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition"
               >
                 Start free trial

@@ -64,7 +64,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/subscribe') ||
     pathname.startsWith('/terms') ||
     pathname.startsWith('/privacy') ||
-    pathname.startsWith('/invites')
+    pathname.startsWith('/invites') ||
+    pathname.startsWith('/coach-subscribe') ||
+    pathname.startsWith('/for-coaches')
   ) {
     return NextResponse.next()
   }

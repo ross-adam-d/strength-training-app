@@ -61,6 +61,13 @@ export const authOptions: NextAuthOptions = {
                 manualAccessGrantedUntil: true,
               },
             },
+            coachSubscription: {
+              select: {
+                plan: true,
+                status: true,
+                trialEndsAt: true,
+              },
+            },
           },
         })
         const dbTime = Date.now() - dbStart
@@ -114,6 +121,9 @@ export const authOptions: NextAuthOptions = {
           tier: user.subscription?.tier ?? 'PREMIERE',
           trialEndsAt: user.subscription?.trialEndsAt?.toISOString() ?? null,
           manualAccessGrantedUntil: user.subscription?.manualAccessGrantedUntil?.toISOString() ?? null,
+          coachPlan: user.coachSubscription?.plan ?? null,
+          coachSubscriptionStatus: user.coachSubscription?.status ?? null,
+          coachTrialEndsAt: user.coachSubscription?.trialEndsAt?.toISOString() ?? null,
         }
       },
     }),
@@ -131,11 +141,15 @@ export const authOptions: NextAuthOptions = {
         token.tier = (user as any).tier
         token.trialEndsAt = (user as any).trialEndsAt
         token.manualAccessGrantedUntil = (user as any).manualAccessGrantedUntil
+        token.coachPlan = (user as any).coachPlan
+        token.coachSubscriptionStatus = (user as any).coachSubscriptionStatus
+        token.coachTrialEndsAt = (user as any).coachTrialEndsAt
       }
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: {
+            role: true,
             emailVerified: true,
             unitPreference: true,
             overloadTrigger: true,
@@ -148,9 +162,17 @@ export const authOptions: NextAuthOptions = {
                 manualAccessGrantedUntil: true,
               },
             },
+            coachSubscription: {
+              select: {
+                plan: true,
+                status: true,
+                trialEndsAt: true,
+              },
+            },
           },
         })
         if (dbUser) {
+          token.role = dbUser.role
           token.emailVerified = !!dbUser.emailVerified
           token.unitPreference = dbUser.unitPreference ?? 'metric'
           token.overloadTrigger = dbUser.overloadTrigger ?? 'topOfRange'
@@ -161,6 +183,9 @@ export const authOptions: NextAuthOptions = {
             token.trialEndsAt = dbUser.subscription.trialEndsAt?.toISOString() ?? null
             token.manualAccessGrantedUntil = dbUser.subscription.manualAccessGrantedUntil?.toISOString() ?? null
           }
+          token.coachPlan = dbUser.coachSubscription?.plan ?? null
+          token.coachSubscriptionStatus = dbUser.coachSubscription?.status ?? null
+          token.coachTrialEndsAt = dbUser.coachSubscription?.trialEndsAt?.toISOString() ?? null
         }
       }
       return token
@@ -176,6 +201,9 @@ export const authOptions: NextAuthOptions = {
         session.user.tier = token.tier ?? 'PREMIERE'
         session.user.subscriptionStatus = token.subscriptionStatus ?? null
         session.user.trialEndsAt = token.trialEndsAt ?? null
+        session.user.coachPlan = token.coachPlan ?? null
+        session.user.coachSubscriptionStatus = token.coachSubscriptionStatus ?? null
+        session.user.coachTrialEndsAt = token.coachTrialEndsAt ?? null
       }
       return session
     },

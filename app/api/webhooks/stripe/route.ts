@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getStripe, tierFromProductId, mapStripeStatus } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
-import { SubscriptionStatus } from '@prisma/client'
+import { SubscriptionStatus, CoachPlan } from '@prisma/client'
 
 export async function POST(request: Request) {
   const body = await request.arrayBuffer()
@@ -55,14 +55,32 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: true })
 }
 
+// ── Checkout completed ────────────────────────────────────────────────────────
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId
+  const coachPlan = session.metadata?.coachPlan as string | undefined
+
   if (!userId || !session.subscription) return
 
   const stripeSubscription = await getStripe().subscriptions.retrieve(
     session.subscription as string,
     { expand: ['items.data.price.product'] }
   )
+
+  if (coachPlan) {
+    await handleCoachCheckoutCompleted(session, stripeSubscription, coachPlan)
+  } else {
+    await handleUserCheckoutCompleted(session, stripeSubscription)
+  }
+}
+
+async function handleUserCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  stripeSubscription: Stripe.Subscription
+) {
+  const userId = session.metadata?.userId
+  if (!userId) return
 
   const price = stripeSubscription.items.data[0]?.price
   const product = price?.product as Stripe.Product | undefined
@@ -85,10 +103,71 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   })
 
-  console.log(`[Webhook] checkout.session.completed: userId=${userId}, tier=${tier}, status=${status}`)
+  console.log(`[Webhook] checkout.session.completed (user): userId=${userId}, tier=${tier}, status=${status}`)
 }
 
+async function handleCoachCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  stripeSubscription: Stripe.Subscription,
+  coachPlanStr: string
+) {
+  const userId = session.metadata?.userId
+  if (!userId) return
+
+  const status = mapStripeStatus(stripeSubscription.status)
+  const plan: CoachPlan = coachPlanStr === 'PRO' ? CoachPlan.PRO : CoachPlan.STARTER
+  const maxClients = plan === CoachPlan.PRO ? 999 : 5
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : (session.customer as Stripe.Customer | null)?.id ?? null
+
+  await prisma.coachSubscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      plan,
+      status,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: stripeSubscription.id,
+      trialEndsAt: stripeSubscription.trial_end
+        ? new Date(stripeSubscription.trial_end * 1000)
+        : null,
+    },
+    update: {
+      plan,
+      status,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: stripeSubscription.id,
+      trialEndsAt: stripeSubscription.trial_end
+        ? new Date(stripeSubscription.trial_end * 1000)
+        : null,
+    },
+  })
+
+  // Promote user to COACH role
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: 'COACH' },
+  })
+
+  // Upsert CoachProfile with seat limit from plan
+  await prisma.coachProfile.upsert({
+    where: { userId },
+    create: { userId, maxClients },
+    update: { maxClients },
+  })
+
+  console.log(`[Webhook] checkout.session.completed (coach): userId=${userId}, plan=${plan}, status=${status}`)
+}
+
+// ── Subscription updated ──────────────────────────────────────────────────────
+
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const coachPlan = subscription.metadata?.coachPlan
+  if (coachPlan) {
+    return updateCoachSubscriptionInDb(subscription)
+  }
+
   const userId = subscription.metadata?.userId
   if (!userId) {
     const sub = await prisma.subscription.findFirst({
@@ -130,7 +209,60 @@ async function updateSubscriptionInDb(userId: string, subscriptionId: string) {
   console.log(`[Webhook] subscription.updated: userId=${userId}, tier=${tier}, status=${status}`)
 }
 
+async function updateCoachSubscriptionInDb(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata?.userId
+  const coachSub = userId
+    ? await prisma.coachSubscription.findUnique({ where: { userId } })
+    : await prisma.coachSubscription.findFirst({ where: { stripeSubscriptionId: subscription.id } })
+
+  if (!coachSub) {
+    console.error(`[Webhook] coach subscription.updated: not found: ${subscription.id}`)
+    return
+  }
+
+  const status = mapStripeStatus(subscription.status)
+  const coachPlanStr = subscription.metadata?.coachPlan
+  const plan: CoachPlan = coachPlanStr === 'PRO' ? CoachPlan.PRO : CoachPlan.STARTER
+  const maxClients = plan === CoachPlan.PRO ? 999 : 5
+
+  const updateData: Parameters<typeof prisma.coachSubscription.update>[0]['data'] = { status, plan }
+  if (subscription.trial_end) {
+    updateData.trialEndsAt = new Date(subscription.trial_end * 1000)
+  }
+  if (status === SubscriptionStatus.CANCELLED) {
+    updateData.cancelledAt = new Date()
+  }
+
+  await prisma.coachSubscription.update({ where: { id: coachSub.id }, data: updateData })
+
+  // Keep maxClients in sync with plan
+  await prisma.coachProfile.upsert({
+    where: { userId: coachSub.userId },
+    create: { userId: coachSub.userId, maxClients },
+    update: { maxClients },
+  })
+
+  console.log(`[Webhook] coach subscription.updated: userId=${coachSub.userId}, plan=${plan}, status=${status}`)
+}
+
+// ── Subscription deleted ──────────────────────────────────────────────────────
+
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const coachPlan = subscription.metadata?.coachPlan
+  if (coachPlan) {
+    const userId = subscription.metadata?.userId
+    const coachSub = userId
+      ? await prisma.coachSubscription.findUnique({ where: { userId } })
+      : await prisma.coachSubscription.findFirst({ where: { stripeSubscriptionId: subscription.id } })
+    if (!coachSub) return
+    await prisma.coachSubscription.update({
+      where: { id: coachSub.id },
+      data: { status: SubscriptionStatus.CANCELLED, cancelledAt: new Date() },
+    })
+    console.log(`[Webhook] coach subscription.deleted: userId=${coachSub.userId}`)
+    return
+  }
+
   const userId = subscription.metadata?.userId
   if (!userId) {
     const sub = await prisma.subscription.findFirst({
@@ -150,26 +282,32 @@ async function cancelSubscriptionInDb(userId: string) {
   console.log(`[Webhook] subscription.deleted: userId=${userId}`)
 }
 
+// ── Payment events ────────────────────────────────────────────────────────────
+
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   const subscriptionId = invoice.parent?.subscription_details?.subscription
   if (!subscriptionId) return
 
   const subId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId.id
-  const sub = await prisma.subscription.findFirst({
+
+  // Check coach subscription first
+  const coachSub = await prisma.coachSubscription.findFirst({
     where: { stripeSubscriptionId: subId },
   })
+  if (coachSub) {
+    const stripeSubscription = await getStripe().subscriptions.retrieve(subId)
+    const status = mapStripeStatus(stripeSubscription.status)
+    await prisma.coachSubscription.update({ where: { id: coachSub.id }, data: { status } })
+    console.log(`[Webhook] invoice.payment_succeeded (coach): subscriptionId=${subId}, status=${status}`)
+    return
+  }
+
+  const sub = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: subId } })
   if (!sub) return
 
-  // Retrieve actual subscription status — don't hardcode ACTIVE.
-  // Stripe fires invoice.payment_succeeded for $0 trial invoices too,
-  // in which case the subscription is still TRIALING, not ACTIVE.
   const stripeSubscription = await getStripe().subscriptions.retrieve(subId)
   const status = mapStripeStatus(stripeSubscription.status)
-
-  await prisma.subscription.update({
-    where: { id: sub.id },
-    data: { status },
-  })
+  await prisma.subscription.update({ where: { id: sub.id }, data: { status } })
   console.log(`[Webhook] invoice.payment_succeeded: subscriptionId=${subId}, status=${status}`)
 }
 
@@ -178,9 +316,21 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   if (!subscriptionId) return
 
   const subId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId.id
-  const sub = await prisma.subscription.findFirst({
+
+  // Check coach subscription first
+  const coachSub = await prisma.coachSubscription.findFirst({
     where: { stripeSubscriptionId: subId },
   })
+  if (coachSub) {
+    await prisma.coachSubscription.update({
+      where: { id: coachSub.id },
+      data: { status: SubscriptionStatus.PAST_DUE },
+    })
+    console.log(`[Webhook] invoice.payment_failed (coach): subscriptionId=${subId}`)
+    return
+  }
+
+  const sub = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: subId } })
   if (!sub) return
 
   await prisma.subscription.update({
@@ -193,5 +343,6 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   // TODO: Send reminder email 3 days before trial ends
   const userId = subscription.metadata?.userId
-  console.log(`[Webhook] trial_will_end: userId=${userId ?? 'unknown'}, subscriptionId=${subscription.id}`)
+  const isCoach = !!subscription.metadata?.coachPlan
+  console.log(`[Webhook] trial_will_end: userId=${userId ?? 'unknown'}, isCoach=${isCoach}, subscriptionId=${subscription.id}`)
 }
