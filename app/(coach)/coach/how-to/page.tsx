@@ -396,7 +396,7 @@ export default function CoachHowToPage() {
           ))}
         </div>
 
-        <ScreenshotPlaceholder label="Screenshot: Client progress tab — volume chart + exercise metrics" aspectRatio="16/7" />
+        <Screenshot src="/how-to/coach client progress.jpg" alt="Client progress tab — volume chart and exercise metrics" />
         <SectionDivider />
         <BackToTop />
       </section>
