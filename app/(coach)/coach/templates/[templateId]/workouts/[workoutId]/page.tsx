@@ -12,6 +12,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -211,7 +212,10 @@ export default function TemplateWorkoutEditPage() {
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null)
   const [pickerInitialValues, setPickerInitialValues] = useState<ExercisePickerInitialValues | undefined>()
 
-  const sensors = useSensors(useSensor(PointerSensor))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  )
 
   useEffect(() => {
     setLoading(true)
