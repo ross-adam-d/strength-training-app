@@ -5,12 +5,16 @@ import { getStripe, COACH_STRIPE_PRICES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-const VALID_COACH_PRICES = new Set(Object.values(COACH_STRIPE_PRICES))
-
 const bodySchema = z.object({
-  priceId: z.string().startsWith('price_'),
-  plan: z.enum(['STARTER', 'PRO']),
+  plan:     z.enum(['STARTER', 'PRO']),
+  currency: z.enum(['AUD', 'USD']).default('AUD'),
+  period:   z.enum(['monthly', 'annual']).default('monthly'),
 })
+
+function resolvePriceId(plan: 'STARTER' | 'PRO', currency: 'AUD' | 'USD', period: 'monthly' | 'annual'): string {
+  const key = `${plan}_${currency}_${period === 'monthly' ? 'MONTHLY' : 'ANNUAL'}` as keyof typeof COACH_STRIPE_PRICES
+  return COACH_STRIPE_PRICES[key]
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
@@ -24,10 +28,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  const { priceId, plan } = parsed.data
+  const { plan, currency, period } = parsed.data
+  const priceId = resolvePriceId(plan, currency, period)
 
-  if (!VALID_COACH_PRICES.has(priceId)) {
-    return NextResponse.json({ error: 'Invalid coach price ID' }, { status: 400 })
+  if (!priceId) {
+    return NextResponse.json({ error: 'Price not configured' }, { status: 500 })
   }
 
   const userId = session.user.id
@@ -45,7 +50,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  // Coach subscriptions use their own Stripe customer ID (separate from user subscription)
   let stripeCustomerId = user.coachSubscription?.stripeCustomerId
   if (!stripeCustomerId) {
     const customer = await getStripe().customers.create({

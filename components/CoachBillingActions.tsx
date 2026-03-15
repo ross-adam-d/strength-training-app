@@ -1,10 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
-import { COACH_STRIPE_PRICES } from '@/lib/stripe'
 
 type Plan = 'STARTER' | 'PRO'
+
+async function startCoachCheckout(plan: Plan, currency = 'AUD', period = 'monthly') {
+  const res = await fetch('/api/billing/coach-checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan, currency, period }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
+  window.location.assign(data.url)
+}
 
 export function ManageCoachBillingButton() {
   const [loading, setLoading] = useState(false)
@@ -33,7 +42,6 @@ export function ManageCoachBillingButton() {
 }
 
 export function UpgradeToProButton() {
-  const { update } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,17 +49,7 @@ export function UpgradeToProButton() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/billing/coach-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          priceId: COACH_STRIPE_PRICES.PRO_AUD_MONTHLY,
-          plan: 'PRO',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      window.location.assign(data.url)
+      await startCoachCheckout('PRO')
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
@@ -80,18 +78,8 @@ export function CoachSubscribeButton({ plan }: { plan: Plan }) {
   async function handleSubscribe() {
     setLoading(true)
     setError(null)
-    const priceId = plan === 'PRO'
-      ? COACH_STRIPE_PRICES.PRO_AUD_MONTHLY
-      : COACH_STRIPE_PRICES.STARTER_AUD_MONTHLY
     try {
-      const res = await fetch('/api/billing/coach-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, plan }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      window.location.assign(data.url)
+      await startCoachCheckout(plan)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)

@@ -5,8 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import { PBeXLogo } from '@/components/PBeXLogo'
-import { COACH_STRIPE_PRICES } from '@/lib/stripe'
-
 type Plan = 'STARTER' | 'PRO'
 type Period = 'monthly' | 'annual'
 type Currency = 'AUD' | 'USD'
@@ -38,11 +36,6 @@ const PLAN_INFO = {
     ],
   },
 } as const
-
-function getPriceId(plan: Plan, currency: Currency, period: Period): string {
-  const key = `${plan}_${currency}_${period === 'monthly' ? 'MONTHLY' : 'ANNUAL'}` as keyof typeof COACH_STRIPE_PRICES
-  return COACH_STRIPE_PRICES[key]
-}
 
 function Check() {
   return (
@@ -95,12 +88,11 @@ function CoachSubscribeInner() {
     }
     setLoading(true)
     setError(null)
-    const priceId = getPriceId(selectedPlan, currency, period)
     try {
       const res = await fetch('/api/billing/coach-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, plan: selectedPlan }),
+        body: JSON.stringify({ plan: selectedPlan, currency, period }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
