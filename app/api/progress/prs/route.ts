@@ -4,12 +4,12 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { estimate1RM } from '@/lib/progressiveOverload'
 
-async function resolveUserId(session: { user: { id: string; role?: string } }, requestUrl: string) {
+async function resolveUserId(user: { id: string; role?: string }, requestUrl: string) {
   const clientId = new URL(requestUrl).searchParams.get('clientId')
-  if (!clientId) return session.user.id
-  if (session.user.role !== 'COACH') return null
+  if (!clientId) return user.id
+  if (user.role !== 'COACH') return null
   const rel = await prisma.coachClientRelationship.findFirst({
-    where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+    where: { coachId: user.id, clientId, status: 'ACTIVE' },
     select: { id: true },
   })
   return rel ? clientId : null

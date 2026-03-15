@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-async function resolveUserId(session: { user: { id: string; role?: string } }, searchParams: URLSearchParams) {
+async function resolveUserId(user: { id: string; role?: string }, searchParams: URLSearchParams) {
   const clientId = searchParams.get('clientId')
-  if (!clientId) return session.user.id
-  if (session.user.role !== 'COACH') return null
+  if (!clientId) return user.id
+  if (user.role !== 'COACH') return null
   const rel = await prisma.coachClientRelationship.findFirst({
-    where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+    where: { coachId: user.id, clientId, status: 'ACTIVE' },
     select: { id: true },
   })
   return rel ? clientId : null
