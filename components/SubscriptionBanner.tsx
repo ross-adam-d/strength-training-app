@@ -7,12 +7,17 @@ export async function SubscriptionBanner({
   userId,
   subscriptionStatus,
   trialEndsAt,
+  hasActiveCoach,
 }: {
   userId: string
   subscriptionStatus?: string | null
   trialEndsAt?: string | null
+  hasActiveCoach?: boolean
 }) {
   if (!userId) return null
+
+  // Coached athletes have a different access model — never show subscription banners
+  if (hasActiveCoach) return null
 
   // Skip DB call for statuses that never show a banner
   if (subscriptionStatus === 'ACTIVE') return null

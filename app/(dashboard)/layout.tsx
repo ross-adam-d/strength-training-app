@@ -28,6 +28,7 @@ export default async function DashboardLayout({
         userId={session.user?.id}
         subscriptionStatus={session.user?.subscriptionStatus}
         trialEndsAt={session.user?.trialEndsAt}
+        hasActiveCoach={(session.user as any)?.hasActiveCoach}
       />
       <main className="container mx-auto px-4 py-8">{children}</main>
     </div>
