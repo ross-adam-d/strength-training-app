@@ -1,5 +1,33 @@
 import { prisma } from './prisma'
 
+/**
+ * Returns true if the user is a coached athlete without their own active subscription.
+ * These users can log workouts and access coach-assigned blocks,
+ * but cannot create their own training blocks/phases.
+ */
+export async function isCoachOnlyMode(userId: string): Promise<boolean> {
+  const [sub, coachRel] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { userId },
+      select: { status: true, trialEndsAt: true, manualAccessGrantedUntil: true },
+    }),
+    prisma.coachClientRelationship.findFirst({
+      where: { clientId: userId, status: 'ACTIVE' },
+      select: { id: true },
+    }),
+  ])
+
+  if (!coachRel) return false // not a coached athlete
+
+  const now = new Date()
+  const hasOwnAccess =
+    (sub?.manualAccessGrantedUntil && sub.manualAccessGrantedUntil > now) ||
+    sub?.status === 'ACTIVE' ||
+    (sub?.status === 'TRIALING' && sub.trialEndsAt != null && sub.trialEndsAt > now)
+
+  return !hasOwnAccess
+}
+
 export type SubscriptionAccessStatus = {
   canWrite: boolean
   isExpired: boolean

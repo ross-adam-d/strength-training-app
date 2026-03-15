@@ -17,6 +17,7 @@ declare module 'next-auth' {
       coachPlan?: string | null
       coachSubscriptionStatus?: string | null
       coachTrialEndsAt?: string | null
+      hasActiveCoach?: boolean
     }
   }
 
@@ -44,5 +45,6 @@ declare module 'next-auth/jwt' {
     coachPlan?: string | null
     coachSubscriptionStatus?: string | null
     coachTrialEndsAt?: string | null
+    hasActiveCoach?: boolean
   }
 }

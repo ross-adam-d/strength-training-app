@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isCoachOnlyMode } from '@/lib/subscription'
 import { z } from 'zod'
 
 const macrocycleSchema = z.object({
@@ -55,6 +56,14 @@ export async function POST(request: Request) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Coached athletes without their own subscription cannot create their own blocks
+    if (await isCoachOnlyMode(session.user.id)) {
+      return NextResponse.json(
+        { error: 'You are on a coach plan. Subscribe to create your own training blocks.' },
+        { status: 403 }
+      )
     }
 
     // Single tier — block limit disabled. Re-enable if tiering reintroduced:

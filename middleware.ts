@@ -9,8 +9,15 @@ function canAccess(token: {
   subscriptionStatus?: string | null
   trialEndsAt?: string | null
   manualAccessGrantedUntil?: string | null
+  hasActiveCoach?: boolean
 }): { canWrite: boolean; isExpired: boolean } {
   if (token.role === 'ADMIN' || token.role === 'COACH') {
+    return { canWrite: true, isExpired: false }
+  }
+
+  // Coached athletes get access to log workouts and coach-assigned content
+  // even without their own subscription. Block creation is enforced at the API level.
+  if (token.hasActiveCoach) {
     return { canWrite: true, isExpired: false }
   }
 

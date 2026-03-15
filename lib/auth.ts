@@ -68,6 +68,11 @@ export const authOptions: NextAuthOptions = {
                 trialEndsAt: true,
               },
             },
+            clientRelationships: {
+              where: { status: 'ACTIVE' },
+              select: { id: true },
+              take: 1,
+            },
           },
         })
         const dbTime = Date.now() - dbStart
@@ -124,6 +129,7 @@ export const authOptions: NextAuthOptions = {
           coachPlan: user.coachSubscription?.plan ?? null,
           coachSubscriptionStatus: user.coachSubscription?.status ?? null,
           coachTrialEndsAt: user.coachSubscription?.trialEndsAt?.toISOString() ?? null,
+          hasActiveCoach: (user.clientRelationships?.length ?? 0) > 0,
         }
       },
     }),
@@ -144,6 +150,7 @@ export const authOptions: NextAuthOptions = {
         token.coachPlan = (user as any).coachPlan
         token.coachSubscriptionStatus = (user as any).coachSubscriptionStatus
         token.coachTrialEndsAt = (user as any).coachTrialEndsAt
+        token.hasActiveCoach = (user as any).hasActiveCoach ?? false
       }
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
@@ -169,6 +176,11 @@ export const authOptions: NextAuthOptions = {
                 trialEndsAt: true,
               },
             },
+            clientRelationships: {
+              where: { status: 'ACTIVE' },
+              select: { id: true },
+              take: 1,
+            },
           },
         })
         if (dbUser) {
@@ -186,6 +198,7 @@ export const authOptions: NextAuthOptions = {
           token.coachPlan = dbUser.coachSubscription?.plan ?? null
           token.coachSubscriptionStatus = dbUser.coachSubscription?.status ?? null
           token.coachTrialEndsAt = dbUser.coachSubscription?.trialEndsAt?.toISOString() ?? null
+          token.hasActiveCoach = (dbUser.clientRelationships?.length ?? 0) > 0
         }
       }
       return token
@@ -204,6 +217,7 @@ export const authOptions: NextAuthOptions = {
         session.user.coachPlan = token.coachPlan ?? null
         session.user.coachSubscriptionStatus = token.coachSubscriptionStatus ?? null
         session.user.coachTrialEndsAt = token.coachTrialEndsAt ?? null
+        session.user.hasActiveCoach = (token.hasActiveCoach as boolean) ?? false
       }
       return session
     },
