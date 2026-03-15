@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { BetaEmailButton } from '@/components/admin/BetaEmailButton'
 
 function statusBadge(
   status: string | null,
@@ -93,7 +94,10 @@ export default async function AdminUsersPage() {
   })
 
   return (
-    <div>
+    <div className="space-y-8">
+      <BetaEmailButton />
+
+      <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Users</h2>
@@ -177,6 +181,7 @@ export default async function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   )
 }
