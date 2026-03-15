@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2 MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
@@ -20,15 +19,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: 'File must be JPEG, PNG, or WebP' }, { status: 400 })
+  // Accept any image format (including HEIC from iOS cameras)
+  if (!file.type.startsWith('image/')) {
+    return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
   }
 
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: 'File must be under 2 MB' }, { status: 400 })
   }
 
-  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+  // Derive extension — default to jpg for unknown/heic types since Vercel Blob stores them correctly
+  const rawExt = file.type.split('/')[1] ?? 'jpg'
+  const ext = rawExt.replace('jpeg', 'jpg').replace('heic', 'jpg').replace('heif', 'jpg')
   const filename = `coach-photos/${session.user.id}.${ext}`
 
   const blob = await put(filename, file, {

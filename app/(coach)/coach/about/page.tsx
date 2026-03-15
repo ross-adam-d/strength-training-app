@@ -137,13 +137,13 @@ export default function CoachAboutPage() {
             >
               {photoUploading ? 'Uploading…' : photoUrl ? 'Change photo' : 'Upload photo'}
             </button>
-            <p className="text-xs text-gray-400 mt-1.5">JPEG, PNG or WebP · max 2 MB</p>
+            <p className="text-xs text-gray-400 mt-1.5">Any photo format · max 2 MB</p>
             {photoError && <p className="text-xs text-red-600 mt-1">{photoError}</p>}
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             className="hidden"
             onChange={handlePhotoChange}
           />
