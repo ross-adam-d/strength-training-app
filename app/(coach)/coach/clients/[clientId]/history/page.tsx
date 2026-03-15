@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
 interface WorkoutLog {
   id: string
@@ -157,7 +158,11 @@ export default function ClientHistoryPage() {
               const logDate = new Date(log.completedAt)
               const uniqueExercises = new Set(log.exerciseLogs.map((el) => el.exercise.id)).size
               return (
-                <div key={log.id} className="border rounded-md p-4">
+                <Link
+                  key={log.id}
+                  href={`/coach/clients/${clientId}/workout-logs/${log.id}`}
+                  className="block border rounded-md p-4 hover:bg-gray-50 transition"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{log.workout?.name ?? 'Manual Workout'}</h3>
@@ -172,8 +177,11 @@ export default function ClientHistoryPage() {
                         {log.overallRpe && <><span>•</span><span>RPE {log.overallRpe.toFixed(1)}</span></>}
                       </div>
                     </div>
+                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>

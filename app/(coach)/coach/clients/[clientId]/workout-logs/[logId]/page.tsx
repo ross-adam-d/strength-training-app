@@ -1,0 +1,164 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
+import { formatWeight, weightUnit } from '@/lib/units'
+
+export default async function CoachClientWorkoutLogPage({
+  params,
+}: {
+  params: Promise<{ clientId: string; logId: string }>
+}) {
+  const { clientId, logId } = await params
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id || session.user.role !== 'COACH') return null
+
+  // Verify active coaching relationship
+  const relationship = await prisma.coachClientRelationship.findFirst({
+    where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+    select: { id: true },
+  })
+  if (!relationship) return <div className="text-center py-8">Access denied</div>
+
+  // Fetch log — must belong to the client
+  const log = await prisma.workoutLog.findFirst({
+    where: { id: logId, userId: clientId },
+    include: {
+      user: { select: { unitPreference: true, name: true } },
+      workout: {
+        select: {
+          id: true,
+          name: true,
+          microcycle: {
+            select: {
+              mesocycle: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+      exerciseLogs: {
+        include: { exercise: { select: { id: true, name: true, isUnilateral: true } } },
+      },
+    },
+  })
+
+  if (!log) return <div className="text-center py-8">Workout log not found</div>
+
+  const unitPref = (log.user?.unitPreference ?? 'metric') as 'metric' | 'imperial'
+
+  // Group by exercise, preserving order of first appearance
+  const exerciseOrder: string[] = []
+  const grouped = new Map<string, typeof log.exerciseLogs>()
+  for (const el of log.exerciseLogs) {
+    if (!grouped.has(el.exercise.id)) {
+      grouped.set(el.exercise.id, [])
+      exerciseOrder.push(el.exercise.id)
+    }
+    grouped.get(el.exercise.id)!.push(el)
+  }
+  grouped.forEach((sets) => sets.sort((a, b) => a.setNumber - b.setNumber))
+
+  return (
+    <div className="min-h-screen pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10 mb-4">
+        <Link
+          href={`/coach/clients/${clientId}/history`}
+          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+        >
+          ← Back to history
+        </Link>
+        <h1 className="text-lg font-bold text-gray-900 mt-2">
+          {log.workout?.name ?? 'Manual Workout'}
+        </h1>
+        <p className="text-sm text-gray-600 mt-0.5">
+          {new Date(log.completedAt).toLocaleDateString(undefined, {
+            weekday: 'short', month: 'short', day: 'numeric',
+          })}
+          {log.duration && ` • ${log.duration} min`}
+          {log.overallRating && ` • ${log.overallRating}⭐`}
+          {log.overallRpe && ` • RPE ${log.overallRpe.toFixed(1)}`}
+        </p>
+        {log.notes && (
+          <p className="mt-2 text-sm text-gray-600 italic border-l-2 border-primary-300 pl-3">
+            {log.notes}
+          </p>
+        )}
+      </div>
+
+      <div className="px-4">
+        {exerciseOrder.length === 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <p className="text-gray-500">No exercises logged</p>
+          </div>
+        )}
+
+        {exerciseOrder.map((exerciseId) => {
+          const sets = grouped.get(exerciseId)!
+          const skippedCount = sets.filter((s) => s.skipped).length
+          const completedSets = sets.filter((s) => !s.skipped)
+          const exerciseRpe = sets[0]?.exerciseRpe
+          const isUnilateral = sets[0]?.exercise.isUnilateral ?? false
+
+          return (
+            <div key={exerciseId} className="bg-white rounded-lg border border-gray-200 p-4 mb-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-gray-900">{sets[0].exercise.name}</h2>
+                {exerciseRpe && (
+                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                    RPE {exerciseRpe}
+                  </span>
+                )}
+              </div>
+
+              <div className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-xs font-medium text-gray-500 mb-2`}>
+                <div className="text-center">#</div>
+                <div className="text-center">Weight</div>
+                <div className="text-center">{isUnilateral ? 'Reps (L/R)' : 'Reps'}</div>
+                <div className="text-center">RIR</div>
+              </div>
+
+              <div className="space-y-1.5">
+                {sets.map((set) =>
+                  set.skipped ? (
+                    <div
+                      key={set.setNumber}
+                      className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5`}
+                    >
+                      <span className="text-sm text-gray-400 text-center line-through">{set.setNumber}</span>
+                      <span className="col-span-3 text-sm text-yellow-700 text-center">⊘ Skipped</span>
+                    </div>
+                  ) : (
+                    <div key={set.setNumber} className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-sm`}>
+                      <span className="font-medium text-gray-700 text-center">{set.setNumber}</span>
+                      <span className="text-center text-gray-900">{formatWeight(set.weight, unitPref)} {weightUnit(unitPref)}</span>
+                      <span className="text-center text-gray-900">
+                        {isUnilateral
+                          ? `${set.repsLeft ?? 0} / ${set.repsRight ?? 0}`
+                          : set.reps}
+                      </span>
+                      <span className="text-center text-gray-600">{set.rir ?? '—'}</span>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {completedSets.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
+                  {completedSets.length} set{completedSets.length !== 1 ? 's' : ''} completed
+                  {skippedCount > 0 && ` • ${skippedCount} skipped`}
+                </div>
+              )}
+
+              {sets[0]?.notes && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-xs text-gray-600 italic">{sets[0].notes}</p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
