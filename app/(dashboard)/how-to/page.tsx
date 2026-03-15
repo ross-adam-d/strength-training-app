@@ -193,7 +193,7 @@ export default function HowToPage() {
           />
         </div>
 
-        <Screenshot src="/how-to/block set up.jpg" alt="Training Blocks overview" />
+        <Screenshot src="/how-to/block overview.jpg" alt="Training Blocks overview" />
 
         <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-4 text-sm leading-relaxed text-gray-700">
           <p className="font-semibold text-gray-900 mb-1">The big picture</p>
