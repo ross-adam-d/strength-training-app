@@ -106,7 +106,7 @@ function SortButton({
   )
 }
 
-export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
+export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: string; clientId?: string }) {
   const { data: session } = useSession()
   const isBasic = false // single tier — re-enable if tiering reintroduced: (session?.user as any)?.tier === 'BASIC'
   const unitPref = (session?.user as any)?.unitPreference ?? 'metric'
@@ -128,7 +128,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
 
   // Fetch PR data on mount
   useEffect(() => {
-    fetch('/api/progress/prs')
+    fetch(`/api/progress/prs${clientId ? `?clientId=${clientId}` : ''}`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setPrData)
       .catch(console.error)
@@ -137,7 +137,7 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
 
   // Fetch exercise list for chart selector
   useEffect(() => {
-    fetch('/api/exercises?logged=true')
+    fetch(`/api/exercises?logged=true${clientId ? `&clientId=${clientId}` : ''}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data: Exercise[]) => {
         setExercises(data)
@@ -152,9 +152,10 @@ export default function ExerciseTab({ timePeriod }: { timePeriod: string }) {
     setLoadingLogs(true)
     try {
       const since = getSinceDate(period)
+      const clientParam = clientId ? `&clientId=${clientId}` : ''
       const url = since
-        ? `/api/exercises/${exerciseId}/logs?since=${encodeURIComponent(since)}`
-        : `/api/exercises/${exerciseId}/logs`
+        ? `/api/exercises/${exerciseId}/logs?since=${encodeURIComponent(since)}${clientParam}`
+        : `/api/exercises/${exerciseId}/logs${clientId ? `?clientId=${clientId}` : ''}`
       const res = await fetch(url)
       if (res.ok) setExerciseLogs(await res.json())
     } catch (e) {

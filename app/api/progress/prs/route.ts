@@ -4,13 +4,27 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { estimate1RM } from '@/lib/progressiveOverload'
 
-export async function GET() {
+async function resolveUserId(session: { user: { id: string; role?: string } }, requestUrl: string) {
+  const clientId = new URL(requestUrl).searchParams.get('clientId')
+  if (!clientId) return session.user.id
+  if (session.user.role !== 'COACH') return null
+  const rel = await prisma.coachClientRelationship.findFirst({
+    where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+    select: { id: true },
+  })
+  return rel ? clientId : null
+}
+
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const userId = await resolveUserId(session.user as any, request.url)
+  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const logs = await prisma.exerciseLog.findMany({
     where: {
-      workoutLog: { userId: session.user.id },
+      workoutLog: { userId },
       skipped: false,
       weight: { gt: 0 },
       OR: [{ reps: { gt: 0 } }, { repsLeft: { gt: 0 } }],
@@ -25,27 +39,17 @@ export async function GET() {
     },
   })
 
-  // Group by exercise: track max est 1RM and most recent log date
-  const byExercise = new Map<
-    string,
-    { exerciseName: string; est1RM: number; lastLoggedAt: Date }
-  >()
+  const byExercise = new Map<string, { exerciseName: string; est1RM: number; lastLoggedAt: Date }>()
 
   for (const log of logs) {
     const effectiveReps = log.reps > 0 ? log.reps : (log.repsLeft ?? 0)
     const est = estimate1RM(log.weight, effectiveReps)
     const existing = byExercise.get(log.exerciseId)
     if (!existing) {
-      byExercise.set(log.exerciseId, {
-        exerciseName: log.exercise.name,
-        est1RM: est,
-        lastLoggedAt: log.workoutLog.completedAt,
-      })
+      byExercise.set(log.exerciseId, { exerciseName: log.exercise.name, est1RM: est, lastLoggedAt: log.workoutLog.completedAt })
     } else {
       if (est > existing.est1RM) existing.est1RM = est
-      if (log.workoutLog.completedAt > existing.lastLoggedAt) {
-        existing.lastLoggedAt = log.workoutLog.completedAt
-      }
+      if (log.workoutLog.completedAt > existing.lastLoggedAt) existing.lastLoggedAt = log.workoutLog.completedAt
     }
   }
 
@@ -60,7 +64,5 @@ export async function GET() {
     }))
     .sort((a, b) => b.est1RM - a.est1RM)
 
-  return NextResponse.json(result, {
-    headers: { 'Cache-Control': 'private, s-maxage=300' },
-  })
+  return NextResponse.json(result, { headers: { 'Cache-Control': 'private, s-maxage=300' } })
 }

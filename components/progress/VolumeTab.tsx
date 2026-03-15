@@ -72,9 +72,10 @@ function capitalize(s: string) {
 interface Props {
   timePeriod: string
   filteredWorkouts: WorkoutLog[]
+  clientId?: string
 }
 
-export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
+export default function VolumeTab({ timePeriod, filteredWorkouts, clientId }: Props) {
   const { data: session } = useSession()
   const unitPref = (session?.user as any)?.unitPreference ?? 'metric'
   const unit = weightUnit(unitPref)
@@ -88,7 +89,7 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
   useEffect(() => {
     let cancelled = false
     setLoadingComparison(true)
-    fetch(`/api/progress/block-comparison?type=${comparisonType}`)
+    fetch(`/api/progress/block-comparison?type=${comparisonType}${clientId ? `&clientId=${clientId}` : ''}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => { if (!cancelled) setComparisonData(data) })
       .catch((err) => console.error('Comparison fetch error:', err))
@@ -99,7 +100,7 @@ export default function VolumeTab({ timePeriod, filteredWorkouts }: Props) {
   useEffect(() => {
     let cancelled = false
     setLoadingMuscle(true)
-    fetch(`/api/progress/muscle-volume?period=${timePeriod}`)
+    fetch(`/api/progress/muscle-volume?period=${timePeriod}${clientId ? `&clientId=${clientId}` : ''}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => { if (!cancelled) setMuscleVolumeData(data) })
       .catch((err) => console.error('Muscle volume fetch error:', err))

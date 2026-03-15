@@ -16,14 +16,26 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url)
-    const since = searchParams.get('since') // ISO date string
+    const since = searchParams.get('since')
+    const clientId = searchParams.get('clientId')
+
+    let targetUserId = session.user.id
+    if (clientId) {
+      if ((session.user as any).role !== 'COACH') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const rel = await prisma.coachClientRelationship.findFirst({
+        where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+        select: { id: true },
+      })
+      if (!rel) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      targetUserId = clientId
+    }
 
     const logs = await prisma.exerciseLog.findMany({
       where: {
         exerciseId: id,
         skipped: false,
         workoutLog: {
-          userId: session.user.id,
+          userId: targetUserId,
           ...(since ? { completedAt: { gte: new Date(since) } } : {}),
         },
       },

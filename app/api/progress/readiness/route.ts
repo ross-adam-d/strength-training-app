@@ -30,11 +30,22 @@ function groupByExercise(logs: ExerciseLogEntry[]) {
   return groups
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const userId = session.user.id
+  // Resolve target user — support coach viewing a client's data
+  const clientId = new URL(request.url).searchParams.get('clientId')
+  let userId = session.user.id
+  if (clientId) {
+    if ((session.user as any).role !== 'COACH') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const rel = await prisma.coachClientRelationship.findFirst({
+      where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+      select: { id: true },
+    })
+    if (!rel) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    userId = clientId
+  }
   const now = new Date()
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
   const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)

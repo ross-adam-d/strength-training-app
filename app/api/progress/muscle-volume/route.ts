@@ -3,12 +3,26 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+async function resolveUserId(session: { user: { id: string; role?: string } }, searchParams: URLSearchParams) {
+  const clientId = searchParams.get('clientId')
+  if (!clientId) return session.user.id
+  if (session.user.role !== 'COACH') return null
+  const rel = await prisma.coachClientRelationship.findFirst({
+    where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+    select: { id: true },
+  })
+  return rel ? clientId : null
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') ?? '3m'
+
+  const userId = await resolveUserId(session.user as any, searchParams)
+  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const now = new Date()
 
@@ -27,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Scope to current active block → active mesocycle
     const activeMeso = await prisma.mesocycle.findFirst({
       where: {
-        macrocycle: { userId: session.user.id, status: 'active' },
+        macrocycle: { userId, status: 'active' },
         status: 'active',
       },
       orderBy: { startDate: 'desc' },
@@ -47,7 +61,7 @@ export async function GET(request: NextRequest) {
   const logs = await prisma.exerciseLog.findMany({
     where: {
       workoutLog: {
-        userId: session.user.id,
+        userId,
         completedAt: {
           ...(since ? { gte: since } : {}),
           // Always exclude the current partial week so mid-week averages aren't deflated

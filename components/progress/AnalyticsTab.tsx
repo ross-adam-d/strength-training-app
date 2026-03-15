@@ -50,7 +50,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
+export default function AnalyticsTab({ timePeriod, clientId }: { timePeriod: string; clientId?: string }) {
   const { data: session } = useSession()
   const isBasic = false // single tier — re-enable if tiering reintroduced: (session?.user as any)?.tier === 'BASIC'
 
@@ -60,7 +60,7 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
   const [loadingMuscle, setLoadingMuscle] = useState(true)
 
   useEffect(() => {
-    fetch('/api/progress/readiness')
+    fetch(`/api/progress/readiness${clientId ? `?clientId=${clientId}` : ''}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setReadiness)
       .catch(console.error)
@@ -71,7 +71,7 @@ export default function AnalyticsTab({ timePeriod }: { timePeriod: string }) {
     let cancelled = false
     setLoadingMuscle(true)
     // Always use current phase for weak point analysis — cross-phase data is misleading here
-    fetch('/api/progress/muscle-volume?period=phase')
+    fetch(`/api/progress/muscle-volume?period=phase${clientId ? `&clientId=${clientId}` : ''}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => { if (!cancelled) setMuscleVolumeData(data) })
       .catch(console.error)

@@ -2,81 +2,145 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { Card, CardBody } from '@/components/ui/card'
+import { Select } from '@/components/ui/select'
+import VolumeTab from '@/components/progress/VolumeTab'
+import ExerciseTab from '@/components/progress/ExerciseTab'
+import AnalyticsTab from '@/components/progress/AnalyticsTab'
 
-interface PR {
-  exerciseId: string
-  exerciseName: string
-  est1RM: number
-  est5RM: number
-  est10RM: number
-  lastLoggedAt: string
+type Tab = 'volume' | 'exercise' | 'analytics'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'volume', label: 'Volume & Intensity' },
+  { id: 'exercise', label: 'Exercise Metrics' },
+  { id: 'analytics', label: 'Deep Analytics' },
+]
+
+const TIME_PERIODS = [
+  { value: '4w', label: 'Last 4 weeks' },
+  { value: '3m', label: 'Last 3 months' },
+  { value: 'all', label: 'All time' },
+]
+
+interface WorkoutLog {
+  id: string
+  completedAt: string
+  duration?: number
+  overallRpe?: number
+  workout: { name: string } | null
+  exerciseLogs: Array<{ exercise: { name: string }; weight: number; reps: number }>
+}
+
+function getSinceDate(period: string): string | null {
+  const now = new Date()
+  if (period === '4w') { now.setDate(now.getDate() - 28); return now.toISOString() }
+  if (period === '3m') { now.setMonth(now.getMonth() - 3); return now.toISOString() }
+  return null
 }
 
 export default function ClientProgressPage() {
   const params = useParams()
   const clientId = params.clientId as string
-  const [prs, setPrs] = useState<PR[]>([])
+
+  const [activeTab, setActiveTab] = useState<Tab>('volume')
+  const [timePeriod, setTimePeriod] = useState('3m')
+  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/coach/clients/${clientId}/progress`)
-      .then((r) => r.json())
-      .then(setPrs)
+    fetch(`/api/coach/clients/${clientId}/workout-logs?limit=50`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setRecentWorkouts)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [clientId])
 
-  if (loading) {
-    return <div className="text-sm text-gray-400 py-4">Loading progress data...</div>
-  }
+  const filteredWorkouts = recentWorkouts.filter((w) => {
+    const since = getSinceDate(timePeriod)
+    if (!since) return true
+    return new Date(w.completedAt) >= new Date(since)
+  })
 
-  if (prs.length === 0) {
+  const totalVolumeKg = filteredWorkouts.reduce(
+    (sum, w) => sum + w.exerciseLogs.reduce((s, l) => s + l.weight * l.reps, 0),
+    0
+  )
+
+  const avgRpe = (() => {
+    const withRpe = filteredWorkouts.filter((w) => w.overallRpe)
+    if (withRpe.length === 0) return '—'
+    return (withRpe.reduce((s, w) => s + (w.overallRpe || 0), 0) / withRpe.length).toFixed(1)
+  })()
+
+  if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-        <p className="text-gray-400 text-sm">No logged sets yet — progress data will appear after workouts are tracked.</p>
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-48" />
+        <div className="grid md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="bg-white rounded-lg p-6 h-24" />)}
+        </div>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700">Estimated maxes</h3>
-          <p className="text-xs text-gray-400 mt-0.5">Based on logged sets using the Epley formula</p>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {prs.map((pr) => (
-            <div key={pr.exerciseId} className="px-5 py-3.5 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 text-sm truncate">{pr.exerciseName}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Last logged{' '}
-                  {new Date(pr.lastLoggedAt).toLocaleDateString('en-AU', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
-              <div className="flex items-center gap-5 text-right flex-shrink-0">
-                <div>
-                  <p className="text-xs text-gray-400">e1RM</p>
-                  <p className="text-sm font-semibold text-gray-900">{pr.est1RM} kg</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">e5RM</p>
-                  <p className="text-sm font-medium text-gray-600">{pr.est5RM} kg</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">e10RM</p>
-                  <p className="text-sm font-medium text-gray-600">{pr.est10RM} kg</p>
-                </div>
-              </div>
-            </div>
-          ))}
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
+      </div>
+
+      <div className="flex justify-end mb-6">
+        <div className="w-44">
+          <Select
+            options={TIME_PERIODS.map((p) => ({ value: p.value, label: p.label }))}
+            value={timePeriod}
+            onChange={(e) => setTimePeriod(e.target.value)}
+          />
         </div>
       </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <Card>
+          <CardBody>
+            <p className="text-xs text-gray-500 text-center">Sessions</p>
+            <p className="text-2xl font-bold text-primary-600 text-center mt-1">{filteredWorkouts.length}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <p className="text-xs text-gray-500 text-center">Volume</p>
+            <p className="text-2xl font-bold text-primary-600 text-center mt-1">{(totalVolumeKg / 1000).toFixed(1)}T</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <p className="text-xs text-gray-500 text-center">Avg RPE</p>
+            <p className="text-2xl font-bold text-primary-600 text-center mt-1">{avgRpe}</p>
+          </CardBody>
+        </Card>
+      </div>
+
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'volume' && (
+        <VolumeTab timePeriod={timePeriod} filteredWorkouts={filteredWorkouts} clientId={clientId} />
+      )}
+      {activeTab === 'exercise' && <ExerciseTab timePeriod={timePeriod} clientId={clientId} />}
+      {activeTab === 'analytics' && <AnalyticsTab timePeriod={timePeriod} clientId={clientId} />}
     </div>
   )
 }

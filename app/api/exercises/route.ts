@@ -63,13 +63,18 @@ export async function GET(request: Request) {
       }
     }
 
-    // Only return exercises the current user has actually logged
+    // Only return exercises the target user has actually logged
     if (logged && session?.user?.id) {
-      where.exerciseLogs = {
-        some: {
-          workoutLog: { userId: session.user.id },
-        },
+      const clientId = searchParams.get('clientId')
+      let loggedUserId = session.user.id
+      if (clientId && (session.user as any).role === 'COACH') {
+        const rel = await prisma.coachClientRelationship.findFirst({
+          where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+          select: { id: true },
+        })
+        if (rel) loggedUserId = clientId
       }
+      where.exerciseLogs = { some: { workoutLog: { userId: loggedUserId } } }
     }
 
     const exercises = await prisma.exercise.findMany({

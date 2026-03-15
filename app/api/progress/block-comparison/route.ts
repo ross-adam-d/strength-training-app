@@ -62,6 +62,19 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') ?? 'blocks'
+
+    // Resolve target user — support coach viewing a client's data
+    const clientId = searchParams.get('clientId')
+    let userId = session.user.id
+    if (clientId) {
+      if (session.user.role !== 'COACH') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const rel = await prisma.coachClientRelationship.findFirst({
+        where: { coachId: session.user.id, clientId, status: 'ACTIVE' },
+        select: { id: true },
+      })
+      if (!rel) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      userId = clientId
+    }
     const now = new Date()
 
     // ── Weeks in active/latest phase ───────────────────────────────────────
@@ -76,7 +89,7 @@ export async function GET(request: Request) {
         activeMacro?.id ??
         (
           await prisma.macrocycle.findFirst({
-            where: { userId: session.user.id },
+            where: { userId },
             orderBy: { startDate: 'desc' },
             select: { id: true },
           })
@@ -156,7 +169,7 @@ export async function GET(request: Request) {
     // ── Phase vs Phase ──────────────────────────────────────────────────────
     if (type === 'phases') {
       const macrocycles = await prisma.macrocycle.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         orderBy: { startDate: 'asc' },
         select: {
           name: true,
@@ -214,7 +227,7 @@ export async function GET(request: Request) {
 
     // ── Block vs Block (default) ────────────────────────────────────────────
     const macrocycles = await prisma.macrocycle.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { startDate: 'asc' },
       select: {
         id: true,
