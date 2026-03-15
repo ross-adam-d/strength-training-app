@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-15'
+export const CURRENT_RELEASE_ID = '2026-03-16'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-16',
+    date: 'March 16, 2026',
+    title: 'Chart fixes',
+    changes: [
+      'Removed "legs" as a legacy muscle group from volume and weak point charts',
+      'Support contact email updated throughout the app',
+    ],
+  },
   {
     id: '2026-03-15',
     date: 'March 15, 2026',

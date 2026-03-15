@@ -449,8 +449,8 @@ export default function CoachHowToPage() {
       <div className="text-center pb-4">
         <p className="text-sm text-gray-400">
           Questions or feedback?{' '}
-          <a href="mailto:support@pbxstrength.com.au" className="text-primary-600 hover:text-primary-700 transition">
-            support@pbxstrength.com.au
+          <a href="mailto:pbx.strengthtraining@gmail.com" className="text-primary-600 hover:text-primary-700 transition">
+            pbx.strengthtraining@gmail.com
           </a>
         </p>
       </div>

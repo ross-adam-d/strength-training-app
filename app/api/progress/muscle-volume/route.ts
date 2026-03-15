@@ -89,9 +89,12 @@ export async function GET(request: NextRequest) {
   const weeksInPeriod = Math.max(1, Math.round((endRef.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
 
   // Count sets per muscle group — each log counts once per muscle group on the exercise
+  // "legs" is a legacy group superseded by quads/hamstrings/glutes — exclude from output
+  const EXCLUDED_MUSCLE_GROUPS = new Set(['legs'])
   const counts: Record<string, number> = {}
   for (const log of logs) {
     for (const muscle of log.exercise.muscleGroups) {
+      if (EXCLUDED_MUSCLE_GROUPS.has(muscle)) continue
       counts[muscle] = (counts[muscle] ?? 0) + 1
     }
   }
