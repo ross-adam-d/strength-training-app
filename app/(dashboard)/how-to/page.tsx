@@ -386,6 +386,8 @@ export default function HowToPage() {
           </TipBox>
         </div>
 
+        <Screenshot src="/how-to/settings - PO.jpg" alt="Progressive overload settings" />
+
         <SectionDivider />
         <BackToTop />
       </section>
