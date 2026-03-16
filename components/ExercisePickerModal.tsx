@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/modal'
+import { SetTarget, formatSetTargets } from '@/lib/setTargets'
 
 const MUSCLE_GROUP_LABELS: Record<string, string> = {
   chest: 'Chest',
@@ -41,6 +42,7 @@ export interface ExercisePickerResult {
   tempo: string | null
   supersetWithPrevious: boolean
   notes: string | null
+  setTargets: SetTarget[] | null
 }
 
 export interface ExercisePickerInitialValues {
@@ -52,6 +54,7 @@ export interface ExercisePickerInitialValues {
   tempo?: string
   supersetWithPrevious?: boolean
   notes?: string
+  setTargets?: SetTarget[] | null
 }
 
 interface ExercisePickerModalProps {
@@ -82,6 +85,10 @@ function sortByRelevance(exercises: PickerExercise[], priorityGroups: Set<string
     return a.name.localeCompare(b.name)
   })
 }
+
+const DEFAULT_SET_TARGETS: SetTarget[] = [
+  { sets: 1, reps: '', weight: undefined },
+]
 
 export function ExercisePickerModal({
   open,
@@ -123,6 +130,10 @@ export function ExercisePickerModal({
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  // Prescribed mode state
+  const [prescribedMode, setPrescribedMode] = useState(false)
+  const [setTargetRows, setSetTargetRows] = useState<SetTarget[]>(DEFAULT_SET_TARGETS)
+
   // Fetch exercises once on first open
   useEffect(() => {
     if (open && !fetched) {
@@ -143,6 +154,11 @@ export function ExercisePickerModal({
     setCreating(false)
     setNewName('')
     setFormErrors({})
+
+    const hasPrescribed = !!(initialValues?.setTargets && initialValues.setTargets.length > 0)
+    setPrescribedMode(hasPrescribed)
+    setSetTargetRows(hasPrescribed ? initialValues!.setTargets! : DEFAULT_SET_TARGETS)
+
     setForm({
       targetSets: initialValues?.targetSets ?? '3',
       targetReps: initialValues?.targetReps ?? '8-12',
@@ -182,7 +198,7 @@ export function ExercisePickerModal({
 
   function handleSelect(exercise: PickerExercise) {
     if (mode === 'log') {
-      onAdd({ exercise, targetSets: 3, targetReps: '', targetRir: null, restPeriod: null, tempo: null, supersetWithPrevious: false, notes: null })
+      onAdd({ exercise, targetSets: 3, targetReps: '', targetRir: null, restPeriod: null, tempo: null, supersetWithPrevious: false, notes: null, setTargets: null })
       handleClose()
     } else {
       setSelectedExercise(exercise)
@@ -215,21 +231,50 @@ export function ExercisePickerModal({
   function handleSubmit() {
     if (!selectedExercise) return
     const errors: Record<string, string> = {}
-    const sets = parseInt(form.targetSets)
-    if (!form.targetSets || isNaN(sets) || sets < 1) errors.targetSets = 'Required'
-    setFormErrors(errors)
-    if (Object.keys(errors).length > 0) return
 
-    onAdd({
-      exercise: selectedExercise,
-      targetSets: sets,
-      targetReps: form.targetReps || '',
-      targetRir: form.targetRir !== '' ? parseInt(form.targetRir) : null,
-      restPeriod: form.restPeriod !== '' ? parseInt(form.restPeriod) : null,
-      tempo: form.tempo || null,
-      supersetWithPrevious: form.supersetWithPrevious,
-      notes: form.notes || null,
-    })
+    if (prescribedMode) {
+      // Validate prescribed rows
+      if (setTargetRows.length === 0) {
+        errors.setTargets = 'Add at least one row'
+      } else {
+        for (const row of setTargetRows) {
+          if (!row.sets || row.sets < 1) { errors.setTargets = 'Sets must be at least 1'; break }
+          if (!row.reps.trim()) { errors.setTargets = 'Reps required for each row'; break }
+        }
+      }
+      setFormErrors(errors)
+      if (Object.keys(errors).length > 0) return
+
+      const totalSets = setTargetRows.reduce((sum, g) => sum + g.sets, 0)
+      onAdd({
+        exercise: selectedExercise,
+        targetSets: totalSets,
+        targetReps: '',
+        targetRir: null,
+        restPeriod: form.restPeriod !== '' ? parseInt(form.restPeriod) : null,
+        tempo: form.tempo || null,
+        supersetWithPrevious: form.supersetWithPrevious,
+        notes: form.notes || null,
+        setTargets: setTargetRows,
+      })
+    } else {
+      const sets = parseInt(form.targetSets)
+      if (!form.targetSets || isNaN(sets) || sets < 1) errors.targetSets = 'Required'
+      setFormErrors(errors)
+      if (Object.keys(errors).length > 0) return
+
+      onAdd({
+        exercise: selectedExercise,
+        targetSets: sets,
+        targetReps: form.targetReps || '',
+        targetRir: form.targetRir !== '' ? parseInt(form.targetRir) : null,
+        restPeriod: form.restPeriod !== '' ? parseInt(form.restPeriod) : null,
+        tempo: form.tempo || null,
+        supersetWithPrevious: form.supersetWithPrevious,
+        notes: form.notes || null,
+        setTargets: null,
+      })
+    }
     handleClose()
   }
 
@@ -244,7 +289,27 @@ export function ExercisePickerModal({
       setSelectedExercise(null)
       setView('search')
       setFormErrors({})
+      setPrescribedMode(false)
+      setSetTargetRows(DEFAULT_SET_TARGETS)
     }, 150)
+  }
+
+  function updateSetTargetRow(index: number, field: keyof SetTarget, value: string) {
+    setSetTargetRows((prev) => prev.map((row, i) => {
+      if (i !== index) return row
+      if (field === 'sets') return { ...row, sets: parseInt(value) || 1 }
+      if (field === 'reps') return { ...row, reps: value }
+      if (field === 'weight') return { ...row, weight: value === '' ? undefined : parseFloat(value) }
+      return row
+    }))
+  }
+
+  function addSetTargetRow() {
+    setSetTargetRows((prev) => [...prev, { sets: 1, reps: '', weight: undefined }])
+  }
+
+  function removeSetTargetRow(index: number) {
+    setSetTargetRows((prev) => prev.filter((_, i) => i !== index))
   }
 
   const modalTitle = title ?? (view === 'form' && mode === 'plan' ? (initialValues?.exerciseId ? 'Edit Exercise' : 'Configure Exercise') : 'Add Exercise')
@@ -371,41 +436,150 @@ export function ExercisePickerModal({
             </button>
           </div>
 
-          {/* Sets / Reps / RIR / Rest */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Sets {formErrors.targetSets && <span className="text-red-500 ml-0.5">*</span>}
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={form.targetSets}
-                onChange={(e) => { setForm({ ...form, targetSets: e.target.value }); setFormErrors({ ...formErrors, targetSets: '' }) }}
-                className={`w-full px-3 py-2 border rounded-lg text-sm ${formErrors.targetSets ? 'border-red-500' : 'border-gray-300'}`}
-              />
+          {/* Mode toggle */}
+          <div>
+            <div className="flex gap-2 mb-1">
+              {(['Standard', 'Prescribed'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPrescribedMode(m === 'Prescribed')}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                    (m === 'Prescribed') === prescribedMode
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
             </div>
+            <p className="text-xs text-gray-500">
+              {prescribedMode
+                ? 'Specify exact sets, reps, and optional target weights.'
+                : 'Set a rep range and RIR — progressive overload suggestions apply.'}
+            </p>
+          </div>
+
+          {prescribedMode ? (
+            /* Prescribed mode: per-set table */
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Reps</label>
-              <input
-                type="text"
-                placeholder="8-12"
-                value={form.targetReps}
-                onChange={(e) => setForm({ ...form, targetReps: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
+              {/* Column headers */}
+              <div className="grid grid-cols-[3rem_1fr_1fr_1.5rem] gap-2 pb-1.5 border-b border-gray-200 mb-2">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sets</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reps</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Weight <span className="normal-case font-normal">(opt.)</span></div>
+                <div />
+              </div>
+              {/* Rows */}
+              <div className="space-y-2">
+                {setTargetRows.map((row, i) => (
+                  <div key={i} className="grid grid-cols-[3rem_1fr_1fr_1.5rem] gap-2 items-center">
+                    <input
+                      type="number"
+                      min="1"
+                      value={row.sets}
+                      onChange={(e) => updateSetTargetRow(i, 'sets', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center"
+                    />
+                    <input
+                      type="text"
+                      placeholder="e.g. 1 or 3"
+                      value={row.reps}
+                      onChange={(e) => updateSetTargetRow(i, 'reps', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="kg"
+                      value={row.weight ?? ''}
+                      onChange={(e) => updateSetTargetRow(i, 'weight', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSetTargetRow(i)}
+                      disabled={setTargetRows.length === 1}
+                      className="text-red-400 hover:text-red-600 disabled:opacity-20 text-base leading-none"
+                      aria-label="Remove row"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {formErrors.setTargets && (
+                <p className="text-xs text-red-500 mt-1">{formErrors.setTargets}</p>
+              )}
+              {/* Add row */}
+              <button
+                type="button"
+                onClick={addSetTargetRow}
+                className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm text-primary-700 hover:bg-primary-50 transition border border-dashed border-primary-300 font-medium"
+              >
+                + Add row
+              </button>
+              {/* Preview */}
+              {setTargetRows.some((r) => r.reps) && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {formatSetTargets(setTargetRows.filter((r) => r.reps), 'kg')}
+                </p>
+              )}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">RIR</label>
-              <input
-                type="number"
-                min="0"
-                placeholder="2"
-                value={form.targetRir}
-                onChange={(e) => setForm({ ...form, targetRir: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
+          ) : (
+            /* Standard mode: sets / reps / RIR */
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Sets {formErrors.targetSets && <span className="text-red-500 ml-0.5">*</span>}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.targetSets}
+                  onChange={(e) => { setForm({ ...form, targetSets: e.target.value }); setFormErrors({ ...formErrors, targetSets: '' }) }}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm ${formErrors.targetSets ? 'border-red-500' : 'border-gray-300'}`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Reps</label>
+                <input
+                  type="text"
+                  placeholder="8-12"
+                  value={form.targetReps}
+                  onChange={(e) => setForm({ ...form, targetReps: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">RIR</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="2"
+                  value={form.targetRir}
+                  onChange={(e) => setForm({ ...form, targetRir: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Rest (s)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="90"
+                  value={form.restPeriod}
+                  onChange={(e) => setForm({ ...form, restPeriod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
             </div>
+          )}
+
+          {/* Rest period (prescribed mode) */}
+          {prescribedMode && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Rest (s)</label>
               <input
@@ -417,7 +591,7 @@ export function ExercisePickerModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>
-          </div>
+          )}
 
           {/* Superset */}
           <div className="flex items-center gap-2">

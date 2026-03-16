@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 async function verifyExerciseOwnership(coachId: string, exerciseId: string) {
@@ -10,6 +11,12 @@ async function verifyExerciseOwnership(coachId: string, exerciseId: string) {
   })
   return !!ex
 }
+
+const setTargetSchema = z.object({
+  sets: z.number().int().positive(),
+  reps: z.string(),
+  weight: z.number().optional(),
+})
 
 const patchSchema = z.object({
   exerciseId: z.string().optional(),
@@ -22,6 +29,7 @@ const patchSchema = z.object({
   supersetWithPrevious: z.boolean().optional(),
   notes: z.string().nullable().optional(),
   orderIndex: z.number().int().optional(),
+  setTargets: z.array(setTargetSchema).nullable().optional(),
 })
 
 export async function PATCH(
@@ -40,11 +48,21 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const data = patchSchema.parse(body)
+    const { setTargets, ...rest } = patchSchema.parse(body)
+
+    const patchData: any = { ...rest }
+    if (setTargets !== undefined) {
+      patchData.setTargets = setTargets ?? Prisma.DbNull
+      if (setTargets && setTargets.length > 0) {
+        patchData.targetSets = setTargets.reduce((sum, g) => sum + g.sets, 0)
+        patchData.targetReps = null
+        patchData.targetRir = null
+      }
+    }
 
     const updated = await prisma.coachPhaseTemplateExercise.update({
       where: { id: exerciseId },
-      data,
+      data: patchData,
       include: {
         exercise: { select: { id: true, name: true, muscleGroups: true, equipment: true } },
       },
