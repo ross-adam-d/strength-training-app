@@ -10,7 +10,6 @@ import { LiftHistoryModal } from '@/components/LiftHistoryModal'
 import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
 import { getSuggestion, estimate1RM, calculateSuggestedReps, parseRepRange } from '@/lib/progressiveOverload'
 import { kgToDisplay, displayToKg, weightUnit } from '@/lib/units'
-import { SetTarget, expandSetTargets, formatSetTargets, allWeightsPrescribed } from '@/lib/setTargets'
 
 interface WorkoutExercise {
   id: string
@@ -23,7 +22,6 @@ interface WorkoutExercise {
   restPeriod?: number
   supersetWithPrevious: boolean
   notes?: string
-  setTargets?: SetTarget[] | null
   exercise: {
     id: string
     name: string
@@ -318,16 +316,6 @@ export default function WorkoutLogPage() {
               : s
           )
 
-          // Prescribed mode: skip PO entirely when all sets have weights prescribed
-          const isPrescribed = !!(we.setTargets && we.setTargets.length > 0)
-          const fullyPrescribed = isPrescribed && allWeightsPrescribed(we.setTargets!)
-
-          if (fullyPrescribed) {
-            // No suggestions — prescribed weights take over at init time
-            newSuggestions.set(we.exercise.id, setMap)
-            continue
-          }
-
           const set1Suggestion = we.exercise.isTimed ? null : getSuggestion(
             effectiveSets,
             we.targetReps,
@@ -394,28 +382,8 @@ export default function WorkoutLogPage() {
 
         // Only initialise blank sets on a fresh start; draft restore supplies exerciseLogs
         if (!draft) {
-          const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) => {
-            // Prescribed mode: expand setTargets and pre-fill weight/reps
-            if (we.setTargets && we.setTargets.length > 0) {
-              const expanded = expandSetTargets(we.setTargets)
-              return expanded.map((slot) => {
-                const prescribedWeight = slot.weight != null
-                  ? String(kgToDisplay(slot.weight, unitPrefRef.current))
-                  : ''
-                // Only pre-fill reps if it's a single number (not a range)
-                const prescribedReps = slot.reps && !slot.reps.includes('-') ? slot.reps : ''
-                return {
-                  exerciseId: we.exercise.id,
-                  setNumber: slot.setNumber,
-                  reps: prescribedReps,
-                  weight: prescribedWeight,
-                  rir: undefined,
-                  notes: '',
-                  skipped: false,
-                }
-              })
-            }
-            return Array.from({ length: we.targetSets }, (_, i) => ({
+          const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
+            Array.from({ length: we.targetSets }, (_, i) => ({
               exerciseId: we.exercise.id,
               setNumber: i + 1,
               reps: '',
@@ -424,7 +392,7 @@ export default function WorkoutLogPage() {
               notes: '',
               skipped: false,
             }))
-          })
+          )
           setExerciseLogs(prepopulated)
         }
 
@@ -1334,16 +1302,9 @@ export default function WorkoutLogPage() {
                         </span>
                       )}
                     </div>
-                    {we.setTargets && we.setTargets.length > 0 ? (
-                      <p className="text-sm mt-1 flex items-center gap-1.5 flex-wrap">
-                        <span className="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5 rounded">Prescribed</span>
-                        <span className="text-gray-600 text-xs">{formatSetTargets(we.setTargets, unitPref === 'imperial' ? 'lbs' : 'kg')}</span>
-                      </p>
-                    ) : (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Target: {we.targetSets} sets × {we.targetReps} reps
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-600 mt-1">
+                      Target: {we.targetSets} sets × {we.targetReps} reps
+                    </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="flex flex-col">

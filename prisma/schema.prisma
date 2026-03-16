@@ -260,7 +260,6 @@ model WorkoutExercise {
   notes             String?
   restPeriod        Int?     // rest in seconds
   supersetWithPrevious Boolean @default(false) // true if this exercise is supersetted with the previous one
-  setTargets        Json?    // Array of {sets, reps, weight?} for prescribed per-set programming; null = standard mode
 
   workoutId         String
   workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
@@ -457,7 +456,6 @@ model CoachPhaseTemplateExercise {
   restPeriod  Int?
   supersetWithPrevious Boolean          @default(false)
   notes       String?
-  setTargets  Json?                     // Array of {sets, reps, weight?} for prescribed per-set programming; null = standard mode
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
 

@@ -8,7 +8,6 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
 import { ExercisePickerModal, ExercisePickerResult, ExercisePickerInitialValues } from '@/components/ExercisePickerModal'
-import { SetTarget, formatSetTargets } from '@/lib/setTargets'
 import {
   DndContext,
   closestCenter,
@@ -41,7 +40,6 @@ interface TemplateExercise {
   restPeriod: number | null
   supersetWithPrevious: boolean
   notes: string | null
-  setTargets: SetTarget[] | null
   exercise: Exercise
 }
 
@@ -151,27 +149,18 @@ function SortableExercise({ exercise, supersetGroup, onEdit, onDelete, onMoveUp,
                 )}
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                {exercise.setTargets && exercise.setTargets.length > 0 ? (
-                  <div className="col-span-2">
-                    <span className="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5 rounded mr-1.5">Prescribed</span>
-                    <span className="text-gray-700 text-xs">{formatSetTargets(exercise.setTargets, 'kg')}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <span className="text-gray-600">Sets:</span>{' '}
-                      <span className="font-medium">{exercise.targetSets}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Reps:</span>{' '}
-                      <span className="font-medium">{exercise.targetReps || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">RIR:</span>{' '}
-                      <span className="font-medium">{exercise.targetRir ?? 'N/A'}</span>
-                    </div>
-                  </>
-                )}
+                <div>
+                  <span className="text-gray-600">Sets:</span>{' '}
+                  <span className="font-medium">{exercise.targetSets}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Reps:</span>{' '}
+                  <span className="font-medium">{exercise.targetReps || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">RIR:</span>{' '}
+                  <span className="font-medium">{exercise.targetRir ?? 'N/A'}</span>
+                </div>
                 <div>
                   <span className="text-gray-600">Rest:</span>{' '}
                   <span className="font-medium">{exercise.restPeriod ? `${exercise.restPeriod}s` : 'N/A'}</span>
@@ -313,7 +302,6 @@ export default function TemplateWorkoutEditPage() {
       restPeriod: ex.restPeriod !== null ? String(ex.restPeriod) : '90',
       supersetWithPrevious: ex.supersetWithPrevious,
       notes: ex.notes || '',
-      setTargets: ex.setTargets ?? null,
     })
     setEditingExercise(exerciseId)
   }
@@ -335,7 +323,6 @@ export default function TemplateWorkoutEditPage() {
       restPeriod: result.restPeriod,
       supersetWithPrevious: result.supersetWithPrevious,
       notes: result.notes || null,
-      setTargets: result.setTargets ?? null,
     }
     if (!isEditing) payload.orderIndex = exercises.length
 
@@ -355,12 +342,12 @@ export default function TemplateWorkoutEditPage() {
         setExercises((prev) =>
           prev.map((ex) =>
             ex.id === editingExercise
-              ? { ...ex, exercise: { id: result.exercise.id, name: result.exercise.name }, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null, setTargets: result.setTargets ?? null }
+              ? { ...ex, exercise: { id: result.exercise.id, name: result.exercise.name }, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null }
               : ex
           )
         )
       } else {
-        setExercises((prev) => [...prev, { id: savedData.id, orderIndex: prev.length, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null, setTargets: result.setTargets ?? null, exercise: { id: result.exercise.id, name: result.exercise.name } }])
+        setExercises((prev) => [...prev, { id: savedData.id, orderIndex: prev.length, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null, exercise: { id: result.exercise.id, name: result.exercise.name } }])
       }
       setEditingExercise(null)
       setAddingExercise(false)

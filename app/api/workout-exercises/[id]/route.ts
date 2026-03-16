@@ -2,15 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { verifyCoachBlockAccess } from '@/lib/coachAccess'
 import { z } from 'zod'
-
-const setTargetSchema = z.object({
-  sets: z.number().int().positive(),
-  reps: z.string(),
-  weight: z.number().optional(),
-})
 
 const updateSchema = z.object({
   exerciseId: z.string().optional(),
@@ -25,7 +18,6 @@ const updateSchema = z.object({
   applyToRestOfPhase: z.boolean().optional(),
   mesocycleId: z.string().optional(),
   swapExercise: z.boolean().optional(),
-  setTargets: z.array(setTargetSchema).nullable().optional(),
 })
 
 async function verifyOwnership(id: string, userId: string) {
@@ -73,23 +65,12 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { applyToRestOfPhase, mesocycleId, swapExercise, setTargets, ...updateData } = updateSchema.parse(body)
-
-    // Derive targetSets from setTargets when in prescribed mode
-    const finalData: any = { ...updateData }
-    if (setTargets !== undefined) {
-      finalData.setTargets = setTargets ?? Prisma.DbNull
-      if (setTargets && setTargets.length > 0) {
-        finalData.targetSets = setTargets.reduce((sum, g) => sum + g.sets, 0)
-        finalData.targetReps = null
-        finalData.targetRir = null
-      }
-    }
+    const { applyToRestOfPhase, mesocycleId, swapExercise, ...updateData } = updateSchema.parse(body)
 
     // Update the current exercise
     const updated = await prisma.workoutExercise.update({
       where: { id },
-      data: finalData,
+      data: updateData,
       include: {
         exercise: { select: { id: true, name: true } },
         workout: {

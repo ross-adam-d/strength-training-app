@@ -2,14 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { z } from 'zod'
-
-const setTargetSchema = z.object({
-  sets: z.number().int().positive(),
-  reps: z.string(),
-  weight: z.number().optional(),
-})
 
 const createSchema = z.object({
   exerciseId: z.string().min(1),
@@ -21,7 +14,6 @@ const createSchema = z.object({
   restPeriod: z.number().int().min(0).nullable().optional(),
   supersetWithPrevious: z.boolean().optional(),
   notes: z.string().nullable().optional(),
-  setTargets: z.array(setTargetSchema).nullable().optional(),
 })
 
 export async function POST(
@@ -48,24 +40,19 @@ export async function POST(
 
     const count = await prisma.coachPhaseTemplateExercise.count({ where: { workoutId } })
 
-    const resolvedTargetSets = data.setTargets?.length
-      ? data.setTargets.reduce((sum, g) => sum + g.sets, 0)
-      : data.targetSets
-
     const exercise = await prisma.coachPhaseTemplateExercise.create({
       data: {
         workoutId,
         exerciseId: data.exerciseId,
         orderIndex: count,
-        targetSets: resolvedTargetSets,
-        targetReps: data.setTargets?.length ? null : (data.targetReps ?? null),
+        targetSets: data.targetSets,
+        targetReps: data.targetReps ?? null,
         targetRpe: data.targetRpe ?? null,
-        targetRir: data.setTargets?.length ? null : (data.targetRir ?? null),
+        targetRir: data.targetRir ?? null,
         tempo: data.tempo ?? null,
         restPeriod: data.restPeriod ?? null,
         supersetWithPrevious: data.supersetWithPrevious ?? false,
         notes: data.notes ?? null,
-        setTargets: data.setTargets ?? Prisma.DbNull,
       },
       include: {
         exercise: { select: { id: true, name: true, muscleGroups: true, equipment: true } },
