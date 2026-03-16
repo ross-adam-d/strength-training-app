@@ -31,7 +31,7 @@ export default async function DashboardPage({
 }) {
   const { billing, uid, session_id } = await searchParams
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return null
+  if (!session?.user?.id) redirect('/login')
   const unitPref = (session.user as any).unitPreference ?? 'metric'
 
   // Wrong account: Stripe redirected to a browser logged in as a different user
@@ -346,6 +346,30 @@ export default async function DashboardPage({
       {/* Stats carousel — only shown when there's an active phase */}
       {statViews.length > 0 && <StatsCarousel views={statViews} />}
 
+      {/* Active block but no workouts built yet — self-managed user */}
+      {phaseHasNoWorkouts && !coachRelationship && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5 text-white">
+            <p className="text-primary-200 text-xs font-semibold uppercase tracking-wide mb-1">Your training block</p>
+            <h2 className="font-bold text-xl">{activeBlock?.name}</h2>
+            {blockPhaseInfo && (
+              <p className="text-primary-200 text-sm mt-1">
+                {blockPhaseInfo.phaseCount} phase{blockPhaseInfo.phaseCount !== 1 ? 's' : ''} · {blockPhaseInfo.totalWeeks} week{blockPhaseInfo.totalWeeks !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          <div className="px-6 py-8 flex flex-col items-center text-center">
+            <p className="font-semibold text-gray-900 mb-1">No workouts added yet</p>
+            <p className="text-sm text-gray-500 mb-6 max-w-sm">
+              Your training block is set up but doesn&apos;t have any workouts yet. Add exercises to your phases to get started.
+            </p>
+            <Link href={`/macrocycles/${activeBlock?.id}`} className="px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition">
+              Set up workouts
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Active block but no workouts built yet — coach is still programming */}
       {phaseHasNoWorkouts && coachRelationship && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -474,6 +498,19 @@ export default async function DashboardPage({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* No active block — block exists but is inactive/completed */}
+      {blockCount > 0 && !activeBlock && !currentMicro && !coachRelationship && (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+          <p className="font-semibold text-gray-900 mb-1">No active training block</p>
+          <p className="text-sm text-gray-500 mb-6">
+            You don&apos;t have an active training block. Start a new one to continue tracking your progress.
+          </p>
+          <Link href="/macrocycles" className="px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition">
+            View training blocks
+          </Link>
         </div>
       )}
 
