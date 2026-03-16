@@ -154,7 +154,7 @@ export const authOptions: NextAuthOptions = {
       }
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
+          where: { id: (token.id ?? token.sub) as string },
           select: {
             role: true,
             emailVerified: true,
@@ -205,7 +205,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = (token.id ?? token.sub) as string
         session.user.role = token.role
         session.user.emailVerified = token.emailVerified as boolean | undefined
         session.user.unitPreference = token.unitPreference ?? 'metric'
