@@ -582,7 +582,7 @@ export default function MacrocycleDetailPage() {
 
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t space-y-4">
-                      {isLocked && !isReadOnly && (
+                      {isLocked && !isReadOnly && !isViewingAsCoach && (
                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                           Phase has started — configuration is locked.
                         </p>
@@ -597,7 +597,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Goal
                           </label>
-                          {isLocked || isReadOnly ? (
+                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">{phase.goal || '—'}</p>
                           ) : (
                             <Select
@@ -611,7 +611,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Days Per Week
                           </label>
-                          {isLocked || isReadOnly ? (
+                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">
                               {phase.trainingDaysPerWeek ? `${phase.trainingDaysPerWeek} days/week` : '—'}
                             </p>
@@ -635,7 +635,7 @@ export default function MacrocycleDetailPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Training Split
                           </label>
-                          {isLocked || isReadOnly ? (
+                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
                             <p className="text-sm text-gray-600 py-2">{phase.trainingSplit || '—'}</p>
                           ) : (
                             <Select
