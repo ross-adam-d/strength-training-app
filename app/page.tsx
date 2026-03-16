@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { PBeXLogo, PBeXLogoStacked } from '@/components/PBeXLogo'
+import PublicFooter from '@/components/PublicFooter'
 
 function CheckIcon() {
   return (
@@ -351,18 +352,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-10 px-4">
-        <div className="container mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <PBeXLogo className="h-7 w-auto" color="#FF8000" />
-          <div className="flex gap-6 text-sm">
-            <Link href="/login" className="hover:text-white transition">Log in</Link>
-            <Link href="/register" className="hover:text-white transition">Register</Link>
-            <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-          </div>
-          <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} pbX. All rights reserved.</p>
-        </div>
-      </footer>
+      <PublicFooter />
 
     </div>
   )

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import { PBeXLogo } from '@/components/PBeXLogo'
+import PublicFooter from '@/components/PublicFooter'
 type Plan = 'STARTER' | 'PRO'
 type Period = 'monthly' | 'annual'
 type Currency = 'AUD' | 'USD'
@@ -258,6 +259,7 @@ function CoachSubscribeInner() {
           </p>
         </div>
       </div>
+      <PublicFooter />
     </div>
   )
 }

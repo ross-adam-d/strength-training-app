@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PublicFooter from '@/components/PublicFooter'
 
 export const metadata = {
   title: 'Privacy Policy — pbX',
@@ -7,6 +8,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
+    <>
     <div className="min-h-[100dvh] bg-white px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
@@ -238,5 +240,7 @@ export default function PrivacyPage() {
         </div>
       </div>
     </div>
+    <PublicFooter />
+    </>
   )
 }
