@@ -450,62 +450,57 @@ export function ExercisePickerModal({
           </div>
 
           {prescribedMode ? (
-            /* Prescribed: 2-line rows — sets×reps on line 1, weight on line 2 */
-            <div className="space-y-3">
+            /* Prescribed: CSS grid table — guaranteed no overflow */
+            <div className="space-y-2">
               {formErrors.setTargets && <p className="text-sm text-red-500">{formErrors.setTargets}</p>}
-              <div className="space-y-2">
-                {setTargetRows.map((row, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-lg px-3 py-2.5 space-y-2">
-                    {/* Line 1: sets × reps + remove */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={row.sets || ''}
-                        onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
-                        placeholder="3"
-                        className="w-14 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                      <span className="text-sm text-gray-500 font-medium">sets ×</span>
-                      <input
-                        type="text"
-                        placeholder="5 or 4-6"
-                        value={row.reps}
-                        onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
-                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                      <span className="text-sm text-gray-500">reps</span>
-                      {setTargetRows.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeSetTargetRow(idx)}
-                          className="text-gray-400 hover:text-red-500 text-xs font-medium transition ml-1"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    {/* Line 2: weight */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">@</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        placeholder="weight"
-                        value={row.weight ?? ''}
-                        onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
-                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                      <span className="text-sm text-gray-500">kg <span className="text-gray-400">(optional)</span></span>
-                    </div>
-                  </div>
-                ))}
+              {/* Header */}
+              <div className="grid gap-2 text-xs font-medium text-gray-500" style={{ gridTemplateColumns: '1fr 1fr 1.2fr 28px' }}>
+                <span>Sets</span>
+                <span>Reps</span>
+                <span>Weight (kg) <span className="font-normal text-gray-400">opt.</span></span>
+                <span />
               </div>
+              {/* Rows */}
+              {setTargetRows.map((row, idx) => (
+                <div key={idx} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1fr 1fr 1.2fr 28px' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={row.sets || ''}
+                    placeholder="3"
+                    onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <input
+                    type="text"
+                    value={row.reps}
+                    placeholder="5"
+                    onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={row.weight ?? ''}
+                    placeholder="—"
+                    onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSetTargetRow(idx)}
+                    disabled={setTargetRows.length === 1}
+                    className="text-gray-400 hover:text-red-500 disabled:opacity-0 text-xl leading-none transition text-center"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
               <button
                 type="button"
                 onClick={addSetTargetRow}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium transition"
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium transition pt-1"
               >
                 + Add row
               </button>
