@@ -86,17 +86,30 @@ export async function PATCH(
       }
     }
 
-    // Update the current exercise
+    // Update the current exercise — use explicit select so setTargets is always returned
     const updated = await prisma.workoutExercise.update({
       where: { id },
       data: finalData,
-      include: {
+      select: {
+        id: true,
+        orderIndex: true,
+        targetSets: true,
+        targetReps: true,
+        targetRir: true,
+        tempo: true,
+        restPeriod: true,
+        supersetWithPrevious: true,
+        notes: true,
+        setTargets: true,
         exercise: { select: { id: true, name: true } },
         workout: {
-          include: {
+          select: {
+            name: true,
+            dayOfWeek: true,
             microcycle: {
-              include: {
-                mesocycle: true,
+              select: {
+                weekNumber: true,
+                mesocycle: { select: { id: true } },
               },
             },
           },

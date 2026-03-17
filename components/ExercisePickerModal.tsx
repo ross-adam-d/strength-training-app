@@ -448,58 +448,51 @@ export function ExercisePickerModal({
           </div>
 
           {prescribedMode ? (
-            /* Prescribed: per-set rows */
+            /* Prescribed: compact table */
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">Define exact sets. Weight is optional — leave blank to use progressive overload.</p>
               {formErrors.setTargets && <p className="text-sm text-red-500">{formErrors.setTargets}</p>}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
+                {/* Header row */}
+                <div className="flex gap-2 items-center">
+                  <span className="w-14 text-xs font-medium text-gray-500">Sets</span>
+                  <span className="flex-1 text-xs font-medium text-gray-500">Reps</span>
+                  <span className="flex-1 text-xs font-medium text-gray-500">Weight (kg) <span className="font-normal text-gray-400">opt.</span></span>
+                  <span className="w-8" />
+                </div>
+                {/* Data rows */}
                 {setTargetRows.map((row, idx) => (
-                  <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Row {idx + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeSetTargetRow(idx)}
-                        disabled={setTargetRows.length === 1}
-                        className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-30 transition"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Sets</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={row.sets}
-                          onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Reps</label>
-                        <input
-                          type="text"
-                          placeholder="5"
-                          value={row.reps}
-                          onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg) <span className="text-gray-400 font-normal">(opt)</span></label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          placeholder="—"
-                          value={row.weight ?? ''}
-                          onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
-                      </div>
-                    </div>
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min="1"
+                      value={row.sets}
+                      onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
+                      className="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="e.g. 5"
+                      value={row.reps}
+                      onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="—"
+                      value={row.weight ?? ''}
+                      onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSetTargetRow(idx)}
+                      disabled={setTargetRows.length === 1}
+                      className="w-8 text-center text-gray-400 hover:text-red-500 disabled:opacity-30 text-base leading-none transition"
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>
