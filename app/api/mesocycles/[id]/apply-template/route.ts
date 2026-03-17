@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { verifyCoachMesocycleAccess } from '@/lib/coachAccess'
 
 export async function POST(
@@ -46,6 +47,7 @@ export async function POST(
               restPeriod: true,
               supersetWithPrevious: true,
               notes: true,
+              setTargets: true,
             },
           },
         },
@@ -114,6 +116,7 @@ export async function POST(
               restPeriod: tex.restPeriod ?? undefined,
               supersetWithPrevious: tex.supersetWithPrevious ?? false,
               notes: tex.notes ?? undefined,
+              setTargets: tex.setTargets ?? Prisma.DbNull,
             })),
           },
         },

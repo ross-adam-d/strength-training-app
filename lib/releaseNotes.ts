@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-16'
+export const CURRENT_RELEASE_ID = '2026-03-17b'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-17b',
+    date: 'March 17, 2026',
+    title: 'Prescribed exercise programming',
+    changes: [
+      'Coaches and athletes can now prescribe exact per-set targets for exercises (sets × reps × optional weight)',
+      'Prescribed exercises pre-fill weight and reps in the workout log',
+      'Progressive overload suggestions are bypassed when all sets have prescribed weights',
+    ],
+  },
   {
     id: '2026-03-16',
     date: 'March 16, 2026',

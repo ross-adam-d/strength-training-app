@@ -10,6 +10,7 @@ import { LiftHistoryModal } from '@/components/LiftHistoryModal'
 import { ExercisePickerModal, ExercisePickerResult } from '@/components/ExercisePickerModal'
 import { getSuggestion, estimate1RM, calculateSuggestedReps, parseRepRange } from '@/lib/progressiveOverload'
 import { kgToDisplay, displayToKg, weightUnit } from '@/lib/units'
+import { SetTarget, expandSetTargets, formatSetTargets, allWeightsPrescribed } from '@/lib/setTargets'
 
 interface WorkoutExercise {
   id: string
@@ -22,6 +23,7 @@ interface WorkoutExercise {
   restPeriod?: number
   supersetWithPrevious: boolean
   notes?: string
+  setTargets?: SetTarget[] | null
   exercise: {
     id: string
     name: string
@@ -298,6 +300,14 @@ export default function WorkoutLogPage() {
           const exerciseSets = lastLogSets.get(we.exercise.id) ?? []
           const representativeSet = exerciseSets.find((s) => s.setNumber === 1) ?? exerciseSets[0]
 
+          // Prescribed mode: skip PO entirely when all sets have weights prescribed
+          const isPrescribed = !!(we.setTargets && we.setTargets.length > 0)
+          const fullyPrescribed = isPrescribed && allWeightsPrescribed(we.setTargets!)
+          if (fullyPrescribed) {
+            newSuggestions.set(we.exercise.id, setMap)
+            continue
+          }
+
           // Store last session set 1 data for cleanOnBlur
           if (representativeSet) {
             const effectiveReps = we.exercise.isUnilateral && representativeSet.repsLeft
@@ -382,8 +392,23 @@ export default function WorkoutLogPage() {
 
         // Only initialise blank sets on a fresh start; draft restore supplies exerciseLogs
         if (!draft) {
-          const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) =>
-            Array.from({ length: we.targetSets }, (_, i) => ({
+          const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) => {
+            // Prescribed mode: expand setTargets and pre-fill weight/reps
+            if (we.setTargets && we.setTargets.length > 0) {
+              const expanded = expandSetTargets(we.setTargets)
+              return expanded.map((slot) => ({
+                exerciseId: we.exercise.id,
+                setNumber: slot.setNumber,
+                reps: slot.reps && !slot.reps.includes('-') ? slot.reps : '',
+                weight: slot.weight != null
+                  ? String(kgToDisplay(slot.weight, unitPrefRef.current))
+                  : '',
+                rir: undefined,
+                notes: '',
+                skipped: false,
+              }))
+            }
+            return Array.from({ length: we.targetSets }, (_, i) => ({
               exerciseId: we.exercise.id,
               setNumber: i + 1,
               reps: '',
@@ -392,7 +417,7 @@ export default function WorkoutLogPage() {
               notes: '',
               skipped: false,
             }))
-          )
+          })
           setExerciseLogs(prepopulated)
         }
 
@@ -1302,9 +1327,16 @@ export default function WorkoutLogPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Target: {we.targetSets} sets × {we.targetReps} reps
-                    </p>
+                    {we.setTargets && we.setTargets.length > 0 ? (
+                      <p className="text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5 rounded">Prescribed</span>
+                        <span className="text-gray-600 text-xs">{formatSetTargets(we.setTargets, unitPref === 'imperial' ? 'lbs' : 'kg')}</span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Target: {we.targetSets} sets × {we.targetReps} reps
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="flex flex-col">

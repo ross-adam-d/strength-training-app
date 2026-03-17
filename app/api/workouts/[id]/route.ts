@@ -79,6 +79,7 @@ export async function GET(
             restPeriod: true,
             supersetWithPrevious: true,
             notes: true,
+            setTargets: true,
             exercise: {
               select: {
                 id: true,
