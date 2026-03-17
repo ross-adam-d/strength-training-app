@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { formatWeight, weightUnit } from '@/lib/units'
+import { formatSetTargets, SetTarget } from '@/lib/setTargets'
 
 export default async function CoachClientWorkoutLogPage({
   params,
@@ -34,6 +35,14 @@ export default async function CoachClientWorkoutLogPage({
               mesocycle: { select: { id: true, name: true } },
             },
           },
+          workoutExercises: {
+            select: {
+              exerciseId: true,
+              targetSets: true,
+              targetReps: true,
+              setTargets: true,
+            },
+          },
         },
       },
       exerciseLogs: {
@@ -45,6 +54,15 @@ export default async function CoachClientWorkoutLogPage({
   if (!log) return <div className="text-center py-8">Workout log not found</div>
 
   const unitPref = (log.user?.unitPreference ?? 'metric') as 'metric' | 'imperial'
+  const unit = unitPref === 'imperial' ? 'lbs' : 'kg'
+
+  // Build map from exerciseId → planned exercise data
+  const workoutExerciseMap = new Map<string, { targetSets: number; targetReps: string | null; setTargets: SetTarget[] | null }>(
+    (log.workout?.workoutExercises ?? []).map((we) => [
+      we.exerciseId,
+      { targetSets: we.targetSets, targetReps: we.targetReps, setTargets: we.setTargets as SetTarget[] | null },
+    ])
+  )
 
   // Group by exercise, preserving order of first appearance
   const exerciseOrder: string[] = []
@@ -100,9 +118,22 @@ export default async function CoachClientWorkoutLogPage({
           const exerciseRpe = sets[0]?.exerciseRpe
           const isUnilateral = sets[0]?.exercise.isUnilateral ?? false
 
+          const plannedExercise = workoutExerciseMap.get(exerciseId)
+          const planLine = (() => {
+            if (!plannedExercise) return null
+            const st = plannedExercise.setTargets
+            if (st && st.length > 0) {
+              return <p className="text-xs text-orange-600 mb-2">Plan: {formatSetTargets(st, unit)}</p>
+            }
+            if (plannedExercise.targetSets && plannedExercise.targetReps) {
+              return <p className="text-xs text-gray-400 mb-2">Plan: {plannedExercise.targetSets}×{plannedExercise.targetReps}</p>
+            }
+            return null
+          })()
+
           return (
             <div key={exerciseId} className="bg-white rounded-lg border border-gray-200 p-4 mb-3">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-1">
                 <h2 className="font-semibold text-gray-900">{sets[0].exercise.name}</h2>
                 {exerciseRpe && (
                   <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
@@ -110,6 +141,8 @@ export default async function CoachClientWorkoutLogPage({
                   </span>
                 )}
               </div>
+
+              {planLine}
 
               <div className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-xs font-medium text-gray-500 mb-2`}>
                 <div className="text-center">#</div>

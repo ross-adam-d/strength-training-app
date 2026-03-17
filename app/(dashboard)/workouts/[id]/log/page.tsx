@@ -158,6 +158,7 @@ export default function WorkoutLogPage() {
   const [loading, setLoading] = useState(true)
   const [startTime] = useState(new Date())
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([])
+  const [prescribedHints, setPrescribedHints] = useState<Map<string, Map<number, string>>>(new Map())
   const [overallNotes, setOverallNotes] = useState('')
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
@@ -390,16 +391,28 @@ export default function WorkoutLogPage() {
         // Always set display order (needed even on resume so exercises render correctly)
         setExerciseDisplayOrder(data.workoutExercises.map((we: WorkoutExercise) => we.id))
 
+        // Always build prescribed hints so placeholders show on fresh starts and draft resumes
+        const hintsMap = new Map<string, Map<number, string>>()
+        data.workoutExercises.forEach((we: WorkoutExercise) => {
+          if (we.setTargets && we.setTargets.length > 0) {
+            const expanded = expandSetTargets(we.setTargets)
+            const hints = new Map<number, string>()
+            expanded.forEach((slot) => { if (slot.reps) hints.set(slot.setNumber, slot.reps) })
+            if (hints.size > 0) hintsMap.set(we.exercise.id, hints)
+          }
+        })
+        if (hintsMap.size > 0) setPrescribedHints(hintsMap)
+
         // Only initialise blank sets on a fresh start; draft restore supplies exerciseLogs
         if (!draft) {
           const prepopulated = data.workoutExercises.flatMap((we: WorkoutExercise) => {
-            // Prescribed mode: expand setTargets and pre-fill weight/reps
+            // Prescribed mode: expand setTargets, pre-fill weight only — reps shown as hint
             if (we.setTargets && we.setTargets.length > 0) {
               const expanded = expandSetTargets(we.setTargets)
               return expanded.map((slot) => ({
                 exerciseId: we.exercise.id,
                 setNumber: slot.setNumber,
-                reps: slot.reps && !slot.reps.includes('-') ? slot.reps : '',
+                reps: '',
                 weight: slot.weight != null
                   ? String(kgToDisplay(slot.weight, unitPrefRef.current))
                   : '',
@@ -1494,7 +1507,7 @@ export default function WorkoutLogPage() {
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
-                                    placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
+                                    placeholder={prescribedHints.get(we.exercise.id)?.get(log.setNumber) ?? suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps ?? ''}
                                     value={log.repsLeft ?? ''}
                                     onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsLeft', e.target.value)}
                                     onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsLeft', log.repsLeft ?? '')}
@@ -1504,7 +1517,7 @@ export default function WorkoutLogPage() {
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
-                                    placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
+                                    placeholder={prescribedHints.get(we.exercise.id)?.get(log.setNumber) ?? suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps ?? ''}
                                     value={log.repsRight ?? ''}
                                     onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'repsRight', e.target.value)}
                                     onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'repsRight', log.repsRight ?? '')}
@@ -1527,7 +1540,7 @@ export default function WorkoutLogPage() {
                                   type="text"
                                   inputMode="numeric"
                                   pattern="[0-9]*"
-                                  placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps || ''}
+                                  placeholder={prescribedHints.get(we.exercise.id)?.get(log.setNumber) ?? suggestions.get(we.exercise.id)?.get(log.setNumber)?.reps ?? ''}
                                   value={log.reps}
                                   onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'reps', e.target.value)}
                                   onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'reps', log.reps)}
