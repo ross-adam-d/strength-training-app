@@ -290,7 +290,7 @@ export function ExercisePickerModal({
   function updateSetTargetRow(index: number, field: keyof SetTarget, value: string) {
     setSetTargetRows((prev) => prev.map((row, i) => {
       if (i !== index) return row
-      if (field === 'sets') return { ...row, sets: parseInt(value) || 1 }
+      if (field === 'sets') return { ...row, sets: parseInt(value) || 0 }
       if (field === 'reps') return { ...row, reps: value }
       if (field === 'weight') return { ...row, weight: value === '' ? undefined : parseFloat(value) }
       return row
@@ -413,9 +413,9 @@ export function ExercisePickerModal({
         /* Form view — plan mode */
         <div className="space-y-4">
           {/* Selected exercise */}
-          <div className="flex items-center justify-between bg-gray-100 border border-gray-300 rounded-lg px-3 py-2.5">
-            <div>
-              <p className="font-bold text-gray-900 text-sm">{selectedExercise?.name}</p>
+          <div className="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-gray-900 text-base leading-snug">{selectedExercise?.name}</p>
               {selectedExercise && selectedExercise.muscleGroups.length > 0 && (
                 <p className="text-xs text-gray-500 capitalize mt-0.5">{selectedExercise.muscleGroups.join(', ')}</p>
               )}
@@ -423,76 +423,82 @@ export function ExercisePickerModal({
             <button
               type="button"
               onClick={() => { setSelectedExercise(null); setView('search') }}
-              className="text-xs text-primary-600 hover:text-primary-700 ml-3 flex-shrink-0 font-medium"
+              className="text-sm text-primary-600 hover:text-primary-700 ml-3 flex-shrink-0 font-medium"
             >
               Change
             </button>
           </div>
 
           {/* Mode toggle */}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             <button
               type="button"
               onClick={() => { setPrescribedMode(false); setFormErrors({}) }}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${!prescribedMode ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2.5 px-3 text-sm font-medium text-left transition ${!prescribedMode ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Standard
+              <span className={`block text-xs font-normal mt-0.5 ${!prescribedMode ? 'text-orange-100' : 'text-gray-400'}`}>Sets, reps &amp; RIR</span>
             </button>
             <button
               type="button"
               onClick={() => { setPrescribedMode(true); setFormErrors({}) }}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${prescribedMode ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2.5 px-3 text-sm font-medium text-left border-l border-gray-200 transition ${prescribedMode ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Prescribed
+              <span className={`block text-xs font-normal mt-0.5 ${prescribedMode ? 'text-orange-100' : 'text-gray-400'}`}>Exact per-set weights</span>
             </button>
           </div>
 
           {prescribedMode ? (
-            /* Prescribed: compact table */
+            /* Prescribed: 2-line rows — sets×reps on line 1, weight on line 2 */
             <div className="space-y-3">
               {formErrors.setTargets && <p className="text-sm text-red-500">{formErrors.setTargets}</p>}
-              <div className="space-y-1.5">
-                {/* Header row */}
-                <div className="flex gap-2 items-center">
-                  <span className="w-14 text-xs font-medium text-gray-500">Sets</span>
-                  <span className="flex-1 text-xs font-medium text-gray-500">Reps</span>
-                  <span className="flex-1 text-xs font-medium text-gray-500">Weight (kg) <span className="font-normal text-gray-400">opt.</span></span>
-                  <span className="w-8" />
-                </div>
-                {/* Data rows */}
+              <div className="space-y-2">
                 {setTargetRows.map((row, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input
-                      type="number"
-                      min="1"
-                      value={row.sets}
-                      onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
-                      className="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="e.g. 5"
-                      value={row.reps}
-                      onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="—"
-                      value={row.weight ?? ''}
-                      onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeSetTargetRow(idx)}
-                      disabled={setTargetRows.length === 1}
-                      className="w-8 text-center text-gray-400 hover:text-red-500 disabled:opacity-30 text-base leading-none transition"
-                    >
-                      ×
-                    </button>
+                  <div key={idx} className="border border-gray-200 rounded-lg px-3 py-2.5 space-y-2">
+                    {/* Line 1: sets × reps + remove */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={row.sets || ''}
+                        onChange={(e) => updateSetTargetRow(idx, 'sets', e.target.value)}
+                        placeholder="3"
+                        className="w-14 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="text-sm text-gray-500 font-medium">sets ×</span>
+                      <input
+                        type="text"
+                        placeholder="5 or 4-6"
+                        value={row.reps}
+                        onChange={(e) => updateSetTargetRow(idx, 'reps', e.target.value)}
+                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="text-sm text-gray-500">reps</span>
+                      {setTargetRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSetTargetRow(idx)}
+                          className="text-gray-400 hover:text-red-500 text-xs font-medium transition ml-1"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {/* Line 2: weight */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">@</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="weight"
+                        value={row.weight ?? ''}
+                        onChange={(e) => updateSetTargetRow(idx, 'weight', e.target.value)}
+                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="text-sm text-gray-500">kg <span className="text-gray-400">(optional)</span></span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -503,64 +509,55 @@ export function ExercisePickerModal({
               >
                 + Add row
               </button>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rest (s) <span className="text-gray-400 font-normal">(optional)</span></label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="90"
-                  value={form.restPeriod}
-                  onChange={(e) => setForm({ ...form, restPeriod: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
             </div>
           ) : (
             /* Standard: sets / reps / RIR / rest */
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Sets {formErrors.targetSets && <span className="text-red-500 ml-0.5">*</span>}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.targetSets}
-                  onChange={(e) => { setForm({ ...form, targetSets: e.target.value }); setFormErrors({ ...formErrors, targetSets: '' }) }}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${formErrors.targetSets ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Reps</label>
-                <input
-                  type="text"
-                  placeholder="8-12"
-                  value={form.targetReps}
-                  onChange={(e) => setForm({ ...form, targetReps: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">RIR</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="2"
-                  value={form.targetRir}
-                  onChange={(e) => setForm({ ...form, targetRir: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Rest (s)</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="90"
-                  value={form.restPeriod}
-                  onChange={(e) => setForm({ ...form, restPeriod: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sets {formErrors.targetSets && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.targetSets}
+                    onChange={(e) => { setForm({ ...form, targetSets: e.target.value }); setFormErrors({ ...formErrors, targetSets: '' }) }}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${formErrors.targetSets ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reps</label>
+                  <input
+                    type="text"
+                    placeholder="8-12"
+                    value={form.targetReps}
+                    onChange={(e) => setForm({ ...form, targetReps: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RIR</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="2"
+                    value={form.targetRir}
+                    onChange={(e) => setForm({ ...form, targetRir: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rest (s)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="90"
+                    value={form.restPeriod}
+                    onChange={(e) => setForm({ ...form, restPeriod: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
               </div>
             </div>
           )}
