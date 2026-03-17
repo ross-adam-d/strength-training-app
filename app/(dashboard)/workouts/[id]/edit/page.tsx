@@ -401,15 +401,15 @@ export default function EditWorkoutPage() {
             ex.id === editingExercise
               ? {
                   ...ex,
-                  exercise: { id: result.exercise.id, name: result.exercise.name },
-                  targetSets: result.targetSets,
-                  targetReps: result.targetReps || null,
-                  targetRir: result.targetRir,
-                  tempo: result.tempo || null,
-                  restPeriod: result.restPeriod,
-                  supersetWithPrevious: result.supersetWithPrevious,
-                  notes: result.notes || null,
-                  setTargets: result.setTargets ?? null,
+                  exercise: { id: savedData.exercise.id, name: savedData.exercise.name },
+                  targetSets: savedData.targetSets,
+                  targetReps: savedData.targetReps ?? null,
+                  targetRir: savedData.targetRir ?? null,
+                  tempo: savedData.tempo ?? null,
+                  restPeriod: savedData.restPeriod ?? null,
+                  supersetWithPrevious: savedData.supersetWithPrevious,
+                  notes: savedData.notes ?? null,
+                  setTargets: (savedData.setTargets ?? null) as SetTarget[] | null,
                 }
               : ex
           )
@@ -420,15 +420,15 @@ export default function EditWorkoutPage() {
           {
             id: savedData.id,
             orderIndex: prev.length,
-            targetSets: result.targetSets,
-            targetReps: result.targetReps || null,
-            targetRir: result.targetRir,
-            tempo: result.tempo || null,
-            restPeriod: result.restPeriod,
-            supersetWithPrevious: result.supersetWithPrevious,
-            notes: result.notes || null,
-            setTargets: result.setTargets ?? null,
-            exercise: { id: result.exercise.id, name: result.exercise.name },
+            targetSets: savedData.targetSets,
+            targetReps: savedData.targetReps ?? null,
+            targetRir: savedData.targetRir ?? null,
+            tempo: savedData.tempo ?? null,
+            restPeriod: savedData.restPeriod ?? null,
+            supersetWithPrevious: savedData.supersetWithPrevious,
+            notes: savedData.notes ?? null,
+            setTargets: (savedData.setTargets ?? null) as SetTarget[] | null,
+            exercise: { id: savedData.exercise.id, name: savedData.exercise.name },
           },
         ])
       }

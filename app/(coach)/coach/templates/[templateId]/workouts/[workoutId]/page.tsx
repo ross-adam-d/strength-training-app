@@ -355,12 +355,12 @@ export default function TemplateWorkoutEditPage() {
         setExercises((prev) =>
           prev.map((ex) =>
             ex.id === editingExercise
-              ? { ...ex, exercise: { id: result.exercise.id, name: result.exercise.name }, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null, setTargets: result.setTargets ?? null }
+              ? { ...ex, exercise: { id: savedData.exercise.id, name: savedData.exercise.name }, targetSets: savedData.targetSets, targetReps: savedData.targetReps ?? null, targetRir: savedData.targetRir ?? null, tempo: savedData.tempo ?? null, restPeriod: savedData.restPeriod ?? null, supersetWithPrevious: savedData.supersetWithPrevious, notes: savedData.notes ?? null, setTargets: (savedData.setTargets ?? null) as SetTarget[] | null }
               : ex
           )
         )
       } else {
-        setExercises((prev) => [...prev, { id: savedData.id, orderIndex: prev.length, targetSets: result.targetSets, targetReps: result.targetReps || null, targetRir: result.targetRir, tempo: result.tempo || null, restPeriod: result.restPeriod, supersetWithPrevious: result.supersetWithPrevious, notes: result.notes || null, setTargets: result.setTargets ?? null, exercise: { id: result.exercise.id, name: result.exercise.name } }])
+        setExercises((prev) => [...prev, { id: savedData.id, orderIndex: prev.length, targetSets: savedData.targetSets, targetReps: savedData.targetReps ?? null, targetRir: savedData.targetRir ?? null, tempo: savedData.tempo ?? null, restPeriod: savedData.restPeriod ?? null, supersetWithPrevious: savedData.supersetWithPrevious, notes: savedData.notes ?? null, setTargets: (savedData.setTargets ?? null) as SetTarget[] | null, exercise: { id: savedData.exercise.id, name: savedData.exercise.name } }])
       }
       setEditingExercise(null)
       setAddingExercise(false)
