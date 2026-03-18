@@ -38,25 +38,24 @@
 
 ---
 
-## 🎯 Current Priorities
+## 🎯 Current Priorities (Session 80+)
 
-### Beta Operations (immediate)
-- [x] Beta access management deployed ✅
-- [x] Admin dashboard live at `/admin` ✅
-- [x] All existing users given 28-day trials ✅
-- [ ] Monitor beta users, extend trials as needed via admin dashboard
+### Test on Prod (next session start)
+- [ ] Prescribed exercise — reps show as greyed placeholder, weight pre-fills, inputs start empty
+- [ ] No "New PR!" on workout open for prescribed exercises
+- [ ] Coach: View Details on completed workout in phase editor works (no error)
+- [ ] View details: "Plan: N×reps" line under each exercise name
 
-### Post-Beta Features (next dev cycle)
-**Priority**: High post-beta
-- Progressive overload tracking + exercise analytics charts
-- Data export (CSV/PDF)
-- Stripe integration + email lifecycle (see separate beta plan doc)
-- **Equipment selection in block builder** *(advanced feature)*
-  - User selects available equipment when setting up a training block (e.g. barbell, dumbbell, cable, bodyweight)
-  - Exercise generation respects selection — only assigns exercises matching available equipment
-  - Affects `generate-workouts` API and split templates
-  - Store selection on Macrocycle or per-Mesocycle (TBD)
-  - UI: multi-select checkboxes in setup wizard / block builder
+### Growth / Monetisation
+- [ ] BETA30 coupon — create in Stripe, build redemption UI at checkout, sync via webhook
+- [ ] Beta thank-you email — send to existing users with BETA30 offer via Resend
+- [ ] LinkedIn outreach — message drafted, send to ~10 warm contacts
+
+### Coach Channel
+- [ ] Onboarding improvement — reduce friction so coaches' clients activate and stick
+
+### Marketing
+- [ ] Product Hunt prep — screenshots, demo video, pitch
 
 ---
 
@@ -90,4 +89,4 @@
 
 ---
 
-**Last Updated**: Mar 17, 2026 (Session 78 — Dashboard blank bug fixed)
+**Last Updated**: Mar 18, 2026 (Session 80 — Prescribed reps fix, coach View Details fix, plan vs actual deployed)

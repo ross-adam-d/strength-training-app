@@ -1792,3 +1792,57 @@ f249c4c - Phase Overview redesign (Tasks #1-3)
   - Or accept current behavior as acceptable
 
 🎉 **Phase 6A redesign complete! Clean, mobile-first phase overview with powerful edit capabilities.**
+
+---
+
+# Session 80 — Prescribed Reps Fix, Coach View Details, Plan vs Actual (2026-03-18)
+
+## Overview
+Testing of Session 79's prescribed exercise feature revealed three bugs and one UX gap. All fixed and deployed to production.
+
+## Branch
+`feature/coach-extension` | Commit: `c756ebb`
+
+## What Was Done
+
+### 1. Prescribed reps shown as placeholder only (not pre-filled)
+**Problem**: When a coach prescribed target reps (e.g. 3×8 @ 80kg), the reps value was pre-filled into the input — making every set appear already completed, triggering spurious "New PR!" detections on workout open.
+
+**Fix** (`app/(dashboard)/workouts/[id]/log/page.tsx`):
+- Added `prescribedHints` state: `Map<exerciseId, Map<setNumber, repHint>>`
+- Hint map built from `setTargets` always — on fresh start AND draft resume
+- Pre-fill now sets `reps: ''`; weight still pre-fills (prescribed load)
+- Reps inputs now use `prescribedHints` as placeholder (falls back to PO suggestion), so targets appear greyed-out and user must type actual reps
+
+### 2. Spurious "New PR!" on workout open — fixed as a side-effect
+PR detection logic: `if (!weightDisplay || !reps || reps <= 0) continue`. With reps now empty, the check short-circuits and no PR is awarded until the user logs actual reps.
+
+### 3. Coach "View Details" returning "Workout log not found"
+**Problem**: `/workout-logs/[id]` queried with `where: { id, userId: session.user.id }`. Coaches have a different `session.user.id` than the client, so the log was never found.
+
+**Fix** (`app/(dashboard)/workout-logs/[id]/page.tsx`):
+- Removed `userId` from the query filter
+- Added explicit access check: owner passes immediately; `COACH` role checks for active `CoachClientRelationship`
+- Unauthorised access still shows "Workout log not found" (same UX, no info leak)
+- Unit preference now sourced from `log.user.unitPreference` (log owner's preference)
+- Delete button hidden for coaches (API already rejects non-owners)
+
+### 4. Plan vs actual in workout log detail
+Both the user detail page and coach client detail page now show a plan line per exercise:
+- **Prescribed** (orange `text-orange-600`): `Plan: 3×8 @ 80kg · 2×6 @ 85kg`
+- **Standard** (grey `text-gray-400`): `Plan: 4×8-12`
+- No line for manual workouts (no clutter)
+
+Query extended to include `workout.workoutExercises` with `setTargets`, `targetSets`, `targetReps`.
+
+## Files Changed
+| File | Change |
+|------|--------|
+| `app/(dashboard)/workouts/[id]/log/page.tsx` | `prescribedHints` state; hints always built; reps pre-fill removed; placeholder updated |
+| `app/(dashboard)/workout-logs/[id]/page.tsx` | Coach access; plan vs actual; owner-only delete |
+| `app/(coach)/coach/clients/[clientId]/workout-logs/[logId]/page.tsx` | Plan vs actual |
+
+## Key Decisions
+- Weight still pre-fills for prescribed exercises (coach prescribed the load; reps is what the athlete achieves)
+- `prescribedHints` supports ranges ("8-10") as placeholders — not filtered out like the old pre-fill was
+- Access check order: owner → coach with active relationship → deny (same error message both ways)
