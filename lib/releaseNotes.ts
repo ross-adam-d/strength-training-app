@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-17b'
+export const CURRENT_RELEASE_ID = '2026-03-22'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-22',
+    date: 'March 22, 2026',
+    title: 'Bug fixes & community',
+    changes: [
+      'Deleted exercises no longer trigger incomplete-sets warning when completing a workout',
+      'Workout timer pause and reset now work correctly',
+      'Session volume and estimated 1RM charts now include unilateral exercises',
+      'Progressive overload: weight increases no longer blocked when reps exceed the target range',
+      'Join the PBX Community on WhatsApp — link in Settings',
+    ],
+  },
   {
     id: '2026-03-17b',
     date: 'March 17, 2026',

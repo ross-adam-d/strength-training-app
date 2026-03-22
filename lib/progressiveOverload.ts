@@ -65,9 +65,11 @@ export function getSuggestion(
   }
 
   // Determine eligibility for progression
+  // RIR 0 (failure) normally blocks progression, but if reps are at/above the top of the
+  // range the user is clearly strong enough to increase weight regardless.
   let eligible: boolean
   if (rir !== null && rir !== undefined) {
-    eligible = rir >= 1
+    eligible = rir >= 1 || lastReps >= repRange.max
   } else {
     eligible = lastReps >= repRange.min
   }

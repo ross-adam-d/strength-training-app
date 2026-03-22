@@ -215,6 +215,8 @@ export default function WorkoutLogPage() {
   const [workoutElapsed, setWorkoutElapsed] = useState(0)
   const [workoutTimerRunning, setWorkoutTimerRunning] = useState(true)
   const workoutTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pauseOffsetRef = useRef(0)
+  const pausedAtRef = useRef<number | null>(null)
 
   // Tracks exercises where the user has attempted completion with missing data
   // Invalidity is computed inline per-render from actual log values
@@ -589,12 +591,12 @@ export default function WorkoutLogPage() {
     }
   }, [])
 
-  // Workout stopwatch — uses wall clock so it stays accurate after backgrounding/lock
+  // Workout stopwatch — uses wall clock with pause offset so it stays accurate after backgrounding/lock
   useEffect(() => {
     if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
     if (!workoutTimerRunning) return
     workoutTimerRef.current = setInterval(() => {
-      setWorkoutElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000))
+      setWorkoutElapsed(Math.floor((Date.now() - startTime.getTime() - pauseOffsetRef.current) / 1000))
     }, 1000)
     return () => {
       if (workoutTimerRef.current) clearInterval(workoutTimerRef.current)
@@ -986,7 +988,14 @@ export default function WorkoutLogPage() {
   }
 
   async function handleComplete() {
-    const nonSkipped = exerciseLogs.filter((log) => !log.skipped)
+    // Build set of exercise IDs that belong to removed workout exercises
+    const removedExerciseIds = new Set(
+      workout?.workoutExercises
+        .filter((we) => removedExercises.has(we.id))
+        .map((we) => we.exercise.id) ?? []
+    )
+
+    const nonSkipped = exerciseLogs.filter((log) => !log.skipped && !removedExerciseIds.has(log.exerciseId))
 
     if (nonSkipped.length === 0) {
       alert('Please log at least one set before completing the workout')
@@ -1026,10 +1035,22 @@ export default function WorkoutLogPage() {
   }
 
   async function handleCompleteWithAutoSkip() {
+    // Build set of exercise IDs that belong to removed workout exercises
+    const removedExerciseIds = new Set(
+      workout?.workoutExercises
+        .filter((we) => removedExercises.has(we.id))
+        .map((we) => we.exercise.id) ?? []
+    )
+
     // Compute auto-skipped logs synchronously so we can pass them directly to saveWorkout,
     // avoiding any stale-closure timing issues with React state updates.
     const autoSkippedLogs = exerciseLogs.map((log) => {
       if (log.skipped) return log
+
+      // Auto-skip logs for removed exercises
+      if (removedExerciseIds.has(log.exerciseId)) {
+        return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
+      }
 
       const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
       const isUnilateral = workoutExercise?.exercise.isUnilateral || false
@@ -1251,13 +1272,32 @@ export default function WorkoutLogPage() {
                     {formatWorkoutTimer(workoutElapsed)}
                   </span>
                   <button
-                    onClick={() => setWorkoutTimerRunning((r) => !r)}
+                    onClick={() => {
+                      setWorkoutTimerRunning((r) => {
+                        if (r) {
+                          // Pausing — record when we paused
+                          pausedAtRef.current = Date.now()
+                        } else {
+                          // Resuming — accumulate pause duration
+                          if (pausedAtRef.current) {
+                            pauseOffsetRef.current += Date.now() - pausedAtRef.current
+                            pausedAtRef.current = null
+                          }
+                        }
+                        return !r
+                      })
+                    }}
                     className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
                   >
                     {workoutTimerRunning ? '⏸' : '▶'}
                   </button>
                   <button
-                    onClick={() => { setWorkoutElapsed(0); setWorkoutTimerRunning(true) }}
+                    onClick={() => {
+                      pauseOffsetRef.current = Date.now() - startTime.getTime()
+                      pausedAtRef.current = null
+                      setWorkoutElapsed(0)
+                      setWorkoutTimerRunning(true)
+                    }}
                     className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
                   >
                     ↺

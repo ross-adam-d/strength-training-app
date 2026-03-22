@@ -200,7 +200,8 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
   const weightProgressData = exerciseLogs.reduce(
     (acc: { date: string; maxWeight: number; estimated1RM: number }[], log) => {
       const date = formatDate(log.workoutLog.completedAt)
-      const est1RM = calculate1RM(log.weight, log.reps)
+      const effectiveReps = log.reps || ((log.repsLeft ?? 0) + (log.repsRight ?? 0))
+      const est1RM = calculate1RM(log.weight, effectiveReps)
       const existing = acc.find((item) => item.date === date)
       if (existing) {
         if (log.weight > existing.maxWeight) {
@@ -223,7 +224,8 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
     (acc: { date: string; volume: number; sets: number }[], log) => {
       const date = formatDate(log.workoutLog.completedAt)
       const existing = acc.find((item) => item.date === date)
-      const vol = kgToDisplay(log.weight * log.reps, unitPref)
+      const reps = log.reps || ((log.repsLeft ?? 0) + (log.repsRight ?? 0))
+      const vol = kgToDisplay(log.weight * reps, unitPref)
       if (existing) {
         existing.volume += vol
         existing.sets += 1
