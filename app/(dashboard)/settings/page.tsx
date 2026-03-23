@@ -287,7 +287,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardBody>
           <a
-            href="https://chat.whatsapp.com/PLACEHOLDER"
+            href="https://chat.whatsapp.com/HRrgrleguQc8Gcixj3rfrj"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#25D366] text-white text-sm font-medium rounded-md hover:bg-[#1da851] transition"
