@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-22'
+export const CURRENT_RELEASE_ID = '2026-03-24'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-24',
+    date: 'March 24, 2026',
+    title: 'Bug fix & community link',
+    changes: [
+      'Fixed exercise delete and edit not working for coaches on their own training blocks',
+      'WhatsApp Community invite link now live in Settings',
+    ],
+  },
   {
     id: '2026-03-22',
     date: 'March 22, 2026',
