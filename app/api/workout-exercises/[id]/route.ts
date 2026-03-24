@@ -64,10 +64,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isCoach = session.user.role === 'COACH'
-    const existing = isCoach
-      ? (await verifyCoachExerciseAccess(session.user.id, id) ? true : null)
-      : await verifyOwnership(id, session.user.id)
+    // Try ownership first (coach may be editing their own block as an athlete)
+    const existing = await verifyOwnership(id, session.user.id)
+      || (session.user.role === 'COACH' && await verifyCoachExerciseAccess(session.user.id, id))
     if (!existing) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
@@ -302,10 +301,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isCoachDelete = session.user.role === 'COACH'
-    const existingDelete = isCoachDelete
-      ? (await verifyCoachExerciseAccess(session.user.id, id) ? true : null)
-      : await verifyOwnership(id, session.user.id)
+    // Try ownership first (coach may be editing their own block as an athlete)
+    const existingDelete = await verifyOwnership(id, session.user.id)
+      || (session.user.role === 'COACH' && await verifyCoachExerciseAccess(session.user.id, id))
     if (!existingDelete) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }

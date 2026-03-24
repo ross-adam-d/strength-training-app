@@ -452,9 +452,12 @@ export default function EditWorkoutPage() {
       if (response.ok) {
         setExercises(exercises.filter((e) => e.id !== exerciseId))
         setExerciseToDelete(null)
+      } else {
+        alert('Failed to delete exercise. Please try again.')
       }
     } catch (error) {
       console.error('Error deleting exercise:', error)
+      alert('Network error. Please try again.')
     }
   }
 
