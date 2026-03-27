@@ -231,8 +231,8 @@ export default function PrivacyPage() {
             <p className="mt-3">
               <strong>pbX</strong><br />
               Email:{' '}
-              <a href="mailto:pbx.strengthtraining@gmail.com" className="text-orange-600 hover:text-orange-700">
-                pbx.strengthtraining@gmail.com
+              <a href="mailto:support@pbxstrength.com.au" className="text-orange-600 hover:text-orange-700">
+                support@pbxstrength.com.au
               </a>
             </p>
           </section>

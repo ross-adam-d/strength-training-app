@@ -542,8 +542,8 @@ export default function HowToPage() {
       <div className="text-center pb-4">
         <p className="text-sm text-gray-400">
           Questions or feedback?{' '}
-          <a href="mailto:pbx.strengthtraining@gmail.com" className="text-primary-600 hover:text-primary-700 transition">
-            pbx.strengthtraining@gmail.com
+          <a href="mailto:support@pbxstrength.com.au" className="text-primary-600 hover:text-primary-700 transition">
+            support@pbxstrength.com.au
           </a>
         </p>
       </div>

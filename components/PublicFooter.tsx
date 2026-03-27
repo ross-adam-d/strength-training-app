@@ -12,7 +12,7 @@ export default function PublicFooter() {
             <Link href="/login" className="hover:text-white transition">Log in</Link>
             <Link href="/register" className="hover:text-white transition">Register</Link>
             <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-            <a href="mailto:pbx.strengthtraining@gmail.com" className="hover:text-white transition">
+            <a href="mailto:support@pbxstrength.com.au" className="hover:text-white transition">
               Contact Us
             </a>
           </div>
