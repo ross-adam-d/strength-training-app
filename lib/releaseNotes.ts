@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-24'
+export const CURRENT_RELEASE_ID = '2026-03-28'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-03-28',
+    date: 'March 28, 2026',
+    title: 'Workout timer & contact updates',
+    changes: [
+      'Workout duration now correctly excludes time spent paused — your logged duration reflects actual training time',
+      'Updated support email across the app',
+    ],
+  },
   {
     id: '2026-03-24',
     date: 'March 24, 2026',
