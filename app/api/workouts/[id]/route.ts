@@ -253,10 +253,10 @@ export async function PATCH(
       const currentWeekNumber = workout.microcycle.weekNumber
       const originalName = workout.name
 
-      // Find all workouts with the same name in remaining weeks
+      // Find all workouts with the same name in remaining weeks, preserving recovery flag
       const remainingWorkouts = workout.microcycle.mesocycle.microcycles
         .filter((mic) => mic.weekNumber > currentWeekNumber)
-        .flatMap((mic) => mic.workouts)
+        .flatMap((mic) => mic.workouts.map((w) => ({ ...w, isRecovery: mic.isRecovery })))
         .filter((w) => w.name === originalName)
 
       // Fetch current workout's exercises to clone them
@@ -290,7 +290,7 @@ export async function PATCH(
           })
         )
 
-        // Clone current exercises to this workout
+        // Clone current exercises — reduce sets for recovery/deload weeks (60%, min 1)
         for (const ex of currentExercises) {
           transactionOps.push(
             prisma.workoutExercise.create({
@@ -298,7 +298,9 @@ export async function PATCH(
                 workoutId: w.id,
                 exerciseId: ex.exerciseId,
                 orderIndex: ex.orderIndex,
-                targetSets: ex.targetSets,
+                targetSets: w.isRecovery
+                  ? Math.max(1, Math.floor(ex.targetSets * 0.6))
+                  : ex.targetSets,
                 targetReps: ex.targetReps,
                 targetRpe: ex.targetRpe,
                 targetRir: ex.targetRir,
