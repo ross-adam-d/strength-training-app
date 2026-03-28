@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import DeleteWorkoutLogButton from './DeleteWorkoutLogButton'
+import UndoSkipButton from '@/components/UndoSkipButton'
 import { formatWeight, weightUnit } from '@/lib/units'
 import { formatSetTargets, SetTarget } from '@/lib/setTargets'
 
@@ -113,20 +114,27 @@ export default async function WorkoutLogDetailPage({
             ← Back to Dashboard
           </a>
         )}
-        <h1 className="text-lg font-bold text-gray-900 mt-2">
-          {log.workout?.name ?? 'Manual Workout'}
-        </h1>
+        <div className="flex items-center gap-2 mt-2">
+          <h1 className="text-lg font-bold text-gray-900">
+            {log.workout?.name ?? 'Manual Workout'}
+          </h1>
+          {log.skipped && (
+            <span className="px-2.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-md font-medium">
+              Skipped
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-600 mt-0.5">
           {new Date(log.completedAt).toLocaleDateString(undefined, {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
           })}
-          {log.duration && ` • ${log.duration} min`}
-          {log.overallRating && ` • ${log.overallRating}⭐`}
-          {log.overallRpe && ` • RPE ${log.overallRpe.toFixed(1)}`}
+          {!log.skipped && log.duration && ` • ${log.duration} min`}
+          {!log.skipped && log.overallRating && ` • ${log.overallRating}⭐`}
+          {!log.skipped && log.overallRpe && ` • RPE ${log.overallRpe.toFixed(1)}`}
         </p>
-        {log.notes && (
+        {log.notes && !log.skipped && (
           <p className="mt-2 text-sm text-gray-600 italic border-l-2 border-primary-300 pl-3">
             {log.notes}
           </p>
@@ -135,13 +143,23 @@ export default async function WorkoutLogDetailPage({
 
       <div className="px-4">
 
-        {exerciseOrder.length === 0 && (
+        {log.skipped ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+            <p className="text-gray-500 mb-4">This workout was skipped</p>
+            {isOwner && (
+              <UndoSkipButton workoutLogId={log.id} variant="detail" />
+            )}
+          </div>
+        ) : exerciseOrder.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
             <p className="text-gray-500">No exercises logged</p>
           </div>
-        )}
+        ) : null}
 
-        {exerciseOrder.map((exerciseId) => {
+        {!log.skipped && exerciseOrder.map((exerciseId) => {
           const sets = grouped.get(exerciseId)!
           const skippedCount = sets.filter((s) => s.skipped).length
           const completedSets = sets.filter((s) => !s.skipped)
@@ -223,8 +241,8 @@ export default async function WorkoutLogDetailPage({
         })}
       </div>
 
-      {/* Delete — owner only */}
-      {isOwner && (
+      {/* Delete — owner only, not for skipped (use Undo instead) */}
+      {isOwner && !log.skipped && (
         <div className="px-4 pt-4 pb-8">
           <DeleteWorkoutLogButton id={log.id} />
         </div>

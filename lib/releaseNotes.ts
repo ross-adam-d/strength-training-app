@@ -11,8 +11,10 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: '2026-03-28',
     date: 'March 28, 2026',
-    title: 'Workout timer & contact updates',
+    title: 'Skip workouts & timer fix',
     changes: [
+      'You can now skip workouts from the dashboard or phase overview — useful when you need to jump ahead to a deload week',
+      'Skipped workouts are clearly marked and can be undone at any time',
       'Workout duration now correctly excludes time spent paused — your logged duration reflects actual training time',
       'Updated support email across the app',
     ],

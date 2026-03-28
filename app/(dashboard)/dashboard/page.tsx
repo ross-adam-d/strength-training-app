@@ -10,6 +10,8 @@ import { getUnseenReleaseNotes } from '@/lib/releaseNotes'
 import { syncCheckoutSession } from '@/lib/billing'
 import { BillingSuccessRefresher } from '@/components/BillingSuccessRefresher'
 import { StatsCarousel } from '@/components/StatsCarousel'
+import SkipWorkoutButton from '@/components/SkipWorkoutButton'
+import UndoSkipButton from '@/components/UndoSkipButton'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -59,7 +61,7 @@ export default async function DashboardPage({
       select: { id: true, name: true },
     }),
     prisma.workoutLog.findMany({
-      where: { userId: session.user.id },
+      where: { userId: session.user.id, skipped: false },
       orderBy: { completedAt: 'desc' },
       take: 5,
       select: {
@@ -98,7 +100,7 @@ export default async function DashboardPage({
       name: string
       dayOfWeek: number | null
       estimatedDuration: number | null
-      workoutLogs: { id: string; completedAt: Date; duration: number | null }[]
+      workoutLogs: { id: string; completedAt: Date; duration: number | null; skipped: boolean }[]
     }[]
   } | null = null
 
@@ -125,7 +127,7 @@ export default async function DashboardPage({
         workoutLogs: {
           take: 1,
           orderBy: { completedAt: 'desc' as const },
-          select: { id: true, completedAt: true, duration: true },
+          select: { id: true, completedAt: true, duration: true, skipped: true },
         },
       },
     },
@@ -439,8 +441,10 @@ export default async function DashboardPage({
               <p className="px-6 py-6 text-sm text-gray-500 text-center">No workouts scheduled this week.</p>
             )}
             {sortedWorkouts.map((workout) => {
-              const isCompleted = workout.workoutLogs.length > 0
-              const isNext = workout.id === nextWorkoutId
+              const hasLog = workout.workoutLogs.length > 0
+              const isSkipped = workout.workoutLogs[0]?.skipped === true
+              const isCompleted = hasLog && !isSkipped
+              const isNext = !hasLog && workout.id === nextWorkoutId
               const logId = workout.workoutLogs[0]?.id
               const completedAt = workout.workoutLogs[0]?.completedAt
               const logDuration = workout.workoutLogs[0]?.duration
@@ -459,9 +463,17 @@ export default async function DashboardPage({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
-                      <span className={`font-medium truncate ${isCompleted ? 'text-gray-500' : 'text-gray-900'}`}>
+                      {isSkipped && (
+                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                      )}
+                      <span className={`font-medium truncate ${hasLog ? 'text-gray-500' : 'text-gray-900'}`}>
                         {workout.name}
                       </span>
+                      {isSkipped && (
+                        <span className="text-xs text-gray-400 font-medium">Skipped</span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-400 mt-0.5">
                       {isCompleted && completedAt
@@ -471,11 +483,13 @@ export default async function DashboardPage({
                           : 'Unscheduled'}
                       {isCompleted
                         ? logDuration ? ` · ${logDuration} min` : null
-                        : workout.estimatedDuration ? ` · ${workout.estimatedDuration} min` : null}
+                        : !isSkipped && workout.estimatedDuration ? ` · ${workout.estimatedDuration} min` : null}
                     </p>
                   </div>
 
-                  {isCompleted ? (
+                  {isSkipped ? (
+                    <UndoSkipButton workoutLogId={logId} variant="dashboard" />
+                  ) : isCompleted ? (
                     <Link
                       href={`/workout-logs/${logId}`}
                       className="ml-3 flex-shrink-0 px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition"
@@ -483,16 +497,19 @@ export default async function DashboardPage({
                       View
                     </Link>
                   ) : (
-                    <Link
-                      href={`/workouts/${workout.id}/log`}
-                      className={`ml-3 flex-shrink-0 px-4 py-1.5 text-sm rounded-md font-medium transition ${
-                        isNext
-                          ? 'bg-primary-600 text-white hover:bg-primary-700'
-                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      Start
-                    </Link>
+                    <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                      <SkipWorkoutButton workoutId={workout.id} variant="dashboard" />
+                      <Link
+                        href={`/workouts/${workout.id}/log`}
+                        className={`px-4 py-1.5 text-sm rounded-md font-medium transition ${
+                          isNext
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        Start
+                      </Link>
+                    </div>
                   )}
                 </div>
               )

@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import SkipWorkoutButton from '@/components/SkipWorkoutButton'
+import UndoSkipButton from '@/components/UndoSkipButton'
 
 interface Workout {
   id: string
@@ -14,6 +16,7 @@ interface Workout {
   workoutLogs: {
     id: string
     completedAt: string
+    skipped?: boolean
   }[]
 }
 
@@ -588,7 +591,9 @@ export default function MesocycleDetailPage() {
                 return (a.dayOfWeek ?? 999) - (b.dayOfWeek ?? 999)
               })
               .map((workout) => {
-                const isCompleted = workout.workoutLogs.length > 0
+                const hasLog = workout.workoutLogs.length > 0
+                const isSkipped = workout.workoutLogs[0]?.skipped === true
+                const isCompleted = hasLog && !isSkipped
                 const dayLabel =
                   workout.dayOfWeek !== null ? DAYS_OF_WEEK[workout.dayOfWeek] : 'Unscheduled'
 
@@ -609,7 +614,12 @@ export default function MesocycleDetailPage() {
                               ✓ Completed
                             </span>
                           )}
-                          {!isCompleted && inProgressWorkouts.has(workout.id) && (
+                          {isSkipped && (
+                            <span className="px-2.5 py-1 text-xs bg-gray-100 text-gray-500 rounded-md font-medium whitespace-nowrap flex-shrink-0">
+                              Skipped
+                            </span>
+                          )}
+                          {!hasLog && inProgressWorkouts.has(workout.id) && (
                             <span className="px-2.5 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
                               ⏳ In Progress
                             </span>
@@ -618,7 +628,21 @@ export default function MesocycleDetailPage() {
 
                         {/* Action Buttons */}
                         <div className="flex gap-2">
-                          {isCompleted ? (
+                          {isSkipped ? (
+                            <>
+                              <UndoSkipButton
+                                workoutLogId={workout.workoutLogs[0].id}
+                                variant="mesocycle"
+                                onUndone={() => window.location.reload()}
+                              />
+                              <button
+                                disabled
+                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed opacity-50"
+                              >
+                                Edit
+                              </button>
+                            </>
+                          ) : isCompleted ? (
                             <>
                               <button
                                 onClick={() => handleViewCompleted(workout.workoutLogs[0].id)}
@@ -641,6 +665,11 @@ export default function MesocycleDetailPage() {
                               >
                                 Start Workout
                               </button>
+                              <SkipWorkoutButton
+                                workoutId={workout.id}
+                                variant="mesocycle"
+                                onSkipped={() => window.location.reload()}
+                              />
                               <button
                                 onClick={() => handleEditWorkout(workout.id)}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"

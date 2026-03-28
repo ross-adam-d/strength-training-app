@@ -284,6 +284,7 @@ model WorkoutLog {
   notes             String?
   overallRating     Int?     // 1-5 rating
   overallRpe        Float?   // average exercise RPE (1-5 scale)
+  skipped           Boolean  @default(false)
 
   workoutId         String?
   workout           Workout? @relation(fields: [workoutId], references: [id], onDelete: Cascade)

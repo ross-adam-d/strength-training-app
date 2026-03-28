@@ -98,6 +98,7 @@ export async function GET(
                   select: {
                     id: true,
                     completedAt: true,
+                    skipped: true,
                   },
                   orderBy: {
                     completedAt: 'desc',
