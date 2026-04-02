@@ -134,19 +134,18 @@ export default async function DashboardPage({
   }
 
   if (activeBlock) {
-    // Prefer the earliest started week that still has incomplete workouts.
-    // This keeps a missed workout visible even after the calendar has moved on.
+    // Prefer the earliest week (across all phases) that still has incomplete workouts.
+    // No date constraint — if a phase is finished early, advance to the next phase immediately.
     currentMicro = await prisma.microcycle.findFirst({
       where: {
-        startDate: { lte: now },
         mesocycle: { macrocycleId: activeBlock.id },
         workouts: { some: { workoutLogs: { none: {} } } },
       },
-      orderBy: { weekNumber: 'asc' },
+      orderBy: { startDate: 'asc' },
       select: microSelect,
     })
 
-    // Fall back to the current calendar week when all started weeks are complete
+    // Fall back to the current calendar week when all weeks are complete
     if (!currentMicro) {
       currentMicro = await prisma.microcycle.findFirst({
         where: {
@@ -158,16 +157,14 @@ export default async function DashboardPage({
       })
     }
 
-    // Final fallback: show the earliest upcoming microcycle that has workouts.
-    // Handles coach-created plans where the first week starts in the future.
+    // Final fallback: the last week in the block (everything complete, no calendar match)
     if (!currentMicro) {
       currentMicro = await prisma.microcycle.findFirst({
         where: {
-          startDate: { gt: now },
           mesocycle: { macrocycleId: activeBlock.id },
           workouts: { some: {} },
         },
-        orderBy: { startDate: 'asc' },
+        orderBy: { startDate: 'desc' },
         select: microSelect,
       })
     }

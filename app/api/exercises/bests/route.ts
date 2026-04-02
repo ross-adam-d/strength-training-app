@@ -28,12 +28,16 @@ export async function GET(request: Request) {
     },
   })
 
-  const bests: Record<string, number> = {}
+  const bests: Record<string, { est1RM: number; maxWeight: number }> = {}
   for (const log of logs) {
     const effectiveReps = log.reps > 0 ? log.reps : (log.repsLeft ?? 0)
     const oneRM = estimate1RM(log.weight, effectiveReps)
-    if (!bests[log.exerciseId] || oneRM > bests[log.exerciseId]) {
-      bests[log.exerciseId] = oneRM
+    const prev = bests[log.exerciseId]
+    if (!prev) {
+      bests[log.exerciseId] = { est1RM: oneRM, maxWeight: log.weight }
+    } else {
+      if (oneRM > prev.est1RM) prev.est1RM = oneRM
+      if (log.weight > prev.maxWeight) prev.maxWeight = log.weight
     }
   }
 

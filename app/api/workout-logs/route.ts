@@ -10,6 +10,7 @@ const workoutLogSchema = z.object({
   notes: z.string().optional(),
   overallRating: z.number().int().min(1).max(5).optional(),
   overallRpe: z.number().optional(),
+  preWorkoutWellness: z.number().int().min(1).max(5).optional(),
   exerciseLogs: z.array(z.object({
     exerciseId: z.string(),
     setNumber: z.number().int().positive(),
@@ -136,6 +137,7 @@ export async function POST(request: Request) {
         notes: data.notes,
         overallRating: data.overallRating,
         overallRpe: data.overallRpe,
+        preWorkoutWellness: data.preWorkoutWellness,
         exerciseLogs: {
           create: data.exerciseLogs.map((log) => ({
             exerciseId: log.exerciseId,
@@ -178,6 +180,128 @@ export async function POST(request: Request) {
 
     if (statusUpdates.length > 0) {
       await Promise.all(statusUpdates)
+    }
+
+    // Auto-advance: if this workout completes the entire phase, compress dates and activate next phase
+    if (mesocycleId && macrocycleId && data.workoutId) {
+      const incompleteInPhase = await prisma.workout.count({
+        where: {
+          microcycle: { mesocycleId },
+          workoutLogs: { none: {} },
+          id: { not: data.workoutId }, // exclude the one we just logged
+        },
+      })
+
+      if (incompleteInPhase === 0) {
+        // This phase is fully complete — compress dates and shift subsequent phases
+        const now = new Date()
+        const completedPhase = await prisma.mesocycle.findUnique({
+          where: { id: mesocycleId },
+          select: { endDate: true, startDate: true },
+        })
+
+        if (completedPhase && completedPhase.endDate > now) {
+          // Phase finished early — compress endDate to today
+          const savedDays = Math.round(
+            (completedPhase.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          )
+
+          if (savedDays > 0) {
+            // Update the completed phase endDate
+            await prisma.mesocycle.update({
+              where: { id: mesocycleId },
+              data: { endDate: now, status: 'completed' },
+            })
+
+            // Shift all subsequent phases and their microcycles forward by savedDays
+            const laterPhases = await prisma.mesocycle.findMany({
+              where: {
+                macrocycleId,
+                startDate: { gt: completedPhase.startDate },
+              },
+              orderBy: { startDate: 'asc' },
+              select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                microcycles: {
+                  select: { id: true, startDate: true, endDate: true },
+                },
+              },
+            })
+
+            for (const phase of laterPhases) {
+              const newStart = new Date(phase.startDate.getTime() - savedDays * 86400000)
+              const newEnd = new Date(phase.endDate.getTime() - savedDays * 86400000)
+              await prisma.mesocycle.update({
+                where: { id: phase.id },
+                data: { startDate: newStart, endDate: newEnd },
+              })
+              for (const micro of phase.microcycles) {
+                await prisma.microcycle.update({
+                  where: { id: micro.id },
+                  data: {
+                    startDate: new Date(micro.startDate.getTime() - savedDays * 86400000),
+                    endDate: new Date(micro.endDate.getTime() - savedDays * 86400000),
+                  },
+                })
+              }
+            }
+
+            // Also update the microcycles within the completed phase (compress remaining weeks)
+            const completedMicros = await prisma.microcycle.findMany({
+              where: { mesocycleId, endDate: { gt: now } },
+              select: { id: true },
+            })
+            if (completedMicros.length > 0) {
+              await prisma.microcycle.updateMany({
+                where: { id: { in: completedMicros.map((m) => m.id) } },
+                data: { endDate: now },
+              })
+            }
+
+            // Activate the next phase if it exists and is planned
+            if (laterPhases.length > 0) {
+              await prisma.mesocycle.updateMany({
+                where: { id: laterPhases[0].id, status: 'planned' },
+                data: { status: 'active' },
+              })
+            }
+          } else {
+            // Phase finished on time — just mark complete and activate next
+            await prisma.mesocycle.update({
+              where: { id: mesocycleId },
+              data: { status: 'completed' },
+            })
+            const nextPhase = await prisma.mesocycle.findFirst({
+              where: { macrocycleId, startDate: { gt: completedPhase.startDate }, status: 'planned' },
+              orderBy: { startDate: 'asc' },
+            })
+            if (nextPhase) {
+              await prisma.mesocycle.update({
+                where: { id: nextPhase.id },
+                data: { status: 'active' },
+              })
+            }
+          }
+        } else if (completedPhase) {
+          // Phase finished at or after planned endDate — just mark complete
+          await prisma.mesocycle.update({
+            where: { id: mesocycleId },
+            data: { status: 'completed' },
+          })
+          const nextPhase = await prisma.mesocycle.findFirst({
+            where: { macrocycleId, startDate: { gt: completedPhase.startDate }, status: 'planned' },
+            orderBy: { startDate: 'asc' },
+          })
+          if (nextPhase) {
+            await prisma.mesocycle.update({
+              where: { id: nextPhase.id },
+              data: { status: 'active' },
+            })
+          }
+        }
+      }
     }
 
     return NextResponse.json(workoutLog, { status: 201 })

@@ -182,6 +182,10 @@ export default function WorkoutLogPage() {
   // Exercise-level RPE (1-5 scale: Too Easy → Too Much)
   const [exerciseRpes, setExerciseRpes] = useState<Record<string, number>>({})
 
+  // Pre-workout wellness check (1-5 scale)
+  const [wellnessChecked, setWellnessChecked] = useState(false)
+  const [preWorkoutWellness, setPreWorkoutWellness] = useState<number | null>(null)
+
   // Completed exercises tracking
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
   const [removedExercises, setRemovedExercises] = useState<Set<string>>(new Set())
@@ -232,7 +236,7 @@ export default function WorkoutLogPage() {
 
   // Progressive overload suggestions and all-time PR bests
   const [suggestions, setSuggestions] = useState<Map<string, Map<number, { weight: string; reps: string; duration?: string }>>>(new Map())
-  const [allTimeBests, setAllTimeBests] = useState<Record<string, number>>({})
+  const [allTimeBests, setAllTimeBests] = useState<Record<string, { est1RM: number; maxWeight: number }>>({})
   const lastSessionSet1 = useRef<Map<string, { weight: number; reps: number }>>(new Map())
 
   // Add exercise modal state
@@ -451,27 +455,41 @@ export default function WorkoutLogPage() {
   }, [params.id, loadDraft])
 
 
-  // Compute which sets are PRs (new all-time best estimated 1RM)
-  // Track session best per exercise so only the highest set in this session is flagged
+  // Compute which sets are PRs — triggers on new est 1RM record OR new max weight record
+  // Track session bests per exercise so only the single highest set is flagged per PR type
   const prSets = useMemo(() => {
     const result = new Set<string>()
-    const sessionBest: Record<string, number> = {}
+    const session1RM: Record<string, number> = {}
+    const sessionMaxWt: Record<string, number> = {}
     for (const log of exerciseLogs) {
       if (log.skipped) continue
       const weightDisplay = parseFloat(String(log.weight))
-      // For unilateral exercises reps live in repsLeft; fall back to it if reps is 0
       const reps = parseInt(String(log.reps)) || parseInt(String(log.repsLeft)) || 0
       if (!weightDisplay || !reps || weightDisplay <= 0 || reps <= 0) continue
       const weightKg = displayToKg(weightDisplay, unitPref)
       const oneRM = estimate1RM(weightKg, reps)
-      const historicalBest = allTimeBests[log.exerciseId] ?? 0
-      const currentBest = Math.max(historicalBest, sessionBest[log.exerciseId] ?? 0)
-      if (historicalBest > 0 && oneRM > currentBest) {
-        result.add(`${log.exerciseId}-${log.setNumber}`)
-        sessionBest[log.exerciseId] = oneRM
-      } else if (oneRM > (sessionBest[log.exerciseId] ?? 0)) {
-        sessionBest[log.exerciseId] = oneRM
+      const hist = allTimeBests[log.exerciseId]
+      const historicalEst = hist?.est1RM ?? 0
+      const historicalWt = hist?.maxWeight ?? 0
+      const hasHistory = historicalEst > 0 || historicalWt > 0
+
+      if (!hasHistory) {
+        // No prior logs — track session bests but don't flag as PR
+        if (oneRM > (session1RM[log.exerciseId] ?? 0)) session1RM[log.exerciseId] = oneRM
+        if (weightKg > (sessionMaxWt[log.exerciseId] ?? 0)) sessionMaxWt[log.exerciseId] = weightKg
+        continue
       }
+
+      const current1RM = Math.max(historicalEst, session1RM[log.exerciseId] ?? 0)
+      const currentMaxWt = Math.max(historicalWt, sessionMaxWt[log.exerciseId] ?? 0)
+      const is1RMPR = oneRM > current1RM
+      const isWeightPR = weightKg > currentMaxWt
+
+      if (is1RMPR || isWeightPR) {
+        result.add(`${log.exerciseId}-${log.setNumber}`)
+      }
+      if (oneRM > (session1RM[log.exerciseId] ?? 0)) session1RM[log.exerciseId] = oneRM
+      if (weightKg > (sessionMaxWt[log.exerciseId] ?? 0)) sessionMaxWt[log.exerciseId] = weightKg
     }
     return result
   }, [exerciseLogs, allTimeBests, unitPref])
@@ -486,6 +504,7 @@ export default function WorkoutLogPage() {
       completedExercises: Array.from(completedExercises),
       overallNotes,
       overallRating,
+      preWorkoutWellness,
       startTime: startTime.toISOString(),
       savedAt: new Date().toISOString(),
       // Timer persistence: save wall-clock end time so it can resume across navigation
@@ -495,7 +514,7 @@ export default function WorkoutLogPage() {
 
     localStorage.setItem(draftKey, JSON.stringify(draft))
     setLastSavedAt(new Date())
-  }, [workout, exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, startTime, draftKey])
+  }, [workout, exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, preWorkoutWellness, startTime, draftKey])
 
   useEffect(() => {
     fetchWorkout()
@@ -641,6 +660,10 @@ export default function WorkoutLogPage() {
     setCompletedExercises(new Set(draft.completedExercises))
     setOverallNotes(draft.overallNotes)
     setOverallRating(draft.overallRating)
+    if (draft.preWorkoutWellness != null) {
+      setPreWorkoutWellness(draft.preWorkoutWellness)
+      setWellnessChecked(true)
+    }
     setLastSavedAt(new Date(draft.savedAt))
 
     // Restore rest timer if it was still running when the user navigated away
@@ -713,6 +736,15 @@ export default function WorkoutLogPage() {
 
       setExerciseLogs((prevLogs) => [...prevLogs, ...newSets])
       setShowExercisePicker(false)
+
+      // Fetch historical best for the new exercise so PR detection works
+      try {
+        const bestsRes = await fetch(`/api/exercises/bests?ids=${result.exercise.id}`)
+        if (bestsRes.ok) {
+          const newBests = await bestsRes.json()
+          setAllTimeBests((prev) => ({ ...prev, ...newBests }))
+        }
+      } catch { /* non-critical */ }
     } catch (error) {
       console.error('Error adding exercise:', error)
       alert('Network error. Please try again.')
@@ -1094,6 +1126,7 @@ export default function WorkoutLogPage() {
       notes: overallNotes,
       overallRating,
       overallRpe,
+      preWorkoutWellness: preWorkoutWellness ?? undefined,
       exerciseLogs: logsToSave.map((log) => {
         if (log.skipped) {
           // Check if exercise is unilateral or timed
@@ -1248,6 +1281,55 @@ export default function WorkoutLogPage() {
 
   if (!workout) {
     return <div className="text-center py-8">Workout not found</div>
+  }
+
+  if (!wellnessChecked && !hasDraft) {
+    const wellnessLabels = [
+      { value: 1, label: 'Terrible', color: 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200' },
+      { value: 2, label: 'Poor', color: 'bg-orange-100 border-orange-300 text-orange-700 hover:bg-orange-200' },
+      { value: 3, label: 'Okay', color: 'bg-yellow-100 border-yellow-300 text-yellow-700 hover:bg-yellow-200' },
+      { value: 4, label: 'Good', color: 'bg-green-100 border-green-300 text-green-700 hover:bg-green-200' },
+      { value: 5, label: 'Great', color: 'bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200' },
+    ]
+    return (
+      <div className="max-w-md mx-auto mt-12 px-4">
+        <Card>
+          <CardBody>
+            <h2 className="text-lg font-semibold text-gray-900 text-center mb-2">How are you feeling today?</h2>
+            <p className="text-sm text-gray-500 text-center mb-6">Quick check before you start</p>
+            <div className="grid grid-cols-5 gap-2 mb-6">
+              {wellnessLabels.map(({ value, label, color }) => (
+                <button
+                  key={value}
+                  onClick={() => setPreWorkoutWellness(value)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-center ${
+                    preWorkoutWellness === value
+                      ? color.replace('hover:', '') + ' ring-2 ring-offset-1 ring-primary-500'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="text-lg font-bold">{value}</span>
+                  <span className="text-[10px] leading-tight font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+            <Button
+              onClick={() => setWellnessChecked(true)}
+              disabled={preWorkoutWellness === null}
+              className="w-full"
+            >
+              Start Workout
+            </Button>
+            <button
+              onClick={() => { setPreWorkoutWellness(null); setWellnessChecked(true) }}
+              className="w-full text-center text-sm text-gray-400 hover:text-gray-600 mt-3"
+            >
+              Skip
+            </button>
+          </CardBody>
+        </Card>
+      </div>
+    )
   }
 
   return (

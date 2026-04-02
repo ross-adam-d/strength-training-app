@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-03-28'
+export const CURRENT_RELEASE_ID = '2026-04-02'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,26 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-04-02',
+    date: 'April 2, 2026',
+    title: 'Finish early, move on',
+    changes: [
+      'Dashboard now advances to the next phase as soon as you finish all workouts — no more waiting for planned dates to catch up',
+      'Phase dates auto-compress when you finish early, and the next phase activates automatically',
+      'PR detection now triggers on new max weight, not just estimated 1RM — if you lift heavier than ever before, you\'ll see the badge',
+    ],
+  },
+  {
+    id: '2026-03-29',
+    date: 'March 29, 2026',
+    title: 'Smarter training readiness',
+    changes: [
+      'Training readiness score is now much more sensitive — catches stalling lifts, sustained high RPE, and gradual fatigue drift over 4-6 weeks',
+      'New pre-workout wellness check: quick "How are you feeling?" screen before each workout, factored into your readiness score',
+      'Lifts trend now shows "stalling" as a distinct category alongside improving and declining',
+    ],
+  },
   {
     id: '2026-03-28',
     date: 'March 28, 2026',
