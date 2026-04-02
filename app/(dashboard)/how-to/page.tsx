@@ -159,7 +159,7 @@ export default function HowToPage() {
           <HierarchyLayer
             label="Phase (Mesocycle)"
             example='e.g. "Accumulation — 6 weeks"'
-            description="A focused training period inside your block — typically 4–8 weeks. Each phase has a goal: accumulating volume, intensifying load, or recovering. Phases stack progressively."
+            description="A focused training period inside your block — typically 4–8 weeks. Each phase has a goal: accumulating volume, intensifying load, or recovering. Phases stack progressively. Finish a phase early and pbX automatically advances you to the next one — dates adjust so you never have to wait."
           />
           <div className="flex justify-center py-1">
             <svg className="w-4 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 16 20">
@@ -314,7 +314,7 @@ export default function HowToPage() {
             <div className="min-w-0 flex-1 space-y-2">
               <p className="font-semibold text-gray-900">Start logging</p>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Your dashboard shows this week&apos;s scheduled workouts. Tap a workout and hit Log — your phase activates automatically on your first logged session, no manual step required.
+                Your dashboard shows this week&apos;s scheduled workouts. Tap a workout and hit Log — your phase activates automatically on your first logged session, no manual step required. When you complete every workout in a phase, the dashboard advances to the next phase straight away — no need to wait for the planned dates.
               </p>
               <p className="text-sm text-gray-600 leading-relaxed">
                 Log your sets as you train: enter weight, reps completed, and RIR. Rate your overall session effort (RPE) at the end — this feeds your Training Readiness score in the Progress tab.
@@ -484,7 +484,7 @@ export default function HowToPage() {
               {[
                 ['Weight over time', "One bar per session — the weight you moved. A clear visual of whether you're progressing on each lift."],
                 ['Estimated 1RM', 'Calculated from your best set each session using an Epley-style formula. Tracks strength even when training in higher rep ranges.'],
-                ['PR badges', '"New PR!" appears in your workout log when you set a new estimated 1RM for an exercise in that session.'],
+                ['PR badges', '"New PR!" appears in your workout log when you set a new all-time record — either a new estimated 1RM or a heavier weight than you\'ve ever lifted on that exercise.'],
                 ['Performance summary', 'Max weight, best estimated 1RM, and total volume logged for the selected period.'],
               ].map(([term, desc]) => (
                 <li key={term as string} className="flex gap-2 text-sm text-gray-600">
