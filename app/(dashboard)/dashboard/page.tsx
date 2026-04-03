@@ -284,7 +284,10 @@ export default async function DashboardPage({
   const nextWorkoutId = sortedWorkouts.find((w) => w.workoutLogs.length === 0)?.id ?? null
 
   const totalWeeks = currentMicro?.mesocycle.microcycles.length ?? 0
-  const weekNumber = currentMicro?.weekNumber ?? 0
+  // Week number relative to the current phase (not absolute across the block)
+  const weekNumber = currentMicro
+    ? currentMicro.mesocycle.microcycles.findIndex((m) => m.id === currentMicro.id) + 1
+    : 0
   const progressPercent = totalWeeks > 0 ? Math.round((weekNumber / totalWeeks) * 100) : 0
 
   return (
