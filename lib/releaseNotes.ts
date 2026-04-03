@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-04-02'
+export const CURRENT_RELEASE_ID = '2026-04-03'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,14 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-04-03',
+    date: 'April 3, 2026',
+    title: 'Phase progress fix',
+    changes: [
+      'Fixed dashboard phase card showing cumulative week count (e.g. 7/6) instead of resetting for the current phase (e.g. 1/6)',
+    ],
+  },
   {
     id: '2026-04-02',
     date: 'April 2, 2026',
