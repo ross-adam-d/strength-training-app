@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-04-03'
+export const CURRENT_RELEASE_ID = '2026-04-09'
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-04-09',
+    date: 'April 9, 2026',
+    title: 'Exercise swap fixes',
+    changes: [
+      'Replacing an exercise during a workout now shows a form to set target sets and reps — replacement appears with the correct number of blank set rows',
+      'Completing a workout no longer flags replaced exercises as incomplete or skipped',
+      'Replaced exercises now appear in workout history in the same position as the original — not added to the bottom',
+      'Dashboard and workout history now use a narrower layout on desktop for easier reading',
+    ],
+  },
   {
     id: '2026-04-03',
     date: 'April 3, 2026',

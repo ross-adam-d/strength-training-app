@@ -43,6 +43,7 @@ export default async function WorkoutLogDetailPage({
               targetSets: true,
               targetReps: true,
               setTargets: true,
+              orderIndex: true,
             },
           },
         },
@@ -76,15 +77,15 @@ export default async function WorkoutLogDetailPage({
   const unitPref = (log.user?.unitPreference ?? 'metric') as 'metric' | 'imperial'
   const unit = unitPref === 'imperial' ? 'lbs' : 'kg'
 
-  // Build map from exerciseId → planned exercise data
-  const workoutExerciseMap = new Map<string, { targetSets: number; targetReps: string | null; setTargets: SetTarget[] | null }>(
+  // Build map from exerciseId → planned exercise data (including orderIndex for sorting)
+  const workoutExerciseMap = new Map<string, { targetSets: number; targetReps: string | null; setTargets: SetTarget[] | null; orderIndex: number }>(
     (log.workout?.workoutExercises ?? []).map((we) => [
       we.exerciseId,
-      { targetSets: we.targetSets, targetReps: we.targetReps, setTargets: we.setTargets as SetTarget[] | null },
+      { targetSets: we.targetSets, targetReps: we.targetReps, setTargets: we.setTargets as SetTarget[] | null, orderIndex: we.orderIndex },
     ])
   )
 
-  // Group by exercise, preserving order of first appearance
+  // Group by exercise, then sort by planned orderIndex so swapped exercises appear in their original slot
   const exerciseOrder: string[] = []
   const grouped = new Map<string, typeof log.exerciseLogs>()
   for (const el of log.exerciseLogs) {
@@ -95,6 +96,11 @@ export default async function WorkoutLogDetailPage({
     grouped.get(el.exercise.id)!.push(el)
   }
   grouped.forEach((sets) => sets.sort((a, b) => a.setNumber - b.setNumber))
+  exerciseOrder.sort((a, b) => {
+    const aIdx = workoutExerciseMap.get(a)?.orderIndex ?? 999
+    const bIdx = workoutExerciseMap.get(b)?.orderIndex ?? 999
+    return aIdx - bIdx
+  })
 
   const mesocycleId = log.workout?.microcycle?.mesocycle?.id
 

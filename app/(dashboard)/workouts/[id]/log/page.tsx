@@ -2126,13 +2126,83 @@ export default function WorkoutLogPage() {
         onAdd={async (result) => {
           if (!exerciseToSwap) return
           try {
+            const payload: Record<string, unknown> = { exerciseId: result.exercise.id }
+            if (result.setTargets && result.setTargets.length > 0) {
+              payload.setTargets = result.setTargets
+              payload.targetSets = result.setTargets.reduce((sum: number, st: { sets: number }) => sum + st.sets, 0)
+            } else {
+              payload.targetSets = result.targetSets
+              payload.targetReps = result.targetReps || null
+              payload.setTargets = null
+            }
+            payload.targetRir = result.targetRir
+            payload.restPeriod = result.restPeriod
+            payload.tempo = result.tempo || null
+            payload.notes = result.notes || null
+
             const response = await fetch(`/api/workout-exercises/${exerciseToSwap.workoutExerciseId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ exerciseId: result.exercise.id }),
+              body: JSON.stringify(payload),
             })
             if (response.ok) {
-              await fetchWorkout()
+              const oldExerciseId = exerciseToSwap.exerciseId
+              const newExerciseId = result.exercise.id
+              const newTargetSets = (payload.targetSets as number) || 3
+
+              // Update workout state directly — avoids calling fetchWorkout() which triggers
+              // the draft-resume modal (loadDraft finds the active draft and shows it again).
+              setWorkout((prev) => {
+                if (!prev) return prev
+                return {
+                  ...prev,
+                  workoutExercises: prev.workoutExercises.map((we) =>
+                    we.id === exerciseToSwap.workoutExerciseId
+                      ? {
+                          ...we,
+                          exercise: {
+                            id: result.exercise.id,
+                            name: result.exercise.name,
+                            isUnilateral: result.exercise.isUnilateral,
+                            isTimed: result.exercise.isTimed,
+                            isBodyweight: result.exercise.isBodyweight,
+                            equipment: result.exercise.equipment,
+                          },
+                          targetSets: newTargetSets,
+                          targetReps: result.targetReps || '',
+                          targetRir: result.targetRir ?? undefined,
+                          restPeriod: result.restPeriod ?? undefined,
+                          tempo: result.tempo ?? undefined,
+                          notes: result.notes ?? undefined,
+                          setTargets: result.setTargets ?? null,
+                        }
+                      : we
+                  ),
+                }
+              })
+
+              // Replace old exercise's blank log slots with new blank slots for the replacement
+              setExerciseLogs((prev) => {
+                const without = prev.filter((l) => l.exerciseId !== oldExerciseId)
+                const newLogs = Array.from({ length: newTargetSets }, (_, i) => ({
+                  exerciseId: newExerciseId,
+                  setNumber: i + 1,
+                  reps: '',
+                  weight: '',
+                  rir: undefined,
+                  notes: '',
+                  skipped: false,
+                }))
+                return [...without, ...newLogs]
+              })
+
+              // Fetch bests for the replacement exercise
+              const bestsRes = await fetch(`/api/exercises/bests?ids=${newExerciseId}`)
+              if (bestsRes.ok) {
+                const newBests = await bestsRes.json()
+                setAllTimeBests((prev) => ({ ...prev, ...newBests }))
+              }
+
               setExerciseToSwap(null)
             } else {
               alert('Failed to swap exercise')
@@ -2141,7 +2211,7 @@ export default function WorkoutLogPage() {
             alert('Failed to swap exercise')
           }
         }}
-        mode="log"
+        mode="plan"
         existingExerciseIds={workout?.workoutExercises.filter(we => we.exercise.id !== exerciseToSwap?.exerciseId).map(we => we.exercise.id) ?? []}
         title={exerciseToSwap ? `Swap: ${exerciseToSwap.name}` : 'Swap Exercise'}
       />

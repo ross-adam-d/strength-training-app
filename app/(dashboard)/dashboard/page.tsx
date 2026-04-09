@@ -291,7 +291,7 @@ export default async function DashboardPage({
   const progressPercent = totalWeeks > 0 ? Math.round((weekNumber / totalWeeks) * 100) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
 
       {/* Billing return banners */}
       {billing === 'success' && (
