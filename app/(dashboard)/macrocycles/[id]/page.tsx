@@ -75,6 +75,50 @@ export default function MacrocycleDetailPage() {
   const [rebuildModal, setRebuildModal] = useState<Mesocycle | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [savedTemplates, setSavedTemplates] = useState<Record<string, { templateId: string; name: string } | 'saving' | 'error'>>({})
+  const [resizeModal, setResizeModal] = useState<{ phase: Mesocycle; newWeekCount: number; phaseIndex: number } | null>(null)
+  const [endPhaseModal, setEndPhaseModal] = useState<{ phase: Mesocycle; phaseIndex: number } | null>(null)
+  const [resizing, setResizing] = useState<string | null>(null)
+  const [endingPhase, setEndingPhase] = useState<string | null>(null)
+
+  async function handleResize(phaseId: string, newWeekCount: number) {
+    setResizeModal(null)
+    setResizing(phaseId)
+    try {
+      const res = await fetch(`/api/mesocycles/${phaseId}/resize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekCount: newWeekCount }),
+      })
+      if (res.ok) {
+        await fetchMacrocycle()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to resize phase')
+      }
+    } catch {
+      alert('Failed to resize phase')
+    } finally {
+      setResizing(null)
+    }
+  }
+
+  async function handleEndPhase(phaseId: string) {
+    setEndPhaseModal(null)
+    setEndingPhase(phaseId)
+    try {
+      const res = await fetch(`/api/mesocycles/${phaseId}/end-early`, { method: 'POST' })
+      if (res.ok) {
+        await fetchMacrocycle()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to end phase')
+      }
+    } catch {
+      alert('Failed to end phase')
+    } finally {
+      setEndingPhase(null)
+    }
+  }
 
   async function handleSaveAsTemplate(phaseId: string) {
     setSavedTemplates((prev) => ({ ...prev, [phaseId]: 'saving' }))
@@ -390,181 +434,112 @@ export default function MacrocycleDetailPage() {
   const isReadOnly = isCoachCreated && !isViewingAsCoach
 
   return (
-    <div>
-      <div className="mb-6">
-        <Link
-          href={isViewingAsCoach ? `/coach/clients/${macrocycle.userId}/blocks` : '/macrocycles'}
-          className="text-primary-600 hover:text-primary-700 text-sm"
-        >
-          {isViewingAsCoach ? '← Back to Client Blocks' : '← Back to Training Blocks'}
-        </Link>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-4">
+      <Link
+        href={isViewingAsCoach ? `/coach/clients/${macrocycle.userId}/blocks` : '/macrocycles'}
+        className="text-primary-500 hover:text-primary-400 text-xs font-medium inline-block"
+      >
+        {isViewingAsCoach ? '← Back to Client Blocks' : '← Back to Training Blocks'}
+      </Link>
 
       {isReadOnly && (
-        <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3.5 flex items-start gap-3">
-          <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3.5 flex items-start gap-3">
+          <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-sm text-blue-700">
-            This block was created by your coach. You can log workouts but editing the structure is disabled.
-          </p>
+          <p className="text-xs text-blue-700">This block was created by your coach. You can log workouts but editing the structure is disabled.</p>
         </div>
       )}
 
-      <Card className="mb-8">
-        <CardBody>
-          {/* Title row */}
-          {!isReadOnly && editingName ? (
-            <div className="flex items-center gap-2 mb-2">
-              <Input
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                autoFocus
-              />
-              <Button size="sm" onClick={handleSaveName}>Save</Button>
-              <Button size="sm" variant="secondary" onClick={() => {
-                setEditedName(macrocycle.name)
-                setEditingName(false)
-              }}>Cancel</Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900 flex-1">{macrocycle.name}</h1>
-              {!isReadOnly && (
-                <button
-                  onClick={() => setEditingName(true)}
-                  className="text-gray-400 hover:text-primary-600 text-lg leading-none"
-                  title="Edit name"
-                >
-                  ✎
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Dates row */}
-          {!isReadOnly && editingDates ? (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <input
-                type="date"
-                value={editedStartDate}
-                onChange={(e) => setEditedStartDate(e.target.value)}
-                className="px-2 py-1 border rounded text-sm"
-              />
-              <span className="text-gray-400">–</span>
-              <input
-                type="date"
-                value={editedEndDate}
-                onChange={(e) => setEditedEndDate(e.target.value)}
-                className="px-2 py-1 border rounded text-sm"
-              />
-              <Button size="sm" onClick={handleSaveDates}>Save</Button>
-              <Button size="sm" variant="secondary" onClick={() => {
-                setEditedStartDate(macrocycle.startDate.split('T')[0])
-                setEditedEndDate(macrocycle.endDate.split('T')[0])
-                setEditingDates(false)
-              }}>Cancel</Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-sm text-gray-500">
-                {new Date(macrocycle.startDate).toLocaleDateString()} –{' '}
-                {new Date(macrocycle.endDate).toLocaleDateString()} ({duration} weeks)
-              </p>
-              {!isReadOnly && (
-                <button
-                  onClick={() => setEditingDates(true)}
-                  className="text-gray-400 hover:text-primary-600 text-lg leading-none"
-                  title="Edit dates"
-                >
-                  ✎
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Status + Delete row */}
-          <div className="flex items-center gap-2 pt-1 border-t">
-            <Select
-              options={[
-                { value: 'planned', label: 'Planned' },
-                { value: 'active', label: 'Active' },
-                { value: 'paused', label: 'Paused' },
-                { value: 'completed', label: 'Completed' },
-              ]}
-              value={macrocycle.status}
-              onChange={(e) => handleStatusChange(e.target.value as 'planned' | 'active' | 'paused' | 'completed')}
-            />
+      {/* Block header — dark tile */}
+      <div className="bg-gray-900 rounded-2xl shadow-md px-6 py-5">
+        {/* Title */}
+        {!isReadOnly && editingName ? (
+          <div className="flex items-center gap-2 mb-3">
+            <Input value={editedName} onChange={(e) => setEditedName(e.target.value)} autoFocus className="flex-1" />
+            <Button size="sm" onClick={handleSaveName}>Save</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setEditedName(macrocycle.name); setEditingName(false) }}>Cancel</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-base font-semibold text-white flex-1">{macrocycle.name}</h1>
             {!isReadOnly && (
-              <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
-                Delete
-              </Button>
+              <button onClick={() => setEditingName(true)} className="text-gray-500 hover:text-gray-300 text-lg leading-none" title="Edit name">✎</button>
             )}
           </div>
+        )}
 
-          {macrocycle.description && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-gray-600 text-sm">{macrocycle.description}</p>
-            </div>
+        {/* Dates */}
+        {!isReadOnly && editingDates ? (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <input type="date" value={editedStartDate} onChange={(e) => setEditedStartDate(e.target.value)} className="px-2 py-1 border border-gray-600 bg-gray-800 text-white rounded text-xs" />
+            <span className="text-gray-500">–</span>
+            <input type="date" value={editedEndDate} onChange={(e) => setEditedEndDate(e.target.value)} className="px-2 py-1 border border-gray-600 bg-gray-800 text-white rounded text-xs" />
+            <Button size="sm" onClick={handleSaveDates}>Save</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setEditedStartDate(macrocycle.startDate.split('T')[0]); setEditedEndDate(macrocycle.endDate.split('T')[0]); setEditingDates(false) }}>Cancel</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-xs text-gray-400">
+              {new Date(macrocycle.startDate).toLocaleDateString('en-AU')} – {new Date(macrocycle.endDate).toLocaleDateString('en-AU')} · {duration} weeks
+            </p>
+            {!isReadOnly && (
+              <button onClick={() => setEditingDates(true)} className="text-gray-500 hover:text-gray-300 text-base leading-none" title="Edit dates">✎</button>
+            )}
+          </div>
+        )}
+
+        {/* Status + Delete */}
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-700">
+          <select
+            value={macrocycle.status}
+            onChange={(e) => handleStatusChange(e.target.value as 'planned' | 'active' | 'paused' | 'completed')}
+            className="px-3 py-1.5 text-sm font-medium bg-gray-800 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="planned">Planned</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="completed">Completed</option>
+          </select>
+          {!isReadOnly && (
+            <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>Delete</Button>
           )}
-        </CardBody>
-      </Card>
+        </div>
 
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Training Phases</h2>
+        {macrocycle.description && (
+          <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-700">{macrocycle.description}</p>
+        )}
       </div>
 
+      {/* Training Phases */}
+      <p className="text-sm font-medium text-gray-700 pt-2">Training Phases</p>
+
       {macrocycle.mesocycles.length === 0 ? (
-        <Card>
-          <CardBody>
-            <div className="text-center py-12">
-              <p className="text-gray-600">No phases in this block yet.</p>
-            </div>
-          </CardBody>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-md px-6 py-12 text-center">
+          <p className="text-sm text-gray-500">No phases in this block yet.</p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {macrocycle.mesocycles.map((phase, index) => {
             const isExpanded = expandedPhases.has(phase.id)
             const weekCount = phase.microcycles.length
-            // Only lock phases that have actually started AND have been activated/completed.
-            // Future phases (startDate > today) are always editable regardless of status.
             const phaseHasStarted = new Date(phase.startDate) <= new Date()
             const isLocked = phaseHasStarted && (phase.status === 'active' || phase.status === 'completed')
+            const isEditable = !(isLocked && !isViewingAsCoach) && !isReadOnly
 
             return (
-              <Card key={phase.id}>
-                <CardBody>
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
-                    onClick={() => togglePhase(phase.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg text-gray-400">{isExpanded ? '▼' : '▶'}</span>
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-900">
-                          Phase {index + 1}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          {new Date(phase.startDate).toLocaleDateString()} – {new Date(phase.endDate).toLocaleDateString()}
-                          {' '}· {weekCount} {weekCount === 1 ? 'week' : 'weeks'}
-                        </p>
-                      </div>
-                    </div>
+              <div key={phase.id} className="bg-white rounded-2xl shadow-md overflow-hidden">
+                {/* Orange header — clickable */}
+                <div
+                  className="bg-primary-600 px-5 py-4 cursor-pointer"
+                  onClick={() => togglePhase(phase.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-white">Phase {index + 1}</h3>
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {isLocked && (
-                        <span className="text-xs text-gray-400">🔒</span>
-                      )}
+                      {isLocked && <span className="text-primary-200 text-xs">🔒</span>}
                       {phase.status && (
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            phase.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : phase.status === 'completed'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-white/20 text-white">
                           {phase.status}
                         </span>
                       )}
@@ -572,89 +547,130 @@ export default function MacrocycleDetailPage() {
                         <button
                           type="button"
                           onClick={() => handleActivatePhase(phase.id)}
-                          className="px-2 py-1 text-xs font-medium rounded-full bg-primary-600 text-white hover:bg-primary-700 transition"
+                          className="px-2 py-0.5 text-xs font-medium rounded-full bg-white text-primary-700 hover:bg-primary-50 transition"
                         >
                           Activate
                         </button>
                       )}
+                      <span className="text-primary-200 text-xs ml-1">{isExpanded ? '▼' : '▶'}</span>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-xs text-primary-200">
+                      {new Date(phase.startDate).toLocaleDateString('en-AU')} – {new Date(phase.endDate).toLocaleDateString('en-AU')}
+                    </p>
+                    <p className="text-xs text-primary-200 font-medium">{weekCount} {weekCount === 1 ? 'week' : 'weeks'}</p>
+                  </div>
+                </div>
 
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t space-y-4">
-                      {isLocked && !isReadOnly && !isViewingAsCoach && (
-                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                          Phase has started — configuration is locked.
-                        </p>
-                      )}
-                      {!isLocked && !isCoachCreated && dirtyStructure.has(phase.id) && (
-                        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">
-                          Days/split updated. Click &quot;Update Workouts&quot; below to apply the new structure.
-                        </p>
-                      )}
-                      <div className="grid md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Training Goal
-                          </label>
-                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
-                            <p className="text-sm text-gray-600 py-2">{phase.goal || '—'}</p>
-                          ) : (
-                            <Select
-                              options={GOAL_OPTIONS}
-                              value={phase.goal || ''}
-                              onChange={(e) => handleUpdatePhaseGoal(phase.id, e.target.value)}
-                            />
-                          )}
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="px-5 py-4 space-y-4">
+                    {phase.status === 'completed' ? (
+                      <>
+                        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                          <span className="text-gray-400 text-base">✓</span>
+                          <div>
+                            <p className="text-xs font-medium text-gray-600">Phase complete</p>
+                            {phase.goal && <p className="text-xs text-gray-400 mt-0.5">{phase.goal} · {weekCount} {weekCount === 1 ? 'week' : 'weeks'}</p>}
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Training Days Per Week
-                          </label>
-                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
-                            <p className="text-sm text-gray-600 py-2">
-                              {phase.trainingDaysPerWeek ? `${phase.trainingDaysPerWeek} days/week` : '—'}
-                            </p>
-                          ) : (
-                            <Select
-                              options={[
-                                { value: '', label: 'Select days...' },
-                                { value: '2', label: '2 days/week' },
-                                { value: '3', label: '3 days/week' },
-                                { value: '4', label: '4 days/week' },
-                                { value: '5', label: '5 days/week' },
-                                { value: '6', label: '6 days/week' },
-                                { value: '7', label: '7 days/week' },
-                              ]}
-                              value={phase.trainingDaysPerWeek?.toString() || ''}
-                              onChange={(e) => handleUpdateTrainingDays(phase.id, parseInt(e.target.value))}
-                            />
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Training Split
-                          </label>
-                          {(isLocked && !isViewingAsCoach) || isReadOnly ? (
-                            <p className="text-sm text-gray-600 py-2">{phase.trainingSplit || '—'}</p>
-                          ) : (
-                            <Select
-                              options={getSplitOptions(phase.trainingDaysPerWeek ?? null)}
-                              value={phase.trainingSplit || ''}
-                              onChange={(e) => handleUpdateTrainingSplit(phase.id, e.target.value)}
-                            />
-                          )}
-                        </div>
+                        <Link
+                          href={`/mesocycles/${phase.id}`}
+                          className="block w-full text-center text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-xl py-2.5 transition"
+                        >
+                          View Phase Details →
+                        </Link>
+                      </>
+                    ) : (
+                    <>
+                    {!isLocked && !isCoachCreated && dirtyStructure.has(phase.id) && (
+                      <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+                        Days/split updated. Click &quot;Update Workouts&quot; below to apply the new structure.
+                      </p>
+                    )}
+
+                    {/* Side-by-side config rows */}
+                    <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <p className="text-xs font-medium text-gray-500">Training Goal</p>
+                        {isEditable ? (
+                          <select
+                            value={phase.goal || ''}
+                            onChange={(e) => handleUpdatePhaseGoal(phase.id, e.target.value)}
+                            className="text-xs font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 w-36"
+                          >
+                            {GOAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        ) : (
+                          <p className="text-xs font-medium text-gray-900">{phase.goal || '—'}</p>
+                        )}
                       </div>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <p className="text-xs font-medium text-gray-500">Days Per Week</p>
+                        {isEditable ? (
+                          <select
+                            value={phase.trainingDaysPerWeek?.toString() || ''}
+                            onChange={(e) => handleUpdateTrainingDays(phase.id, parseInt(e.target.value))}
+                            className="text-xs font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 w-36"
+                          >
+                            <option value="">Select days...</option>
+                            {['2','3','4','5','6','7'].map((d) => <option key={d} value={d}>{d} days/week</option>)}
+                          </select>
+                        ) : (
+                          <p className="text-xs font-medium text-gray-900">{phase.trainingDaysPerWeek ? `${phase.trainingDaysPerWeek} days/week` : '—'}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <p className="text-xs font-medium text-gray-500">Training Split</p>
+                        {isEditable ? (
+                          <select
+                            value={phase.trainingSplit || ''}
+                            onChange={(e) => handleUpdateTrainingSplit(phase.id, e.target.value)}
+                            className="text-xs font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 w-36"
+                          >
+                            {getSplitOptions(phase.trainingDaysPerWeek ?? null).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        ) : (
+                          <p className="text-xs font-medium text-gray-900">{phase.trainingSplit || '—'}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <p className="text-xs font-medium text-gray-500">Phase Length</p>
+                        {phase.status !== 'completed' && !isReadOnly ? (
+                          <select
+                            value={phase.microcycles.length}
+                            onChange={(e) => {
+                              const n = parseInt(e.target.value)
+                              if (n !== phase.microcycles.length) {
+                                setResizeModal({ phase, newWeekCount: n, phaseIndex: index + 1 })
+                              }
+                            }}
+                            disabled={resizing === phase.id}
+                            className="text-xs font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 w-36 disabled:opacity-50"
+                          >
+                            {Array.from({ length: 16 }, (_, i) => i + 1).map((w) => (
+                              <option key={w} value={w}>{w} {w === 1 ? 'week' : 'weeks'}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-xs font-medium text-gray-900">
+                            {phase.microcycles.length} {phase.microcycles.length === 1 ? 'week' : 'weeks'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
+                    {/* Action buttons */}
+                    <div className="space-y-2">
                       {!isLocked && !isCoachCreated && phase.trainingDaysPerWeek && phase.trainingSplit && (
                         <button
                           type="button"
                           onClick={() => handleUpdateStructure(phase)}
                           disabled={updatingStructure === phase.id}
-                          className={`block w-full text-center text-sm font-medium rounded-lg py-2 transition border ${
+                          className={`block w-full text-center text-xs font-medium rounded-xl py-2.5 transition border ${
                             dirtyStructure.has(phase.id)
-                              ? 'text-white bg-blue-600 hover:bg-blue-700 border-blue-700'
+                              ? 'text-white bg-primary-600 hover:bg-primary-700 border-primary-700'
                               : 'text-gray-600 bg-gray-50 hover:bg-gray-100 border-gray-200'
                           } disabled:opacity-50`}
                         >
@@ -663,21 +679,17 @@ export default function MacrocycleDetailPage() {
                       )}
                       <Link
                         href={`/mesocycles/${phase.id}`}
-                        className="block w-full text-center text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg py-2 transition"
+                        className="block w-full text-center text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-xl py-2.5 transition"
                       >
                         View Phase Details →
                       </Link>
-
-                      {/* Save as Template — coach only, when phase has workouts */}
                       {authSession?.user?.role === 'COACH' && phase.microcycles.some((mc) => mc.workouts.length > 0) && (() => {
                         const ts = savedTemplates[phase.id]
                         if (ts && ts !== 'saving' && ts !== 'error') {
                           return (
-                            <p className="text-center text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg py-2">
+                            <p className="text-center text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-xl py-2.5">
                               Saved as &ldquo;{ts.name}&rdquo;{' '}
-                              <a href={`/coach/templates/${ts.templateId}`} className="underline font-medium">
-                                View template →
-                              </a>
+                              <a href={`/coach/templates/${ts.templateId}`} className="underline font-medium text-primary-600">View template →</a>
                             </p>
                           )
                         }
@@ -686,16 +698,28 @@ export default function MacrocycleDetailPage() {
                             type="button"
                             onClick={() => handleSaveAsTemplate(phase.id)}
                             disabled={ts === 'saving'}
-                            className="block w-full text-center text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg py-2 transition disabled:opacity-50"
+                            className="block w-full text-center text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl py-2.5 transition disabled:opacity-50"
                           >
                             {ts === 'saving' ? 'Saving…' : '📋 Save Phase as Template'}
                           </button>
                         )
                       })()}
+                      {phase.status !== 'completed' && !isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={() => setEndPhaseModal({ phase, phaseIndex: index + 1 })}
+                          disabled={endingPhase === phase.id}
+                          className="block w-full text-center text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl py-2.5 transition disabled:opacity-50"
+                        >
+                          {endingPhase === phase.id ? 'Ending phase...' : '⏹ End Phase Early'}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </CardBody>
-              </Card>
+                    </>
+                    )}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
@@ -789,6 +813,112 @@ export default function MacrocycleDetailPage() {
                   className="w-full text-sm text-gray-500 hover:text-gray-700 py-2"
                 >
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Resize phase modal */}
+      {resizeModal && (() => {
+        const { phase, newWeekCount, phaseIndex } = resizeModal
+        const currentCount = phase.microcycles.length
+        const diff = Math.abs(newWeekCount - currentCount)
+        const isAdding = newWeekCount > currentCount
+        const daysDiff = diff * 7
+        const hasLaterPhases = macrocycle!.mesocycles.indexOf(phase) < macrocycle!.mesocycles.length - 1
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="p-5 border-b">
+                <h2 className="text-lg font-bold text-gray-900">
+                  {isAdding ? `Add ${diff} Week${diff > 1 ? 's' : ''}` : `Remove ${diff} Week${diff > 1 ? 's' : ''}`}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">Phase {phaseIndex} · {currentCount} → {newWeekCount} {newWeekCount === 1 ? 'week' : 'weeks'}</p>
+              </div>
+              <div className="p-5">
+                {isAdding ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-2">
+                    <p className="text-sm text-blue-800">
+                      {diff} week{diff > 1 ? 's' : ''} will be added to this phase. Workouts will be copied from week 1 of this phase.
+                    </p>
+                    {hasLaterPhases && (
+                      <p className="text-sm text-blue-700">All subsequent phases will shift {daysDiff} days later.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-2">
+                    <p className="text-sm text-amber-800">
+                      The last {diff} week{diff > 1 ? 's' : ''} will be removed from this phase. Any workouts in those weeks will be permanently deleted.
+                    </p>
+                    {hasLaterPhases && (
+                      <p className="text-sm text-amber-700">All subsequent phases will shift {daysDiff} days earlier.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="px-5 pb-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setResizeModal(null)}
+                  className="flex-1 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-2.5 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleResize(phase.id, newWeekCount)}
+                  className={`flex-1 text-sm font-medium text-white rounded-xl py-2.5 transition ${
+                    isAdding ? 'bg-primary-600 hover:bg-primary-700' : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* End phase early modal */}
+      {endPhaseModal && (() => {
+        const { phase, phaseIndex } = endPhaseModal
+        const savedDays = Math.max(0, Math.round((new Date(phase.endDate).getTime() - Date.now()) / 86400000))
+        const hasLaterPhases = macrocycle!.mesocycles.indexOf(phase) < macrocycle!.mesocycles.length - 1
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="p-5 border-b">
+                <h2 className="text-lg font-bold text-gray-900">End Phase {phaseIndex} Early</h2>
+                <p className="text-sm text-gray-500 mt-1">This action cannot be undone</p>
+              </div>
+              <div className="p-5">
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-2">
+                  <p className="text-sm text-red-800">All remaining incomplete workouts in this phase will be marked as skipped, and the phase will close today.</p>
+                  {savedDays > 0 && (
+                    <p className="text-sm text-red-700">
+                      {hasLaterPhases
+                        ? `All subsequent phases will shift ${savedDays} day${savedDays !== 1 ? 's' : ''} earlier.`
+                        : `The training block end date will move ${savedDays} day${savedDays !== 1 ? 's' : ''} earlier.`}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="px-5 pb-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEndPhaseModal(null)}
+                  className="flex-1 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-2.5 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleEndPhase(phase.id)}
+                  className="flex-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl py-2.5 transition"
+                >
+                  End Phase
                 </button>
               </div>
             </div>

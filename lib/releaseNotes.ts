@@ -1,4 +1,5 @@
-export const CURRENT_RELEASE_ID = '2026-04-09'
+export const CURRENT_RELEASE_ID = '2026-04-26b'
+
 
 export interface ReleaseNote {
   id: string
@@ -8,6 +9,55 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-04-26b',
+    date: 'April 26, 2026',
+    title: 'Deload weeks + phase UI improvements',
+    changes: [
+      'New: mark any week as a deload in the phase detail view — immediately reduces all sets to ~60%',
+      'Completed phases now show a clean completion banner instead of locked config rows',
+    ],
+  },
+  {
+    id: '2026-04-26',
+    date: 'April 26, 2026',
+    title: 'Flexible phase management',
+    changes: [
+      'New: change the length of any phase directly from the phase planner — adding weeks copies workouts from week 1, removing weeks shifts all subsequent phases',
+      'New: End Phase Early button closes a phase today, skips remaining workouts, and shifts subsequent phases forward automatically',
+    ],
+  },
+  {
+    id: '2026-04-15',
+    date: 'April 15, 2026',
+    title: 'Timer persistence & subscription fixes',
+    changes: [
+      'Fixed: session timer now persists correctly when navigating away mid-workout — resuming a draft restores the elapsed time and accounts for time spent away',
+      'Fixed: subscription expiry banner no longer shows for admin or coach accounts under any circumstances',
+    ],
+  },
+  {
+    id: '2026-04-14',
+    date: 'April 14, 2026',
+    title: 'Bug fixes & progress improvements',
+    changes: [
+      'Fixed: subscription banner no longer appears for users with admin-granted access, regardless of remaining days',
+      'Dashboard "Last week" stats now only count completed workouts in the active block — skipped sessions and workouts from previous phases are excluded',
+      'Progress page: added "Last week" option to the time period dropdown, showing volume and intensity for the most recently completed Mon–Sun week',
+    ],
+  },
+  {
+    id: '2026-04-10',
+    date: 'April 10, 2026',
+    title: 'Dashboard & phase UI refresh',
+    changes: [
+      'Dashboard workout cards are now individual tiles with drop shadows and a clear two-row layout — workout name on row 1, details and actions on row 2',
+      'Current workout highlighted with an orange background instead of a border ring',
+      'Training Phases page redesigned with colored left accent strips and consistent text hierarchy',
+      'Phase builder page updated with orange phase headers, side-by-side configuration rows, and a matched status dropdown',
+      'Text hierarchy standardised across dashboard: Tier 1 headings, Tier 2 labels and titles, Tier 3 supporting details',
+    ],
+  },
   {
     id: '2026-04-09',
     date: 'April 9, 2026',

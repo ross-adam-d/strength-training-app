@@ -65,6 +65,7 @@ export async function GET(
             weekNumber: true,
             startDate: true,
             endDate: true,
+            isRecovery: true,
             workouts: {
               orderBy: {
                 dayOfWeek: 'asc',

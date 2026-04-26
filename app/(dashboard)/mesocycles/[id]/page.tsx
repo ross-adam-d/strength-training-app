@@ -25,6 +25,7 @@ interface Microcycle {
   weekNumber: number
   startDate: string
   endDate: string
+  isRecovery: boolean
   workouts: Workout[]
 }
 
@@ -65,6 +66,8 @@ export default function MesocycleDetailPage() {
   const [showRepeatPicker, setShowRepeatPicker] = useState(false)
   const [siblingPhases, setSiblingPhases] = useState<SiblingPhase[]>([])
   const [loadingSiblings, setLoadingSiblings] = useState(false)
+  const [deloadConfirmWeek, setDeloadConfirmWeek] = useState<Microcycle | null>(null)
+  const [applyingDeload, setApplyingDeload] = useState<string | null>(null)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -174,42 +177,64 @@ export default function MesocycleDetailPage() {
     }
   }
 
-  useEffect(() => {
-    async function fetchMesocycle() {
-      try {
-        const response = await fetch(`/api/mesocycles/${params.id}`)
-        if (response.ok) {
-          const data = await response.json()
-          setMesocycle(data)
+  async function fetchMesocycle(preserveWeekIndex?: boolean) {
+    try {
+      const response = await fetch(`/api/mesocycles/${params.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setMesocycle(data)
 
-          // Check for in-progress workouts in localStorage
-          const inProgress = new Set<string>()
-          data.microcycles.forEach((microcycle: Microcycle) => {
-            microcycle.workouts.forEach((workout: Workout) => {
-              const draftKey = `workout-draft-${workout.id}`
-              if (localStorage.getItem(draftKey)) {
-                inProgress.add(workout.id)
-              }
-            })
-          })
-          setInProgressWorkouts(inProgress)
-
-          // Set initial week from URL parameter
-          if (weekParam) {
-            const weekIndex = parseInt(weekParam)
-            if (weekIndex >= 0 && weekIndex < data.microcycles.length) {
-              setCurrentWeekIndex(weekIndex)
+        const inProgress = new Set<string>()
+        data.microcycles.forEach((microcycle: Microcycle) => {
+          microcycle.workouts.forEach((workout: Workout) => {
+            const draftKey = `workout-draft-${workout.id}`
+            if (localStorage.getItem(draftKey)) {
+              inProgress.add(workout.id)
             }
+          })
+        })
+        setInProgressWorkouts(inProgress)
+
+        if (!preserveWeekIndex && weekParam) {
+          const weekIndex = parseInt(weekParam)
+          if (weekIndex >= 0 && weekIndex < data.microcycles.length) {
+            setCurrentWeekIndex(weekIndex)
           }
         }
-      } catch (error) {
-        console.error('Error fetching mesocycle:', error)
-      } finally {
-        setLoading(false)
       }
+    } catch (error) {
+      console.error('Error fetching mesocycle:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchMesocycle()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, weekParam])
+
+  async function handleToggleDeload(microcycleId: string, isRecovery: boolean) {
+    setDeloadConfirmWeek(null)
+    setApplyingDeload(microcycleId)
+    try {
+      const res = await fetch(`/api/microcycles/${microcycleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRecovery }),
+      })
+      if (res.ok) {
+        await fetchMesocycle(true)
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to update week')
+      }
+    } catch {
+      alert('Failed to update week')
+    } finally {
+      setApplyingDeload(null)
+    }
+  }
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
@@ -483,212 +508,259 @@ export default function MesocycleDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* Clean Header */}
-      <div className="mb-4 px-4 pt-4">
+    <div className="min-h-screen pb-20 max-w-4xl mx-auto">
+
+      {/* Phase header tile — dark card matching dashboard */}
+      <div className="px-4 pt-4 mb-4">
         <Link
           href={`/macrocycles/${mesocycle.macrocycle.id}`}
-          className="text-primary-600 hover:text-primary-700 text-sm font-medium inline-block"
+          className="text-primary-500 hover:text-primary-400 text-xs font-medium inline-block mb-3"
         >
           ← {mesocycle.macrocycle.name}
         </Link>
-        <h1 className="text-xl font-bold text-gray-900 mt-2">{mesocycle.name}</h1>
+        <div className="bg-gray-900 rounded-2xl shadow-md px-6 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-base font-semibold text-white">{mesocycle.name}</h1>
+            <span className="text-xs text-gray-400">{mesocycle.microcycles.length} weeks</span>
+          </div>
+          {/* Week dots */}
+          <div className="flex gap-1.5 flex-wrap">
+            {mesocycle.microcycles.map((micro, index) => {
+              const allDone = micro.workouts.length > 0 && micro.workouts.every(w => w.workoutLogs.length > 0)
+              return (
+                <button
+                  key={micro.id}
+                  onClick={() => setCurrentWeekIndex(index)}
+                  className={`w-7 h-7 rounded-full text-xs font-medium transition flex items-center justify-center ${
+                    index === currentWeekIndex
+                      ? 'bg-primary-600 text-white'
+                      : allDone
+                      ? 'bg-gray-400 text-white'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  }`}
+                >
+                  {micro.weekNumber}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Week Navigation */}
-      <div className="mb-6 px-4">
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+      {/* Week navigation */}
+      <div className="px-4 mb-4 space-y-3">
+        <div className="flex items-center justify-between">
           <button
             onClick={handlePreviousWeek}
             disabled={!canGoPrevious}
-            className={`px-3 py-2 rounded-md font-medium transition min-w-[80px] ${
-              canGoPrevious
-                ? 'text-primary-600 hover:bg-white'
-                : 'text-gray-300 cursor-not-allowed'
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+              canGoPrevious ? 'text-primary-600 hover:bg-primary-50' : 'text-gray-300 cursor-not-allowed'
             }`}
           >
             ← Prev
           </button>
-
-          <div className="text-center flex-1">
-            <h2 className="text-lg font-bold text-gray-900">Week {currentWeek.weekNumber}</h2>
-            <p className="text-xs text-gray-600 mt-0.5">
-              {new Date(currentWeek.startDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}{' '}
-              -{' '}
-              {new Date(currentWeek.endDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
+          <div className="text-center">
+            <p className="text-base font-semibold text-gray-900">Week {currentWeek.weekNumber}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {new Date(currentWeek.startDate).toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}
+              {' – '}
+              {new Date(currentWeek.endDate).toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}
             </p>
           </div>
-
           <button
             onClick={handleNextWeek}
             disabled={!canGoNext}
-            className={`px-3 py-2 rounded-md font-medium transition min-w-[80px] ${
-              canGoNext
-                ? 'text-primary-600 hover:bg-white'
-                : 'text-gray-300 cursor-not-allowed'
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+              canGoNext ? 'text-primary-600 hover:bg-primary-50' : 'text-gray-300 cursor-not-allowed'
             }`}
           >
             Next →
           </button>
         </div>
 
-        {/* Week dots */}
-        <div className="flex justify-center gap-1.5 mt-3">
-          {mesocycle.microcycles.map((micro, index) => {
-            const allDone = micro.workouts.length > 0 && micro.workouts.every(w => w.workoutLogs.length > 0)
-            return (
-              <button
-                key={micro.id}
-                onClick={() => setCurrentWeekIndex(index)}
-                className={`w-6 h-6 rounded-full text-xs font-medium transition ${
-                  index === currentWeekIndex
-                    ? 'bg-primary-600 text-white'
-                    : allDone
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                }`}
-              >
-                {micro.weekNumber}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Compact Workout Grid */}
-      <div
-        className="px-4"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {/* Swipeable content area with smooth transition */}
-        <div
-          className={`transition-opacity duration-300 ${
-            isTransitioning ? 'opacity-50' : 'opacity-100'
-          }`}
-        >
-          {currentWeek.workouts.length === 0 ? (
-            <Card>
-              <CardBody>
-                <div className="text-center py-12 text-gray-500">
-                  <p className="text-lg">No workouts for this week</p>
-                  <p className="text-sm mt-1">Add workouts from the workout template</p>
-                </div>
-              </CardBody>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {currentWeek.workouts
-              .sort((a, b) => {
-                // Sort by orderIndex if available, otherwise by dayOfWeek
-                return (a.dayOfWeek ?? 999) - (b.dayOfWeek ?? 999)
-              })
-              .map((workout) => {
-                const hasLog = workout.workoutLogs.length > 0
-                const isSkipped = workout.workoutLogs[0]?.skipped === true
-                const isCompleted = hasLog && !isSkipped
-                const dayLabel =
-                  workout.dayOfWeek !== null ? DAYS_OF_WEEK[workout.dayOfWeek] : 'Unscheduled'
-
-                return (
-                  <Card key={workout.id}>
-                    <CardBody className="py-4">
-                      <div className="space-y-3">
-                        {/* Workout Info */}
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-base truncate">
-                              {workout.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-0.5">{dayLabel}</p>
-                          </div>
-                          {isCompleted && (
-                            <span className="px-2.5 py-1 text-xs bg-green-100 text-green-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
-                              ✓ Completed
-                            </span>
-                          )}
-                          {isSkipped && (
-                            <span className="px-2.5 py-1 text-xs bg-gray-100 text-gray-500 rounded-md font-medium whitespace-nowrap flex-shrink-0">
-                              Skipped
-                            </span>
-                          )}
-                          {!hasLog && inProgressWorkouts.has(workout.id) && (
-                            <span className="px-2.5 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium whitespace-nowrap flex-shrink-0">
-                              ⏳ In Progress
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          {isSkipped ? (
-                            <>
-                              <UndoSkipButton
-                                workoutLogId={workout.workoutLogs[0].id}
-                                variant="mesocycle"
-                                onUndone={() => window.location.reload()}
-                              />
-                              <button
-                                disabled
-                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed opacity-50"
-                              >
-                                Edit
-                              </button>
-                            </>
-                          ) : isCompleted ? (
-                            <>
-                              <button
-                                onClick={() => handleViewCompleted(workout.workoutLogs[0].id)}
-                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
-                              >
-                                View Details
-                              </button>
-                              <button
-                                disabled
-                                className="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed opacity-50"
-                              >
-                                Edit
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleStartWorkout(workout.id)}
-                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
-                              >
-                                Start Workout
-                              </button>
-                              <SkipWorkoutButton
-                                workoutId={workout.id}
-                                variant="mesocycle"
-                                onSkipped={() => window.location.reload()}
-                              />
-                              <button
-                                onClick={() => handleEditWorkout(workout.id)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
-                              >
-                                Edit
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                )
-              })}
+        {/* Deload toggle */}
+        <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={currentWeek.isRecovery}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setDeloadConfirmWeek(currentWeek)
+                } else {
+                  handleToggleDeload(currentWeek.id, false)
+                }
+              }}
+              disabled={applyingDeload === currentWeek.id}
+              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            />
+            <div>
+              <p className="text-xs font-medium text-gray-700">Deload week</p>
+              <p className="text-xs text-gray-400">Reduces all sets to ~60%</p>
             </div>
+          </label>
+          {applyingDeload === currentWeek.id && (
+            <span className="text-xs text-gray-400">Saving…</span>
+          )}
+          {currentWeek.isRecovery && applyingDeload !== currentWeek.id && (
+            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Deload</span>
           )}
         </div>
       </div>
 
+      {/* Workout cards */}
+      <div
+        className={`px-4 space-y-3 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {currentWeek.workouts.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-md px-6 py-12 text-center">
+            <p className="text-sm font-medium text-gray-500">No workouts for this week</p>
+          </div>
+        ) : (
+          currentWeek.workouts
+            .sort((a, b) => (a.dayOfWeek ?? 999) - (b.dayOfWeek ?? 999))
+            .map((workout) => {
+              const hasLog = workout.workoutLogs.length > 0
+              const isSkipped = workout.workoutLogs[0]?.skipped === true
+              const isCompleted = hasLog && !isSkipped
+              const isInProgress = !hasLog && inProgressWorkouts.has(workout.id)
+              const dayLabel = workout.dayOfWeek !== null ? DAYS_OF_WEEK[workout.dayOfWeek] : 'Unscheduled'
+
+              const accentColor = isCompleted
+                ? 'bg-gray-300'
+                : isSkipped
+                ? 'bg-gray-300'
+                : isInProgress
+                ? 'bg-blue-500'
+                : 'bg-primary-500'
+
+              return (
+                <div key={workout.id} className="bg-white rounded-2xl shadow-md overflow-hidden flex">
+                  {/* Left accent strip */}
+                  <div className={`w-1.5 flex-shrink-0 ${accentColor}`} />
+
+                  {/* Card content */}
+                  <div className="flex-1 px-5 py-4">
+                    {/* Row 1: name + status badge */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 truncate">{workout.name}</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{dayLabel}</p>
+                      </div>
+                      {isCompleted && (
+                        <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">
+                          ✓ Done
+                        </span>
+                      )}
+                      {isSkipped && (
+                        <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">
+                          Skipped
+                        </span>
+                      )}
+                      {isInProgress && (
+                        <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                          In Progress
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Row 2: action buttons */}
+                    <div className="flex gap-2">
+                      {isSkipped ? (
+                        <>
+                          <UndoSkipButton
+                            workoutLogId={workout.workoutLogs[0].id}
+                            variant="mesocycle"
+                            onUndone={() => window.location.reload()}
+                          />
+                          <button
+                            onClick={() => handleEditWorkout(workout.id)}
+                            className="px-4 py-1.5 text-xs font-medium bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed opacity-50"
+                            disabled
+                          >
+                            Edit
+                          </button>
+                        </>
+                      ) : isCompleted ? (
+                        <>
+                          <button
+                            onClick={() => handleViewCompleted(workout.workoutLogs[0].id)}
+                            className="flex-1 px-4 py-1.5 text-xs font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            disabled
+                            className="px-4 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed opacity-50"
+                          >
+                            Edit
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleStartWorkout(workout.id)}
+                            className="flex-1 px-4 py-1.5 text-xs font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                          >
+                            {isInProgress ? 'Resume' : 'Start Workout'}
+                          </button>
+                          <SkipWorkoutButton
+                            workoutId={workout.id}
+                            variant="mesocycle"
+                            onSkipped={() => window.location.reload()}
+                          />
+                          <button
+                            onClick={() => handleEditWorkout(workout.id)}
+                            className="px-4 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                          >
+                            Edit
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+        )}
+      </div>
+
+      {/* Deload confirmation modal */}
+      {deloadConfirmWeek && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <h2 className="text-lg font-bold text-gray-900">Mark Week {deloadConfirmWeek.weekNumber} as Deload</h2>
+              <p className="text-sm text-gray-500 mt-1">This action cannot be automatically reversed</p>
+            </div>
+            <div className="p-5">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-amber-800">All sets in this week will be immediately reduced to approximately 60% of their current values (minimum 1 set per exercise).</p>
+                <p className="text-sm text-amber-700 mt-2">To restore original volumes, rebuild the phase workouts.</p>
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeloadConfirmWeek(null)}
+                className="flex-1 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-2.5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleDeload(deloadConfirmWeek.id, true)}
+                className="flex-1 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-xl py-2.5 transition"
+              >
+                Apply Deload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
