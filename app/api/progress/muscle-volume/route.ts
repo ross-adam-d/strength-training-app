@@ -68,8 +68,10 @@ export async function GET(request: NextRequest) {
         userId,
         completedAt: {
           ...(since ? { gte: since } : {}),
-          // Always exclude the current partial week so mid-week averages aren't deflated
-          lt: startOfCurrentWeek,
+          // For rolling periods (1w, 4w, 3m) exclude the current partial week so
+          // mid-week averages aren't deflated. For the phase view, include the current
+          // week — otherwise workouts done this week are invisible in the analysis.
+          ...(period !== 'phase' ? { lt: startOfCurrentWeek } : {}),
         },
         ...(phaseWorkoutFilter ? { workout: phaseWorkoutFilter } : {}),
       },
@@ -83,13 +85,14 @@ export async function GET(request: NextRequest) {
 
   if (logs.length === 0) return NextResponse.json([])
 
-  // Derive completed weeks from the earliest log to startOfCurrentWeek.
-  // Current partial week is always excluded so mid-week averages aren't deflated.
+  // Derive completed weeks from the earliest log to the period end reference.
+  // For rolling periods, use startOfCurrentWeek (excludes partial week so averages
+  // aren't deflated). For phase, use now so this week's workouts are included.
   const earliest = logs.reduce(
     (min, l) => (l.workoutLog.completedAt < min ? l.workoutLog.completedAt : min),
     logs[0].workoutLog.completedAt
   )
-  const endRef = startOfCurrentWeek
+  const endRef = period === 'phase' ? now : startOfCurrentWeek
   const weeksInPeriod = Math.max(1, Math.round((endRef.getTime() - earliest.getTime()) / (7 * 24 * 60 * 60 * 1000)))
 
   // Count sets per muscle group — each log counts once per muscle group on the exercise

@@ -55,6 +55,16 @@ export function getSuggestion(
   const lastReps = set1.reps > 0 ? set1.reps : (set1.repsLeft || set1.repsRight || 0)
   const rir = set1.rir
 
+  // If the last session was logged with no meaningful data (weight=0 AND reps=0 for all sets),
+  // treat it as no history so PO shows plan target reps rather than 0/0.
+  // This handles the case where a workout was opened but values were never entered.
+  const sessionHasData = lastSets.some(
+    (s) => (s.weight ?? 0) > 0 || (s.reps ?? 0) > 0 || (s.repsLeft ?? 0) > 0 || (s.repsRight ?? 0) > 0
+  )
+  if (!sessionHasData) {
+    return { weight: '', reps: String(repRange.min), progressionType: 'none' }
+  }
+
   // RPE auto-deload: if last session rated 5/5 (Too Much), reduce weight
   if (options?.rpeAutoDeload && options?.lastExerciseRpe === 5) {
     const increment = getWeightIncrement(equipment, isBodyweight)

@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-04-26b'
+export const CURRENT_RELEASE_ID = '2026-05-02'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-05-02',
+    date: 'May 2, 2026',
+    title: 'Analytics + PO bug fixes',
+    changes: [
+      'Fix: Weak Point Analysis now correctly shows all trained muscle groups — workouts completed earlier in the current week were previously excluded from the phase view',
+      'Fix: Progressive overload suggestion no longer shows 0/0 when the most recent session was logged without entering values — falls back to plan target reps instead',
+    ],
+  },
   {
     id: '2026-04-26b',
     date: 'April 26, 2026',
