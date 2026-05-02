@@ -18,6 +18,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       'Fix: Progressive overload suggestion no longer shows 0/0 when the most recent session was logged without entering values — falls back to plan target reps instead',
       'Fix: Progress page volume now correctly counts unilateral exercises (e.g. alternating dumbbell sets) — previously these contributed zero to the total',
       'Progress page now shows "All training blocks" label to clarify it includes all historical sessions, not just the current program',
+      'Fix: dashboard "Last week" now counts all training sessions in the week, not just those belonging to the active block — phase-transition sessions were being excluded',
     ],
   },
   {

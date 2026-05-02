@@ -236,7 +236,6 @@ export default async function DashboardPage({
           userId: session.user.id,
           skipped: false,
           completedAt: { gte: startOfLastWeek, lt: startOfThisWeek },
-          workout: { microcycle: { mesocycle: { macrocycleId: activeBlock!.id } } },
         },
         select: LOG_SELECT,
       }),
