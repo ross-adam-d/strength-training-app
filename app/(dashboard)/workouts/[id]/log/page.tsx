@@ -1004,7 +1004,7 @@ export default function WorkoutLogPage() {
       const weightVal = parseFloat(cleanedValue)
       if (!isNaN(weightVal) && weightVal > 0) {
         const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
-        if (we && !we.exercise.isBodyweight && !we.exercise.isTimed) {
+        if (we && !we.exercise.isTimed) {
           const lastData = lastSessionSet1.current.get(exerciseId)
           if (lastData && lastData.weight > 0 && lastData.reps > 0) {
             const repRange = parseRepRange(we.targetReps)
@@ -1013,9 +1013,7 @@ export default function WorkoutLogPage() {
             setSuggestions((prev) => {
               const exerciseMap = new Map(prev.get(exerciseId) ?? [])
               exerciseMap.forEach((val, key) => {
-                // Only set 1 shows a rep target; other sets left blank so the user fills from feel
-                const reps = key === 1 ? String(suggestedReps) : ''
-                exerciseMap.set(key, { ...val, weight: cleanedValue, reps })
+                exerciseMap.set(key, { ...val, weight: cleanedValue, reps: String(suggestedReps) })
               })
               const next = new Map(prev)
               next.set(exerciseId, exerciseMap)

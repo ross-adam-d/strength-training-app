@@ -148,6 +148,7 @@ export async function POST(request: Request) {
             repsLeft: log.repsLeft,
             repsRight: log.repsRight,
             weight: log.weight,
+            duration: log.duration,
             exerciseRpe: log.exerciseRpe,
             rir: log.rir,
             skipped: log.skipped ?? false,

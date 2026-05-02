@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-05-02'
+export const CURRENT_RELEASE_ID = '2026-05-03'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-05-03',
+    date: 'May 3, 2026',
+    title: 'Progressive overload fixes',
+    changes: [
+      'Fix: timed exercises now record and display duration from your last session as a reference target',
+      'Fix: changing weight mid-workout now updates rep suggestions for all sets — previously only the first set updated',
+      'Fix: bodyweight+load exercises (e.g. weighted dips) now correctly recalculate rep targets based on 1RM when you enter a different load',
+    ],
+  },
   {
     id: '2026-05-02',
     date: 'May 2, 2026',
