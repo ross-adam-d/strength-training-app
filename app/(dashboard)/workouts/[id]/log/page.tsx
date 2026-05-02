@@ -156,7 +156,7 @@ export default function WorkoutLogPage() {
   useEffect(() => { sessionRef.current = session }, [session])
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
-  const [startTime] = useState(new Date())
+  const [startTime, setStartTime] = useState(new Date())
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([])
   const [prescribedHints, setPrescribedHints] = useState<Map<string, Map<number, string>>>(new Map())
   const [overallNotes, setOverallNotes] = useState('')
@@ -507,6 +507,7 @@ export default function WorkoutLogPage() {
       preWorkoutWellness,
       startTime: startTime.toISOString(),
       savedAt: new Date().toISOString(),
+      pauseOffset: pauseOffsetRef.current,
       // Timer persistence: save wall-clock end time so it can resume across navigation
       timerEndTime: activeTimerKey ? timerEndTimeRef.current : null,
       activeTimerKey: activeTimerKey,
@@ -665,6 +666,13 @@ export default function WorkoutLogPage() {
       setWellnessChecked(true)
     }
     setLastSavedAt(new Date(draft.savedAt))
+
+    // Restore session timer — continue from where it left off, excluding time away
+    if (draft.startTime) {
+      setStartTime(new Date(draft.startTime))
+      const timeAwayMs = Date.now() - new Date(draft.savedAt).getTime()
+      pauseOffsetRef.current = (draft.pauseOffset ?? 0) + timeAwayMs
+    }
 
     // Restore rest timer if it was still running when the user navigated away
     if (draft.timerEndTime && draft.activeTimerKey && draft.timerEndTime > Date.now()) {

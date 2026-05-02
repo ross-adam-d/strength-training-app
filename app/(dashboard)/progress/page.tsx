@@ -18,6 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 const TIME_PERIODS = [
+  { value: '1w', label: 'Last week' },
   { value: '4w', label: 'Last 4 weeks' },
   { value: '3m', label: 'Last 3 months' },
   { value: 'all', label: 'All time' },
@@ -38,6 +39,18 @@ interface WorkoutLog {
   overallRpe?: number
   workout: { name: string } | null
   exerciseLogs: Array<{ exercise: { name: string }; weight: number; reps: number }>
+}
+
+function getLastWeekRange(): { since: Date; until: Date } {
+  const now = new Date()
+  const dow = now.getDay() // 0=Sun, 1=Mon, …
+  const daysToMonday = dow === 0 ? 6 : dow - 1
+  const startOfThisWeek = new Date(now)
+  startOfThisWeek.setDate(now.getDate() - daysToMonday)
+  startOfThisWeek.setHours(0, 0, 0, 0)
+  const startOfLastWeek = new Date(startOfThisWeek)
+  startOfLastWeek.setDate(startOfThisWeek.getDate() - 7)
+  return { since: startOfLastWeek, until: startOfThisWeek }
 }
 
 function getSinceDate(period: string): string | null {
@@ -88,9 +101,14 @@ export default function ProgressPage() {
   }
 
   const filteredWorkouts = recentWorkouts.filter((w) => {
+    const completedAt = new Date(w.completedAt)
+    if (timePeriod === '1w') {
+      const { since, until } = getLastWeekRange()
+      return completedAt >= since && completedAt < until
+    }
     const since = getSinceDate(timePeriod)
     if (!since) return true
-    return new Date(w.completedAt) >= new Date(since)
+    return completedAt >= new Date(since)
   })
 
   const totalVolumeKg = filteredWorkouts.reduce(

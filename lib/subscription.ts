@@ -51,14 +51,14 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
 
   const now = new Date()
 
-  // Admin manual override: if manualAccessGrantedUntil is in the future, full access
+  // Admin manual override: if manualAccessGrantedUntil is in the future, full access.
+  // Return daysUntilExpiry: null so the subscription banner is never shown — the admin
+  // explicitly granted access and the user should not see any expiry warnings.
   if (subscription.manualAccessGrantedUntil && subscription.manualAccessGrantedUntil > now) {
-    const msUntil = subscription.manualAccessGrantedUntil.getTime() - now.getTime()
-    const daysUntilExpiry = Math.ceil(msUntil / (1000 * 60 * 60 * 24))
     return {
       canWrite: true,
       isExpired: false,
-      daysUntilExpiry,
+      daysUntilExpiry: null,
       status: subscription.status,
     }
   }

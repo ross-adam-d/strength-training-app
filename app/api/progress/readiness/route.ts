@@ -49,6 +49,7 @@ export async function GET(request: Request) {
   const now = new Date()
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
   const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
+  const sixWeeksAgo = new Date(now.getTime() - 42 * 24 * 60 * 60 * 1000)
 
   // Must have at least MIN_LOGS_FOR_READINESS total logs before showing readiness data
   const totalLogCount = await prisma.workoutLog.count({ where: { userId } })
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
     ? { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo }, workout: { microcycle: { mesocycleId: activeMicro.mesocycleId } } }, skipped: false, weight: { gt: 0 } }
     : { workoutLog: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } }, skipped: false, weight: { gt: 0 } }
 
-  const [recentWorkoutLogs, priorWorkoutLogs, recentExerciseLogs, priorExerciseLogs, phaseMicros] =
+  const [recentWorkoutLogs, priorWorkoutLogs, oldestWorkoutLogs, recentExerciseLogs, priorExerciseLogs, phaseMicros, recentWellnessLogs] =
     await Promise.all([
       // Recent 2 weeks of logs for RPE trending
       prisma.workoutLog.findMany({
@@ -123,6 +124,11 @@ export async function GET(request: Request) {
       // Prior 2 weeks for RPE comparison
       prisma.workoutLog.findMany({
         where: { userId, completedAt: { gte: fourWeeksAgo, lt: twoWeeksAgo } },
+        select: { overallRpe: true },
+      }),
+      // Oldest 2 weeks (4-6 weeks ago) for RPE slope
+      prisma.workoutLog.findMany({
+        where: { userId, completedAt: { gte: sixWeeksAgo, lt: fourWeeksAgo } },
         select: { overallRpe: true },
       }),
       // Exercise logs — recent 2-week rolling window, scoped to current phase
@@ -135,16 +141,22 @@ export async function GET(request: Request) {
         where: priorExerciseWhere,
         select: exerciseLogSelect,
       }),
-      // All started microcycles in the active phase (for phase-level adherence)
+      // Completed microcycles in the active phase (for adherence — exclude current week's unfinished workouts)
       activeMicro?.mesocycleId
         ? prisma.microcycle.findMany({
             where: {
               mesocycleId: activeMicro.mesocycleId,
               startDate: { lte: now },
+              endDate: { lt: now },
             },
             select: { workouts: { select: { id: true } } },
           })
         : Promise.resolve([]),
+      // Recent wellness scores (past 4 weeks)
+      prisma.workoutLog.findMany({
+        where: { userId, completedAt: { gte: fourWeeksAgo }, preWorkoutWellness: { not: null } },
+        select: { preWorkoutWellness: true },
+      }),
     ])
 
   if (recentWorkoutLogs.length === 0) {
@@ -164,9 +176,15 @@ export async function GET(request: Request) {
       ? priorWithRpe.reduce((s, l) => s + l.overallRpe!, 0) / priorWithRpe.length
       : null
 
+  const oldestWithRpe = oldestWorkoutLogs.filter((l) => l.overallRpe != null)
+  const oldestRpe =
+    oldestWithRpe.length > 0
+      ? oldestWithRpe.reduce((s, l) => s + l.overallRpe!, 0) / oldestWithRpe.length
+      : null
+
   const rpeDelta = recentRpe != null && priorRpe != null ? recentRpe - priorRpe : null
 
-  // Adherence — all workouts in started microcycles of the active phase vs completed
+  // Adherence — completed microcycles only (current week excluded since it's still in progress)
   let adherencePct: number | null = null
   let completedPlanned = 0
   let totalPlanned = 0
@@ -190,7 +208,7 @@ export async function GET(request: Request) {
 
   type HighlightDir = 'up' | 'down'
   const highlights: { exerciseName: string; change: string; direction: HighlightDir }[] = []
-  let improving = 0, declining = 0, commonCount = 0
+  let improving = 0, declining = 0, stalling = 0, commonCount = 0
 
   for (const [id, recent] of recentByEx) {
     const prior = priorByEx.get(id)
@@ -198,25 +216,32 @@ export async function GET(request: Request) {
     commonCount++
     const weightChange = recent.maxWeight - prior.maxWeight
     const volPct = prior.volume > 0 ? (recent.volume - prior.volume) / prior.volume : 0
+
     if (weightChange > 0) {
+      // Weight increased — improving
       improving++
       highlights.push({ exerciseName: recent.name, change: `+${weightChange}kg`, direction: 'up' })
-    } else if (weightChange < 0 && volPct < -0.05) {
+    } else if (weightChange < 0) {
+      // Weight dropped — declining (regardless of volume)
       declining++
       highlights.push({ exerciseName: recent.name, change: `${weightChange}kg`, direction: 'down' })
     } else if (volPct > 0.1) {
+      // Weight same, volume up >10% — improving
       improving++
       highlights.push({ exerciseName: recent.name, change: `+${Math.round(volPct * 100)}% vol`, direction: 'up' })
-    } else if (volPct < -0.15) {
+    } else if (volPct < -0.05) {
+      // Weight same, volume down >5% — declining
       declining++
     } else {
-      improving++ // stable counts as not declining
+      // Weight same, volume between -5% and +10% — stalling
+      stalling++
     }
   }
 
-  const progressionTrend: 'improving' | 'stable' | 'declining' | null =
+  const progressionTrend: 'improving' | 'stable' | 'stalling' | 'declining' | null =
     commonCount < 2 ? null :
-    declining / commonCount > 0.5 ? 'declining' :
+    declining / commonCount > 0.35 ? 'declining' :
+    stalling / commonCount > 0.5 ? 'stalling' :
     improving / commonCount > 0.5 ? 'improving' : 'stable'
 
   // Top highlights — up first, capped at 3
@@ -224,17 +249,53 @@ export async function GET(request: Request) {
     .sort((a, b) => (a.direction === 'up' ? -1 : 1) - (b.direction === 'up' ? -1 : 1))
     .slice(0, 3)
 
+  // Wellness — average of recent pre-workout wellness scores
+  const wellnessValues = recentWellnessLogs.map(l => l.preWorkoutWellness!).filter(v => v != null)
+  const avgWellness = wellnessValues.length > 0
+    ? wellnessValues.reduce((s, v) => s + v, 0) / wellnessValues.length
+    : null
+
   // Scoring
   let score = 0
+
+  // RPE delta (existing)
   if (rpeDelta != null) {
     if (rpeDelta >= 1.0) score += 3
     else if (rpeDelta >= 0.5) score += 2
     else if (rpeDelta >= 0.25) score += 1
     if (rpeDelta >= 0.5 && progressionTrend === 'improving') score -= 1
   }
+
+  // Absolute RPE (new)
+  if (recentRpe != null) {
+    if (recentRpe >= 4.5) score += 2
+    else if (recentRpe >= 4.0) score += 1
+  }
+
+  // RPE slope — monotonic increase across 3 windows (new)
+  if (oldestRpe != null && priorRpe != null && recentRpe != null) {
+    if (recentRpe > priorRpe && priorRpe > oldestRpe) score += 1
+  }
+
+  // Adherence (existing)
   if (adherencePct != null && adherencePct < 70) score += 1
+
+  // Recovery credit (existing)
   if (recoveryCredit) score -= 1
+
+  // Declining performance (strengthened — no longer requires rising RPE)
+  if (progressionTrend === 'declining') score += 2
+  // Declining + rising RPE is an even stronger signal
   if (progressionTrend === 'declining' && rpeDelta != null && rpeDelta >= 0.25) score += 1
+
+  // Stalling lifts (new)
+  if (progressionTrend === 'stalling') score += 1
+
+  // Wellness (new)
+  if (avgWellness != null) {
+    if (avgWellness <= 2.0) score += 2
+    else if (avgWellness <= 3.0) score += 1
+  }
 
   const trafficLight: 'green' | 'amber' | 'red' =
     score <= 0 ? 'green' : score <= 2 ? 'amber' : 'red'
@@ -247,9 +308,11 @@ export async function GET(request: Request) {
     if (trafficLight === 'amber') {
       if (progressionTrend === 'improving') return 'RPE is rising but your lifts are still progressing — classic adaptation. Keep monitoring.'
       if (progressionTrend === 'declining') return 'Fatigue detected and performance is slipping. Consider reducing intensity or taking an extra rest day.'
+      if (progressionTrend === 'stalling') return 'Progress has stalled across several lifts. Consider adjusting volume or intensity.'
       return 'Some fatigue detected. Monitor your performance and consider an easier session or extra rest day.'
     }
     if (progressionTrend === 'declining') return 'High fatigue and declining performance. A deload week would help you recover and come back stronger.'
+    if (progressionTrend === 'stalling') return 'Lifts have stalled and fatigue indicators are high. A deload or program change is recommended.'
     if (progressionTrend === 'improving') return 'RPE is high but lifts are still improving. Ensure you\'re sleeping and eating enough to support the load.'
     return 'High fatigue detected. A deload week would help you recover and come back stronger.'
   }
@@ -259,6 +322,7 @@ export async function GET(request: Request) {
     rpeTrend: {
       recent: recentRpe != null ? Math.round(recentRpe * 10) / 10 : null,
       prior: priorRpe != null ? Math.round(priorRpe * 10) / 10 : null,
+      oldest: oldestRpe != null ? Math.round(oldestRpe * 10) / 10 : null,
       delta: rpeDelta != null ? Math.round(rpeDelta * 10) / 10 : null,
     },
     adherence: {
@@ -269,6 +333,10 @@ export async function GET(request: Request) {
     recoveryCredit,
     progressionTrend,
     highlights: topHighlights,
+    wellness: {
+      average: avgWellness != null ? Math.round(avgWellness * 10) / 10 : null,
+      count: wellnessValues.length,
+    },
     explanation: buildExplanation(),
   })
 }

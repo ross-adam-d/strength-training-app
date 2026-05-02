@@ -8,11 +8,12 @@ import { MEV } from '@/lib/volumeLandmarks'
 
 interface ReadinessData {
   trafficLight: 'green' | 'amber' | 'red'
-  rpeTrend: { recent: number | null; prior: number | null; delta: number | null }
+  rpeTrend: { recent: number | null; prior: number | null; oldest: number | null; delta: number | null }
   adherence: { completed: number; planned: number; percentage: number | null }
   recoveryCredit: boolean
-  progressionTrend: 'improving' | 'stable' | 'declining' | null
+  progressionTrend: 'improving' | 'stable' | 'stalling' | 'declining' | null
   highlights: { exerciseName: string; change: string; direction: 'up' | 'down' }[]
+  wellness: { average: number | null; count: number }
   explanation: string
 }
 
@@ -140,45 +141,72 @@ export default function AnalyticsTab({ timePeriod, clientId }: { timePeriod: str
                 </div>
               </div>
 
-              <div className="flex bg-gray-50 rounded-lg divide-x divide-gray-200">
-                <div className="flex-1 text-center px-3 py-3">
-                  <p className="text-xs text-gray-500 mb-1">Recent RPE</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {readiness.rpeTrend.recent != null ? readiness.rpeTrend.recent.toFixed(1) : '—'}
-                  </p>
-                  <p className="text-xs text-gray-400">past 2 wks</p>
+              <div className="space-y-2">
+                {/* RPE row */}
+                <div className="grid grid-cols-2 bg-gray-50 rounded-lg divide-x divide-gray-200">
+                  <div className="text-center px-3 py-3">
+                    <p className="text-xs text-gray-500 mb-1">Recent RPE</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {readiness.rpeTrend.recent != null ? readiness.rpeTrend.recent.toFixed(1) : '—'}
+                    </p>
+                    <p className="text-xs text-gray-400">past 2 wks</p>
+                  </div>
+                  <div className="text-center px-3 py-3">
+                    <p className="text-xs text-gray-500 mb-1">Prior RPE</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {readiness.rpeTrend.prior != null ? readiness.rpeTrend.prior.toFixed(1) : '—'}
+                    </p>
+                    <p className="text-xs text-gray-400">prior 2 wks</p>
+                  </div>
                 </div>
-                <div className="flex-1 text-center px-3 py-3">
-                  <p className="text-xs text-gray-500 mb-1">Prior RPE</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {readiness.rpeTrend.prior != null ? readiness.rpeTrend.prior.toFixed(1) : '—'}
-                  </p>
-                  <p className="text-xs text-gray-400">prior 2 wks</p>
-                </div>
-                <div className="flex-1 text-center px-3 py-3">
-                  <p className="text-xs text-gray-500 mb-1">Adherence</p>
+
+                {/* Adherence row */}
+                <div className="flex bg-gray-50 rounded-lg px-4 py-3 items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Adherence</p>
+                    <p className="text-xs text-gray-400">{readiness.adherence.completed}/{readiness.adherence.planned} completed weeks</p>
+                  </div>
                   <p className="text-xl font-bold text-gray-900">
                     {readiness.adherence.percentage != null ? `${readiness.adherence.percentage}%` : '—'}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    {readiness.adherence.completed}/{readiness.adherence.planned} this phase
-                  </p>
                 </div>
-                <div className="flex-1 text-center px-3 py-3">
-                  <p className="text-xs text-gray-500 mb-1">Lifts</p>
+
+                {/* Lifts row */}
+                <div className="flex bg-gray-50 rounded-lg px-4 py-3 items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Lift Progression</p>
+                    <p className="text-xs text-gray-400 capitalize">{readiness.progressionTrend ?? 'no data'}</p>
+                  </div>
                   <p className={`text-xl font-bold ${
                     readiness.progressionTrend === 'improving' ? 'text-green-600' :
                     readiness.progressionTrend === 'declining' ? 'text-red-500' :
+                    readiness.progressionTrend === 'stalling' ? 'text-amber-500' :
                     'text-gray-900'
                   }`}>
                     {readiness.progressionTrend === 'improving' ? '↑' :
                      readiness.progressionTrend === 'declining' ? '↓' :
+                     readiness.progressionTrend === 'stalling' ? '→' :
                      readiness.progressionTrend === 'stable' ? '→' : '—'}
                   </p>
-                  <p className="text-xs text-gray-400 capitalize">
-                    {readiness.progressionTrend ?? 'no data'}
-                  </p>
                 </div>
+
+                {/* Wellness row (if data exists) */}
+                {readiness.wellness.average != null && (
+                  <div className="flex bg-gray-50 rounded-lg px-4 py-3 items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500">Pre-Workout Wellness</p>
+                      <p className="text-xs text-gray-400">{readiness.wellness.count} check-in{readiness.wellness.count !== 1 ? 's' : ''} (past 4 wks)</p>
+                    </div>
+                    <p className={`text-xl font-bold ${
+                      readiness.wellness.average >= 4 ? 'text-green-600' :
+                      readiness.wellness.average >= 3 ? 'text-gray-900' :
+                      readiness.wellness.average >= 2 ? 'text-amber-500' :
+                      'text-red-500'
+                    }`}>
+                      {readiness.wellness.average.toFixed(1)}<span className="text-sm text-gray-400 font-normal">/5</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {readiness.highlights.length > 0 && (

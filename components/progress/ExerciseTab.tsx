@@ -55,6 +55,7 @@ const RPE_LABELS: Record<number, string> = {
 
 function getSinceDate(period: string): string | null {
   const now = new Date()
+  if (period === '1w') { now.setDate(now.getDate() - 7); return now.toISOString() }
   if (period === '4w') { now.setDate(now.getDate() - 28); return now.toISOString() }
   if (period === '3m') { now.setMonth(now.getMonth() - 3); return now.toISOString() }
   return null

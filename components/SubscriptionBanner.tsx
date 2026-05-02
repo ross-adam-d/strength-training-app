@@ -5,16 +5,23 @@ import { DismissibleBanner } from '@/components/DismissibleBanner'
 
 export async function SubscriptionBanner({
   userId,
+  role,
   subscriptionStatus,
   trialEndsAt,
+  manualAccessGrantedUntil,
   hasActiveCoach,
 }: {
   userId: string
+  role?: string | null
   subscriptionStatus?: string | null
   trialEndsAt?: string | null
+  manualAccessGrantedUntil?: string | null
   hasActiveCoach?: boolean
 }) {
   if (!userId) return null
+
+  // Admins and coaches have a different access model — never show user subscription banners
+  if (role === 'ADMIN' || role === 'COACH') return null
 
   // Coached athletes have a different access model — never show subscription banners
   if (hasActiveCoach) return null
@@ -27,13 +34,16 @@ export async function SubscriptionBanner({
     subscriptionStatus === 'PAST_DUE'
   ) return null
 
+  // If admin has explicitly granted access, never show a banner (session-level check)
+  if (manualAccessGrantedUntil && new Date(manualAccessGrantedUntil) > new Date()) return null
+
   // Skip DB call for trialing users with plenty of time left
   if (subscriptionStatus === 'TRIALING' && trialEndsAt) {
     const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     if (daysLeft > 7) return null
   }
 
-  // DB query only for: trialing ≤7 days, manual override cases, or unknown status
+  // DB query for: trialing ≤7 days, manual override cases, or unknown status
   const { canWrite, isExpired, daysUntilExpiry, status } = await getUserSubscriptionStatus(userId)
 
   // Fully expired — show plan selection inline on dashboard
@@ -47,13 +57,8 @@ export async function SubscriptionBanner({
     )
   }
 
-  // Active subscription with no trial end — no banner
-  if (status === 'ACTIVE' && daysUntilExpiry === null) {
-    return null
-  }
-
-  // Manual admin override — no banner needed
-  if (!isExpired && canWrite && status !== 'TRIALING') {
+  // Valid access (any source) with no expiry window → no banner
+  if (canWrite && daysUntilExpiry === null) {
     return null
   }
 
@@ -63,7 +68,6 @@ export async function SubscriptionBanner({
   }
 
   const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry <= 7 && daysUntilExpiry > 0
-  const isLastDay = daysUntilExpiry === 1
 
   if (isExpiringSoon) {
     return (

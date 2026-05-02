@@ -224,17 +224,19 @@ export default async function DashboardPage({
 
     const [phaseLogs, weekLogs, lastWeekLogs] = await Promise.all([
       prisma.workoutLog.findMany({
-        where: { userId: session.user.id, workout: { microcycle: { mesocycleId: currentMicro.mesocycle.id } } },
+        where: { userId: session.user.id, skipped: false, workout: { microcycle: { mesocycleId: currentMicro.mesocycle.id } } },
         select: LOG_SELECT,
       }),
       prisma.workoutLog.findMany({
-        where: { userId: session.user.id, workout: { microcycleId: currentMicro.id } },
+        where: { userId: session.user.id, skipped: false, workout: { microcycleId: currentMicro.id } },
         select: LOG_SELECT,
       }),
       prisma.workoutLog.findMany({
         where: {
           userId: session.user.id,
+          skipped: false,
           completedAt: { gte: startOfLastWeek, lt: startOfThisWeek },
+          workout: { microcycle: { mesocycle: { macrocycleId: activeBlock!.id } } },
         },
         select: LOG_SELECT,
       }),
@@ -412,16 +414,16 @@ export default async function DashboardPage({
 
       {/* Current week */}
       {currentMicro && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Phase header with progress — clickable link to phase details */}
-          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 border-b-2 border-primary-600 bg-gray-900 hover:bg-gray-800 transition">
+        <div className="space-y-3">
+          {/* Phase header — full-width tile */}
+          <Link href={`/mesocycles/${currentMicro.mesocycle.id}`} className="block px-6 py-4 rounded-2xl shadow-md bg-gray-900 hover:bg-gray-800 transition">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="font-semibold text-white">{currentMicro.mesocycle.name}</h2>
-                <p className="text-sm text-gray-400">Week {weekNumber} of {totalWeeks}</p>
+                <h2 className="text-base font-semibold text-white">{currentMicro.mesocycle.name}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Week {weekNumber} of {totalWeeks}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-400">{progressPercent}%</span>
+                <span className="text-xs font-medium text-gray-400">{progressPercent}%</span>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -435,86 +437,100 @@ export default async function DashboardPage({
             </div>
           </Link>
 
-          {/* Workout rows */}
-          <div className="divide-y">
-            {sortedWorkouts.length === 0 && (
-              <p className="px-6 py-6 text-sm text-gray-500 text-center">No workouts scheduled this week.</p>
-            )}
-            {sortedWorkouts.map((workout) => {
-              const hasLog = workout.workoutLogs.length > 0
-              const isSkipped = workout.workoutLogs[0]?.skipped === true
-              const isCompleted = hasLog && !isSkipped
-              const isNext = !hasLog && workout.id === nextWorkoutId
-              const logId = workout.workoutLogs[0]?.id
-              const completedAt = workout.workoutLogs[0]?.completedAt
-              const logDuration = workout.workoutLogs[0]?.duration
+          {/* Workout cards — each full-width, same as other tiles */}
+          {sortedWorkouts.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">No workouts scheduled this week.</p>
+          )}
+          {sortedWorkouts.map((workout) => {
+            const hasLog = workout.workoutLogs.length > 0
+            const isSkipped = workout.workoutLogs[0]?.skipped === true
+            const isCompleted = hasLog && !isSkipped
+            const isNext = !hasLog && workout.id === nextWorkoutId
+            const logId = workout.workoutLogs[0]?.id
+            const completedAt = workout.workoutLogs[0]?.completedAt
+            const logDuration = workout.workoutLogs[0]?.duration
 
-              return (
-                <div
-                  key={workout.id}
-                  className={`flex items-center justify-between px-6 py-4 ${
-                    isNext ? 'ring-2 ring-inset ring-primary-500' : ''
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {isCompleted && (
-                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                      {isSkipped && (
-                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                        </svg>
-                      )}
-                      <span className={`font-medium truncate ${hasLog ? 'text-gray-500' : 'text-gray-900'}`}>
-                        {workout.name}
-                      </span>
-                      {isSkipped && (
-                        <span className="text-xs text-gray-400 font-medium">Skipped</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-400 mt-0.5">
-                      {isCompleted && completedAt
-                        ? <LocalDate date={completedAt} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />
-                        : workout.dayOfWeek !== null
-                          ? DAY_NAMES_FULL[workout.dayOfWeek]
-                          : 'Unscheduled'}
-                      {isCompleted
-                        ? logDuration ? ` · ${logDuration} min` : null
-                        : !isSkipped && workout.estimatedDuration ? ` · ${workout.estimatedDuration} min` : null}
-                    </p>
+            return (
+              <div
+                key={workout.id}
+                className={`rounded-2xl shadow-md overflow-hidden ${
+                  isNext
+                    ? 'bg-primary-50 ring-1 ring-primary-300'
+                    : 'bg-white border border-gray-100'
+                }`}
+              >
+                <div className="px-6 py-4 flex flex-col gap-2">
+                  {/* Row 1: status icon + name */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isCompleted && (
+                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {isSkipped && (
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                    )}
+                    <span className={`text-base font-semibold truncate ${isCompleted || isSkipped ? 'text-gray-400' : isNext ? 'text-primary-900' : 'text-gray-900'}`}>
+                      {workout.name}
+                    </span>
                   </div>
 
-                  {isSkipped ? (
-                    <UndoSkipButton workoutLogId={logId} variant="dashboard" />
-                  ) : isCompleted ? (
-                    <Link
-                      href={`/workout-logs/${logId}`}
-                      className="ml-3 flex-shrink-0 px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition"
-                    >
-                      View
-                    </Link>
-                  ) : (
-                    <div className="flex items-center gap-1 ml-3 flex-shrink-0">
-                      <SkipWorkoutButton workoutId={workout.id} variant="dashboard" />
-                      <Link
-                        href={`/workouts/${workout.id}/log`}
-                        className={`px-4 py-1.5 text-sm rounded-md font-medium transition ${
-                          isNext
-                            ? 'bg-primary-600 text-white hover:bg-primary-700'
-                            : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        Start
-                      </Link>
+                  {/* Row 2: meta on left, actions on right */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isNext && (
+                        <span className="text-xs font-medium text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full flex-shrink-0">Next up</span>
+                      )}
+                      {isSkipped && (
+                        <span className="text-xs text-gray-400 font-medium flex-shrink-0">Skipped</span>
+                      )}
+                      <span className="text-xs text-gray-400 truncate">
+                        {isCompleted && completedAt
+                          ? undefined
+                          : workout.dayOfWeek !== null
+                            ? DAY_NAMES_FULL[workout.dayOfWeek]
+                            : 'Unscheduled'}
+                        {isCompleted && completedAt
+                          ? null
+                          : !isSkipped && workout.estimatedDuration ? ` · ${workout.estimatedDuration} min` : null}
+                      </span>
+                      {isCompleted && completedAt && (
+                        <span className="text-xs text-gray-400 truncate">
+                          <LocalDate date={completedAt} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />
+                          {logDuration ? ` · ${logDuration} min` : ''}
+                        </span>
+                      )}
                     </div>
-                  )}
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {isSkipped ? (
+                        <UndoSkipButton workoutLogId={logId} variant="dashboard" />
+                      ) : isCompleted ? (
+                        <Link
+                          href={`/workout-logs/${logId}`}
+                          className="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+                        >
+                          View
+                        </Link>
+                      ) : (
+                        <>
+                          <SkipWorkoutButton workoutId={workout.id} variant="dashboard" />
+                          <Link
+                            href={`/workouts/${workout.id}/log`}
+                            className="px-4 py-1.5 text-xs font-medium rounded-lg transition bg-primary-600 text-white hover:bg-primary-700"
+                          >
+                            Start
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -533,21 +549,20 @@ export default async function DashboardPage({
 
       {/* Recent workouts */}
       {recentWorkoutLogs.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Workouts</h2>
+        <div className="bg-white rounded-2xl shadow-md p-6">
+          <h2 className="text-sm font-medium text-gray-700 mb-4">Recent Workouts</h2>
           <div className="space-y-3">
             {recentWorkoutLogs.map((log) => (
               <Link
                 key={log.id}
                 href={`/workout-logs/${log.id}`}
-                className="block p-3 border rounded-md hover:bg-gray-50 transition"
+                className="block p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition"
               >
-                <h3 className="font-medium">{log.workout?.name ?? 'Manual Workout'}</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm font-medium text-gray-900">{log.workout?.name ?? 'Manual Workout'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
                   <LocalDate date={log.completedAt} />
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {log.exerciseLogs.length} exercises{log.duration ? ` · ${log.duration} min` : ''}
+                  {log.duration ? ` · ${log.duration} min` : ''}
+                  {` · ${log.exerciseLogs.length} exercises`}
                 </p>
               </Link>
             ))}

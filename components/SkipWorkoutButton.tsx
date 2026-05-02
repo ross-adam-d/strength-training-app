@@ -42,8 +42,8 @@ export default function SkipWorkoutButton({ workoutId, variant = 'dashboard', on
         onClick={() => setShowConfirm(true)}
         className={
           variant === 'dashboard'
-            ? 'px-3 py-1.5 text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition font-medium'
-            : 'px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium hover:bg-gray-200 hover:text-gray-700 transition'
+            ? 'px-4 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition'
+            : 'px-4 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition'
         }
       >
         Skip

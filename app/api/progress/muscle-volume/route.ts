@@ -52,6 +52,10 @@ export async function GET(request: NextRequest) {
       phaseWorkoutFilter = { microcycle: { mesocycleId: activeMeso.id } }
     }
     // If no active phase, fall through with no date filter (show all)
+  } else if (period === '1w') {
+    // Last full calendar week (Mon–Sun preceding the current week)
+    since = new Date(startOfCurrentWeek)
+    since.setDate(startOfCurrentWeek.getDate() - 7)
   } else if (period === '4w') {
     since = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
   } else if (period === '3m') {

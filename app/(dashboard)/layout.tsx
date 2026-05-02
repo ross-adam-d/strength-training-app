@@ -26,8 +26,10 @@ export default async function DashboardLayout({
       />
       <SubscriptionBanner
         userId={session.user?.id}
+        role={session.user?.role}
         subscriptionStatus={session.user?.subscriptionStatus}
         trialEndsAt={session.user?.trialEndsAt}
+        manualAccessGrantedUntil={(session.user as any)?.manualAccessGrantedUntil}
         hasActiveCoach={(session.user as any)?.hasActiveCoach}
       />
       <main className="container mx-auto px-4 py-8">{children}</main>
