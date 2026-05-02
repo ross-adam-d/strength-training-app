@@ -60,6 +60,8 @@ export async function GET(request: Request) {
             },
             weight: true,
             reps: true,
+            repsLeft: true,
+            repsRight: true,
           },
         },
       },

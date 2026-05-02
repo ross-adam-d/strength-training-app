@@ -38,7 +38,7 @@ interface WorkoutLog {
   duration?: number
   overallRpe?: number
   workout: { name: string } | null
-  exerciseLogs: Array<{ exercise: { name: string }; weight: number; reps: number }>
+  exerciseLogs: Array<{ exercise: { name: string }; weight: number; reps: number; repsLeft: number | null; repsRight: number | null }>
 }
 
 function getLastWeekRange(): { since: Date; until: Date } {
@@ -112,7 +112,10 @@ export default function ProgressPage() {
   })
 
   const totalVolumeKg = filteredWorkouts.reduce(
-    (sum, w) => sum + w.exerciseLogs.reduce((s, l) => s + l.weight * l.reps, 0),
+    (sum, w) => sum + w.exerciseLogs.reduce((s, l) => {
+      const reps = l.reps || ((l.repsLeft ?? 0) + (l.repsRight ?? 0))
+      return s + l.weight * reps
+    }, 0),
     0
   )
 
@@ -213,7 +216,8 @@ export default function ProgressPage() {
       </div>
 
       {/* Time period */}
-      <div className="flex justify-end mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-xs text-gray-400">All training blocks</p>
         <div className="w-44">
           <Select
             options={TIME_PERIODS.map((p) => ({ value: p.value, label: p.label }))}

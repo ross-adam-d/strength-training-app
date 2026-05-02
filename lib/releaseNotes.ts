@@ -16,6 +16,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     changes: [
       'Fix: Weak Point Analysis now correctly shows all trained muscle groups — workouts completed earlier in the current week were previously excluded from the phase view',
       'Fix: Progressive overload suggestion no longer shows 0/0 when the most recent session was logged without entering values — falls back to plan target reps instead',
+      'Fix: Progress page volume now correctly counts unilateral exercises (e.g. alternating dumbbell sets) — previously these contributed zero to the total',
+      'Progress page now shows "All training blocks" label to clarify it includes all historical sessions, not just the current program',
     ],
   },
   {
