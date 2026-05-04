@@ -1115,8 +1115,7 @@ export default function WorkoutLogPage() {
     setSaving(true)
 
     const endTime = new Date()
-    const totalPauseMs = pauseOffsetRef.current + (pausedAtRef.current ? Date.now() - pausedAtRef.current : 0)
-    const duration = Math.round((endTime.getTime() - startTime.getTime() - totalPauseMs) / 1000 / 60)
+    const duration = Math.max(1, Math.round((endTime.getTime() - startTime.getTime()) / 1000 / 60))
 
     // Calculate overall workout RPE (average of exercise RPEs)
     const rpeValues = Object.values(exerciseRpes).filter(rpe => rpe !== undefined && rpe > 0)
