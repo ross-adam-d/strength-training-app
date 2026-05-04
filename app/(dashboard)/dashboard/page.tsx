@@ -15,6 +15,25 @@ import UndoSkipButton from '@/components/UndoSkipButton'
 
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+function weekStartUTC(date: Date, tz: string): Date {
+  // Returns the UTC timestamp corresponding to Monday 00:00 in the given timezone for the week containing `date`.
+  // Uses Intl to resolve the correct offset including DST (e.g. AEST vs AEDT).
+  const localDateStr = date.toLocaleDateString('en-CA', { timeZone: tz }) // 'YYYY-MM-DD'
+  const localDow = date.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' }) // 'Mon'…'Sun'
+  const dowOffset: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
+  const [y, mo, d] = localDateStr.split('-').map(Number)
+  const mondayStr = new Date(Date.UTC(y, mo - 1, d - (dowOffset[localDow] ?? 0))).toISOString().slice(0, 10)
+  // Probe noon UTC on Monday to find the timezone offset (noon avoids DST transitions at ~2am)
+  const probe = new Date(`${mondayStr}T12:00:00Z`)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false,
+  }).formatToParts(probe)
+  const h = +parts.find(p => p.type === 'hour')!.value
+  const m = +parts.find(p => p.type === 'minute')!.value
+  const tzOffsetMs = ((h * 60 + m) - 720) * 60_000
+  return new Date(new Date(`${mondayStr}T00:00:00Z`).getTime() - tzOffsetMs)
+}
+
 function formatVolume(kg: number, unitPref: string): string {
   if (unitPref === 'imperial') {
     const lbs = kg * 2.20462
@@ -213,14 +232,10 @@ export default async function DashboardPage({
   let statViews: import('@/components/StatsCarousel').StatView[] = []
 
   if (currentMicro) {
-    // Boundaries for the prior completed calendar week (Mon–Sun)
-    const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, …
-    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const startOfThisWeek = new Date(now)
-    startOfThisWeek.setDate(now.getDate() - daysToMonday)
-    startOfThisWeek.setHours(0, 0, 0, 0)
-    const startOfLastWeek = new Date(startOfThisWeek)
-    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7)
+    // Compute Mon–Sun week boundaries in Australia/Sydney time (handles AEST/AEDT).
+    // Server runs UTC; computing in UTC causes the wrong week to be shown before 10am AEST on Mondays.
+    const startOfThisWeek = weekStartUTC(now, 'Australia/Sydney')
+    const startOfLastWeek = new Date(startOfThisWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     const [phaseLogs, weekLogs, lastWeekLogs] = await Promise.all([
       prisma.workoutLog.findMany({
