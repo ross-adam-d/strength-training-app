@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-05-03'
+export const CURRENT_RELEASE_ID = '2026-05-04'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,15 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-05-04',
+    date: 'May 4, 2026',
+    title: 'Bug fixes',
+    changes: [
+      'Fix: saving a workout no longer fails when the workout timer was paused — duration is now recorded as wall-clock session time',
+      'Fix: dashboard "Last Week" stats now show the correct week when viewed before 10am AEST on Mondays',
+    ],
+  },
   {
     id: '2026-05-03',
     date: 'May 3, 2026',
