@@ -70,7 +70,7 @@ export default async function DashboardPage({
   const now = new Date()
 
   // Stage 1: independent queries in parallel
-  const [blockCount, activeBlock, recentWorkoutLogs, userData, coachRelationship] = await Promise.all([
+  const [blockCount, rawActiveBlock, recentWorkoutLogs, userData, coachRelationship] = await Promise.all([
     prisma.macrocycle.count({
       where: { userId: session.user.id },
     }),
@@ -103,6 +103,22 @@ export default async function DashboardPage({
       select: { coach: { select: { name: true } } },
     }),
   ])
+
+  // Self-heal: if the "active" block has all phases completed it was never auto-marked done.
+  // Mark it completed now so the dashboard reflects the correct state.
+  let activeBlock = rawActiveBlock
+  if (rawActiveBlock) {
+    const incompletePhaseCount = await prisma.mesocycle.count({
+      where: { macrocycleId: rawActiveBlock.id, status: { not: 'completed' } },
+    })
+    if (incompletePhaseCount === 0) {
+      await prisma.macrocycle.update({
+        where: { id: rawActiveBlock.id },
+        data: { status: 'completed' },
+      })
+      activeBlock = null
+    }
+  }
 
   // Stage 2: depends on activeBlock — find current microcycle with workouts and phase info
   let currentMicro: {
@@ -153,34 +169,36 @@ export default async function DashboardPage({
   }
 
   if (activeBlock) {
-    // Prefer the earliest week (across all phases) that still has incomplete workouts.
-    // No date constraint — if a phase is finished early, advance to the next phase immediately.
+    // Only look in non-completed phases — completed phases should never surface on the dashboard.
+    const activePhaseFilter = { macrocycleId: activeBlock.id, status: { not: 'completed' as const } }
+
+    // Prefer the earliest week (across all active phases) that still has incomplete workouts.
     currentMicro = await prisma.microcycle.findFirst({
       where: {
-        mesocycle: { macrocycleId: activeBlock.id },
+        mesocycle: activePhaseFilter,
         workouts: { some: { workoutLogs: { none: {} } } },
       },
       orderBy: { startDate: 'asc' },
       select: microSelect,
     })
 
-    // Fall back to the current calendar week when all weeks are complete
+    // Fall back to the current calendar week within non-completed phases
     if (!currentMicro) {
       currentMicro = await prisma.microcycle.findFirst({
         where: {
           startDate: { lte: now },
           endDate: { gt: now },
-          mesocycle: { macrocycleId: activeBlock.id },
+          mesocycle: activePhaseFilter,
         },
         select: microSelect,
       })
     }
 
-    // Final fallback: the last week in the block (everything complete, no calendar match)
+    // Final fallback: the last week in any non-completed phase
     if (!currentMicro) {
       currentMicro = await prisma.microcycle.findFirst({
         where: {
-          mesocycle: { macrocycleId: activeBlock.id },
+          mesocycle: activePhaseFilter,
           workouts: { some: {} },
         },
         orderBy: { startDate: 'desc' },
