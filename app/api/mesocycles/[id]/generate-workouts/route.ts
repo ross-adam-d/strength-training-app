@@ -118,13 +118,13 @@ export async function POST(
       let sourcePhase: { id: string; trainingDaysPerWeek: number | null; trainingSplit: string | null }
 
       if (sourceMesocycleId) {
-        // Use explicitly chosen source phase (must belong to the same macrocycle)
+        // Use explicitly chosen source phase — verified by user ownership, not macrocycle membership
         const found = await prisma.mesocycle.findFirst({
-          where: { id: sourceMesocycleId, macrocycleId },
+          where: { id: sourceMesocycleId, macrocycle: { userId: mesocycle.macrocycle.userId } },
           select: { id: true, trainingDaysPerWeek: true, trainingSplit: true },
         })
         if (!found) {
-          return NextResponse.json({ error: 'Source phase not found in this block' }, { status: 400 })
+          return NextResponse.json({ error: 'Source phase not found' }, { status: 400 })
         }
         sourcePhase = found
       } else {
@@ -144,9 +144,10 @@ export async function POST(
         sourcePhase = allPhases[thisIndex - 1]
       }
 
-      // Fetch week 1 workouts of source phase
+      // Fetch the first non-deload week that has workouts (usually week 1, but robust to edge cases)
       const sourceWeek1 = await prisma.microcycle.findFirst({
-        where: { mesocycleId: sourcePhase.id, weekNumber: 1 },
+        where: { mesocycleId: sourcePhase.id, isRecovery: false, workouts: { some: {} } },
+        orderBy: { weekNumber: 'asc' },
         select: {
           workouts: {
             orderBy: { orderIndex: 'asc' },
@@ -178,7 +179,7 @@ export async function POST(
 
       if (!sourceWeek1 || sourceWeek1.workouts.length === 0) {
         return NextResponse.json(
-          { error: 'The previous phase has no workouts to repeat. Generate workouts in the previous phase first.' },
+          { error: 'The selected phase has no workouts to copy. Generate workouts in that phase first.' },
           { status: 400 }
         )
       }

@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-05-04'
+export const CURRENT_RELEASE_ID = '2026-06-01'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-06-01',
+    date: 'June 1, 2026',
+    title: 'Repeat any previous phase',
+    changes: [
+      'Repeat a Prior Phase now shows phases from all your blocks, not just the current one — useful when starting a new block',
+      'Phases are grouped by block in the picker for easy scanning',
+      'After selecting a phase, you can edit the destination phase name before applying — pre-filled as "Block – Phase" by default',
+    ],
+  },
   {
     id: '2026-05-04',
     date: 'May 4, 2026',

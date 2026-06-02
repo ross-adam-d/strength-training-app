@@ -43,7 +43,7 @@ interface Mesocycle {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 type PhaseTemplate = { id: string; name: string; focus: string | null; daysPerWeek: number | null; defaultWeeks: number; _count: { workouts: number } }
-type SiblingPhase = { id: string; name: string; hasWorkouts: boolean }
+type SiblingPhase = { id: string; name: string; macycleName: string }
 
 export default function MesocycleDetailPage() {
   const params = useParams()
@@ -66,6 +66,9 @@ export default function MesocycleDetailPage() {
   const [showRepeatPicker, setShowRepeatPicker] = useState(false)
   const [siblingPhases, setSiblingPhases] = useState<SiblingPhase[]>([])
   const [loadingSiblings, setLoadingSiblings] = useState(false)
+  const [repeatStep, setRepeatStep] = useState<'pick' | 'confirm'>('pick')
+  const [selectedRepeatPhase, setSelectedRepeatPhase] = useState<SiblingPhase | null>(null)
+  const [repeatDestName, setRepeatDestName] = useState('')
   const [deloadConfirmWeek, setDeloadConfirmWeek] = useState<Microcycle | null>(null)
   const [applyingDeload, setApplyingDeload] = useState<string | null>(null)
 
@@ -109,31 +112,38 @@ export default function MesocycleDetailPage() {
   }
 
   async function openRepeatPicker() {
-    if (!mesocycle) return
     setShowRepeatPicker(true)
+    setRepeatStep('pick')
+    setSelectedRepeatPhase(null)
     if (siblingPhases.length > 0) return
     setLoadingSiblings(true)
     try {
-      const res = await fetch(`/api/macrocycles/${mesocycle.macrocycle.id}`)
+      const res = await fetch(`/api/mesocycles/all-with-workouts?exclude=${params.id}`)
       if (res.ok) {
         const data = await res.json()
-        const others: SiblingPhase[] = (data.mesocycles ?? [])
-          .filter((m: any) => m.id !== params.id)
-          .map((m: any) => ({
-            id: m.id,
-            name: m.name,
-            hasWorkouts: (m.microcycles ?? []).some((mc: any) => (mc.workouts ?? []).length > 0),
-          }))
-        setSiblingPhases(others)
+        setSiblingPhases(data)
       }
     } finally {
       setLoadingSiblings(false)
     }
   }
 
-  async function repeatPhase(sourceMesocycleId: string) {
+  async function repeatPhase(sourceMesocycleId: string, newName: string) {
     setGeneratingWorkouts(true)
     try {
+      if (newName.trim()) {
+        const patchRes = await fetch(`/api/mesocycles/${params.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName.trim() }),
+        })
+        if (!patchRes.ok) {
+          const data = await patchRes.json()
+          alert(data.error || 'Failed to rename phase')
+          setGeneratingWorkouts(false)
+          return
+        }
+      }
       const res = await fetch(`/api/mesocycles/${params.id}/generate-workouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,44 +376,99 @@ export default function MesocycleDetailPage() {
                     🔁 Repeat a Prior Phase
                   </Button>
                   <p className="text-sm text-gray-600 -mt-2">
-                    Copy workouts from a previous phase in this block
+                    Copy workouts from any previous phase across all your blocks
                   </p>
 
                   {showRepeatPicker && (
                     <div className="bg-white border border-gray-200 rounded-xl shadow-sm text-left">
-                      <div className="flex items-center justify-between px-4 py-3 border-b">
-                        <p className="font-semibold text-gray-900 text-sm">Select a phase to repeat</p>
-                        <button
-                          onClick={() => setShowRepeatPicker(false)}
-                          className="text-gray-400 hover:text-gray-600 text-lg leading-none"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      {loadingSiblings ? (
-                        <p className="text-sm text-gray-400 text-center py-6">Loading phases…</p>
-                      ) : siblingPhases.filter((p) => p.hasWorkouts).length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-6">
-                          No other phases with workouts in this block yet.
-                        </p>
+                      {repeatStep === 'pick' ? (
+                        <>
+                          <div className="flex items-center justify-between px-4 py-3 border-b">
+                            <p className="font-semibold text-gray-900 text-sm">Select a phase to repeat</p>
+                            <button
+                              onClick={() => setShowRepeatPicker(false)}
+                              className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          {loadingSiblings ? (
+                            <p className="text-sm text-gray-400 text-center py-6">Loading phases…</p>
+                          ) : siblingPhases.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-6">
+                              No phases with workouts found.
+                            </p>
+                          ) : (
+                            <div className="max-h-64 overflow-y-auto">
+                              {Object.entries(
+                                siblingPhases.reduce<Record<string, SiblingPhase[]>>((acc, p) => {
+                                  if (!acc[p.macycleName]) acc[p.macycleName] = []
+                                  acc[p.macycleName].push(p)
+                                  return acc
+                                }, {})
+                              ).map(([blockName, phases]) => (
+                                <div key={blockName}>
+                                  <p className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-y border-gray-100">
+                                    {blockName}
+                                  </p>
+                                  {phases.map((p) => (
+                                    <button
+                                      key={p.id}
+                                      onClick={() => {
+                                        setSelectedRepeatPhase(p)
+                                        setRepeatDestName(`${p.macycleName} – ${p.name}`)
+                                        setRepeatStep('confirm')
+                                      }}
+                                      disabled={generatingWorkouts}
+                                      className="w-full text-left px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-0 disabled:opacity-50"
+                                    >
+                                      <p className="font-medium text-gray-900 text-sm">{p.name}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       ) : (
-                        <div className="divide-y max-h-64 overflow-y-auto">
-                          {siblingPhases
-                            .filter((p) => p.hasWorkouts)
-                            .map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => repeatPhase(p.id)}
-                                disabled={generatingWorkouts}
-                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition disabled:opacity-50"
-                              >
-                                <p className="font-medium text-gray-900 text-sm">{p.name}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  Week 1 workouts copied into all weeks · recovery weeks at 60% sets
-                                </p>
-                              </button>
-                            ))}
-                        </div>
+                        <>
+                          <div className="flex items-center justify-between px-4 py-3 border-b">
+                            <button
+                              onClick={() => setRepeatStep('pick')}
+                              className="text-sm text-gray-500 hover:text-gray-700"
+                            >
+                              ← Back
+                            </button>
+                            <p className="font-semibold text-gray-900 text-sm">Confirm repeat</p>
+                            <button
+                              onClick={() => setShowRepeatPicker(false)}
+                              className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="px-4 py-4 space-y-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 block mb-1">Phase name</label>
+                              <input
+                                type="text"
+                                value={repeatDestName}
+                                onChange={(e) => setRepeatDestName(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Week 1 workouts copied into all weeks · recovery weeks at 60% sets
+                            </p>
+                            <button
+                              onClick={() => repeatPhase(selectedRepeatPhase!.id, repeatDestName)}
+                              disabled={generatingWorkouts || !repeatDestName.trim()}
+                              className="w-full py-2.5 text-sm font-medium bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition disabled:opacity-50"
+                            >
+                              {generatingWorkouts ? 'Applying…' : 'Apply Phase'}
+                            </button>
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
