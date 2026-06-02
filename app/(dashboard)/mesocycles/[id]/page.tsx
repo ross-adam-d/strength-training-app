@@ -71,6 +71,9 @@ export default function MesocycleDetailPage() {
   const [repeatDestName, setRepeatDestName] = useState('')
   const [deloadConfirmWeek, setDeloadConfirmWeek] = useState<Microcycle | null>(null)
   const [applyingDeload, setApplyingDeload] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [editedName, setEditedName] = useState('')
+  const [savingName, setSavingName] = useState(false)
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -184,6 +187,27 @@ export default function MesocycleDetailPage() {
       alert('Failed to generate workouts')
     } finally {
       setGeneratingWorkouts(false)
+    }
+  }
+
+  async function savePhaseName() {
+    if (!editedName.trim() || !mesocycle) return
+    setSavingName(true)
+    try {
+      const res = await fetch(`/api/mesocycles/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editedName.trim() }),
+      })
+      if (res.ok) {
+        setMesocycle((m) => m ? { ...m, name: editedName.trim() } : m)
+        setEditingName(false)
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to rename phase')
+      }
+    } finally {
+      setSavingName(false)
     }
   }
 
@@ -324,7 +348,26 @@ export default function MesocycleDetailPage() {
           >
             ← {mesocycle.macrocycle.name}
           </Link>
-          <h1 className="text-xl font-bold text-gray-900 mt-2">{mesocycle.name}</h1>
+          {editingName ? (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                autoFocus
+                className="text-xl font-bold text-gray-900 border-b-2 border-primary-500 outline-none bg-transparent flex-1 min-w-0"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') savePhaseName(); if (e.key === 'Escape') setEditingName(false) }}
+              />
+              <button onClick={savePhaseName} disabled={savingName} className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:opacity-50 flex-shrink-0">{savingName ? 'Saving…' : 'Save'}</button>
+              <button onClick={() => setEditingName(false)} className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0">Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mt-2">
+              <h1 className="text-xl font-bold text-gray-900">{mesocycle.name}</h1>
+              <button onClick={() => { setEditedName(mesocycle.name); setEditingName(true) }} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Rename phase">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="px-4">
@@ -585,8 +628,27 @@ export default function MesocycleDetailPage() {
         </Link>
         <div className="bg-gray-900 rounded-2xl shadow-md px-6 py-4">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-base font-semibold text-white">{mesocycle.name}</h1>
-            <span className="text-xs text-gray-400">{mesocycle.microcycles.length} weeks</span>
+            {editingName ? (
+              <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                <input
+                  autoFocus
+                  className="text-base font-semibold text-white bg-transparent border-b border-gray-500 outline-none flex-1 min-w-0"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') savePhaseName(); if (e.key === 'Escape') setEditingName(false) }}
+                />
+                <button onClick={savePhaseName} disabled={savingName} className="text-xs font-medium text-primary-400 hover:text-primary-300 disabled:opacity-50 flex-shrink-0">{savingName ? 'Saving…' : 'Save'}</button>
+                <button onClick={() => setEditingName(false)} className="text-xs text-gray-500 hover:text-gray-300 flex-shrink-0">Cancel</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-base font-semibold text-white truncate">{mesocycle.name}</h1>
+                <button onClick={() => { setEditedName(mesocycle.name); setEditingName(true) }} className="text-gray-500 hover:text-gray-300 flex-shrink-0" title="Rename phase">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+              </div>
+            )}
+            <span className="text-xs text-gray-400 flex-shrink-0">{mesocycle.microcycles.length} weeks</span>
           </div>
           {/* Week dots */}
           <div className="flex gap-1.5 flex-wrap">
