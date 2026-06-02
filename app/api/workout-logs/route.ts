@@ -186,6 +186,8 @@ export async function POST(request: Request) {
     }
 
     // Auto-advance: if this workout completes the entire phase, compress dates and activate next phase
+    let completedType: 'block' | 'phase' | null = null
+
     if (mesocycleId && macrocycleId && data.workoutId) {
       const incompleteInPhase = await prisma.workout.count({
         where: {
@@ -304,10 +306,24 @@ export async function POST(request: Request) {
             })
           }
         }
+
+        // Check if all phases in the block are now complete — if so, mark the block complete
+        const remainingPhases = await prisma.mesocycle.count({
+          where: { macrocycleId, status: { not: 'completed' } },
+        })
+        if (remainingPhases === 0) {
+          await prisma.macrocycle.update({
+            where: { id: macrocycleId },
+            data: { status: 'completed' },
+          })
+          completedType = 'block'
+        } else {
+          completedType = 'phase'
+        }
       }
     }
 
-    return NextResponse.json(workoutLog, { status: 201 })
+    return NextResponse.json({ ...workoutLog, completed: completedType }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

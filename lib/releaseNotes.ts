@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-06-01'
+export const CURRENT_RELEASE_ID = '2026-06-02'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,16 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-06-02',
+    date: 'June 2, 2026',
+    title: 'Phase and block completion',
+    changes: [
+      'Completing the final workout of a phase now shows a celebration message before returning to the dashboard',
+      'Completing the final workout in a block shows a block completion message and automatically marks the block as done',
+      'Completed blocks no longer appear on the dashboard — you\'ll see the "Start a new block" prompt instead',
+    ],
+  },
   {
     id: '2026-06-01',
     date: 'June 1, 2026',

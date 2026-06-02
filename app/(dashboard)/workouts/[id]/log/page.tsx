@@ -163,6 +163,9 @@ export default function WorkoutLogPage() {
   const [overallRating, setOverallRating] = useState<number | undefined>()
   const [saving, setSaving] = useState(false)
 
+  // Completion celebration modal
+  const [completedType, setCompletedType] = useState<'block' | 'phase' | null>(null)
+
   // Missing fields modal state (workout-level)
   const [showIncompleteModal, setShowIncompleteModal] = useState(false)
   const [incompleteSetsCount, setIncompleteSetsCount] = useState(0)
@@ -1257,11 +1260,14 @@ export default function WorkoutLogPage() {
       clearTimeout(timeoutId)
 
       if (response.ok && workout) {
-        // Clear draft on successful save
         clearDraft()
         setSaving(false)
-        // Redirect to dashboard
-        window.location.assign('/dashboard')
+        const result = await response.json().catch(() => ({}))
+        if (result.completed === 'block' || result.completed === 'phase') {
+          setCompletedType(result.completed)
+        } else {
+          window.location.assign('/dashboard')
+        }
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Server error:', errorData)
@@ -1956,6 +1962,49 @@ export default function WorkoutLogPage() {
           {saving ? 'Saving...' : 'Complete Workout'}
         </Button>
       </div>
+
+      {/* Phase / Block completion celebration */}
+      <Modal
+        isOpen={completedType !== null}
+        onClose={() => window.location.assign('/dashboard')}
+        size="sm"
+      >
+        <div className="text-center space-y-5 py-2">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          {completedType === 'block' ? (
+            <>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Block complete!</h2>
+                <p className="text-sm text-gray-500">{workout?.microcycle.mesocycle.macrocycle.name}</p>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                You&apos;ve finished every session in this training block. That&apos;s a serious achievement —
+                the work you&apos;ve put in compounds over time. Take a moment to reflect, then set your goals for your next block.
+              </p>
+            </>
+          ) : (
+            <>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Phase complete!</h2>
+                <p className="text-sm text-gray-500">{workout?.microcycle.mesocycle.name}</p>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                You&apos;ve finished every session in this phase. Keep the momentum going —
+                your next phase is ready when you are.
+              </p>
+            </>
+          )}
+          <Button className="w-full" onClick={() => window.location.assign('/dashboard')}>
+            Back to dashboard
+          </Button>
+        </div>
+      </Modal>
 
       {/* Exercise-level Incomplete Sets Modal */}
       <Modal
