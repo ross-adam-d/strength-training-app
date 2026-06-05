@@ -23,13 +23,16 @@ export function calculateSuggestedReps(
   refWeight: number,
   refReps: number,
   newWeight: number,
-  repRange: { min: number; max: number }
+  repRange: { min: number; max: number },
+  capToMax = true
 ): number {
   if (newWeight <= 0 || refWeight <= 0 || refReps <= 0) return repRange.min
   const e1RM = estimate1RM(refWeight, refReps)
   if (e1RM <= 0 || e1RM <= newWeight) return repRange.min
   const reps = Math.round(30 * (e1RM / newWeight - 1))
-  return Math.max(repRange.min, Math.min(repRange.max, reps))
+  return capToMax
+    ? Math.max(repRange.min, Math.min(repRange.max, reps))
+    : Math.max(1, reps)
 }
 
 export function getSuggestion(

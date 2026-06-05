@@ -28,11 +28,17 @@ export async function GET(request: NextRequest) {
     userId = clientId
   }
 
+  const fourWeeksAgo = new Date()
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
+
   const logs = await prisma.exerciseLog.findMany({
     where: {
       ...(rawIds.length > 0 ? { exerciseId: { in: rawIds } } : {}),
       skipped: false,
-      workoutLog: { userId, completedAt: { gte: new Date('2020-01-01') } },
+      workoutLog: {
+        userId,
+        completedAt: { gte: allMode ? fourWeeksAgo : new Date('2020-01-01') },
+      },
       OR: [{ reps: { gt: 0 } }, { repsLeft: { gt: 0 } }],
     },
     select: {

@@ -1009,30 +1009,37 @@ export default function WorkoutLogPage() {
       })
     )
 
-    // When Set 1 weight changes: recalculate rep suggestion for Set 1 only; blank Sets 2+
+    // When Set 1 weight changes: recalculate rep suggestion for Set 1 only; blank Sets 2+.
+    // Skip if the entered weight matches the current PO suggestion — user accepted the recommendation.
     if (field === 'weight' && setNumber === 1) {
       const weightVal = parseFloat(cleanedValue)
       if (!isNaN(weightVal) && weightVal > 0) {
-        const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
-        if (we && !we.exercise.isTimed) {
-          const lastData = lastSessionSet1.current.get(exerciseId)
-          if (lastData && lastData.weight > 0 && lastData.reps > 0) {
-            const repRange = parseRepRange(we.targetReps)
-            const weightKg = displayToKg(weightVal, unitPref)
-            const suggestedReps = calculateSuggestedReps(lastData.weight, lastData.reps, weightKg, repRange)
-            setSuggestions((prev) => {
-              const exerciseMap = new Map(prev.get(exerciseId) ?? [])
-              exerciseMap.forEach((val, key) => {
-                exerciseMap.set(key, {
-                  ...val,
-                  weight: cleanedValue,
-                  reps: key === 1 ? String(suggestedReps) : '',
+        const currentSuggestedWeight = parseFloat(suggestions.get(exerciseId)?.get(1)?.weight ?? '')
+        const weightMatchesSuggestion = !isNaN(currentSuggestedWeight) &&
+          Math.abs(weightVal - currentSuggestedWeight) < 0.01
+        if (!weightMatchesSuggestion) {
+          const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
+          if (we && !we.exercise.isTimed) {
+            const lastData = lastSessionSet1.current.get(exerciseId)
+            if (lastData && lastData.weight > 0 && lastData.reps > 0) {
+              const repRange = parseRepRange(we.targetReps)
+              const weightKg = displayToKg(weightVal, unitPref)
+              // Don't cap to range max — user is overriding weight, show actual attainable reps
+              const suggestedReps = calculateSuggestedReps(lastData.weight, lastData.reps, weightKg, repRange, false)
+              setSuggestions((prev) => {
+                const exerciseMap = new Map(prev.get(exerciseId) ?? [])
+                exerciseMap.forEach((val, key) => {
+                  exerciseMap.set(key, {
+                    ...val,
+                    weight: cleanedValue,
+                    reps: key === 1 ? String(suggestedReps) : '',
+                  })
                 })
+                const next = new Map(prev)
+                next.set(exerciseId, exerciseMap)
+                return next
               })
-              const next = new Map(prev)
-              next.set(exerciseId, exerciseMap)
-              return next
-            })
+            }
           }
         }
       }
