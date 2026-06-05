@@ -59,6 +59,8 @@ export default function AnalyticsTab({ timePeriod, clientId }: { timePeriod: str
   const [loadingReadiness, setLoadingReadiness] = useState(true)
   const [muscleVolumeData, setMuscleVolumeData] = useState<MuscleVolumeItem[]>([])
   const [loadingMuscle, setLoadingMuscle] = useState(true)
+  const [stagnatingExercises, setStagnatingExercises] = useState<Array<{ id: string; name: string; suggestedLoad?: number; isBodyweight: boolean }>>([])
+  const [loadingStagnation, setLoadingStagnation] = useState(true)
 
   useEffect(() => {
     fetch(`/api/progress/readiness${clientId ? `?clientId=${clientId}` : ''}`)
@@ -77,6 +79,24 @@ export default function AnalyticsTab({ timePeriod, clientId }: { timePeriod: str
       .then((data) => { if (!cancelled) setMuscleVolumeData(data) })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoadingMuscle(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingStagnation(true)
+    fetch(`/api/exercises/stagnation?all=true${clientId ? `&clientId=${clientId}` : ''}`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data: Record<string, { stagnant: boolean; suggestedLoad?: number; isBodyweight: boolean; exerciseName?: string }>) => {
+        if (cancelled) return
+        const list = Object.entries(data)
+          .filter(([, v]) => v.stagnant)
+          .map(([id, v]) => ({ id, name: v.exerciseName ?? id, suggestedLoad: v.suggestedLoad, isBodyweight: v.isBodyweight }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setStagnatingExercises(list)
+      })
+      .catch(console.error)
+      .finally(() => { if (!cancelled) setLoadingStagnation(false) })
     return () => { cancelled = true }
   }, [])
 
@@ -224,6 +244,53 @@ export default function AnalyticsTab({ timePeriod, clientId }: { timePeriod: str
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Stagnating Exercises */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-base font-semibold text-gray-900">Progression Stalls</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Exercises with flat or declining 1RM estimates over the last 3 sessions
+          </p>
+        </CardHeader>
+        <CardBody>
+          {loadingStagnation ? (
+            <div className="text-center py-8 text-sm text-gray-500">Loading...</div>
+          ) : stagnatingExercises.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No stalls detected — all tracked exercises are progressing.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {stagnatingExercises.map((ex) => (
+                <div
+                  key={ex.id}
+                  className="flex items-start justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3"
+                >
+                  <div className="flex items-start gap-2 min-w-0">
+                    <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{ex.name}</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        {ex.isBodyweight
+                          ? 'No rep improvement in last 3 sessions — consider reducing reps slightly to focus on form.'
+                          : ex.suggestedLoad
+                          ? `Consider dropping to ~${ex.suggestedLoad}kg for a few weeks to focus on form and execution.`
+                          : 'No 1RM progress in last 3 sessions.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-gray-400 pt-1">
+                Tip: a short deload or technique focus often breaks a plateau faster than grinding the same weight.
+              </p>
             </div>
           )}
         </CardBody>

@@ -20,13 +20,15 @@ export function getWeightIncrement(equipment: string[], isBodyweight: boolean): 
 }
 
 export function calculateSuggestedReps(
-  lastWeight: number,
-  lastReps: number,
+  refWeight: number,
+  refReps: number,
   newWeight: number,
   repRange: { min: number; max: number }
 ): number {
-  if (newWeight <= 0 || lastWeight <= 0) return repRange.min
-  const reps = Math.round(lastReps * lastWeight / newWeight)
+  if (newWeight <= 0 || refWeight <= 0 || refReps <= 0) return repRange.min
+  const e1RM = estimate1RM(refWeight, refReps)
+  if (e1RM <= 0 || e1RM <= newWeight) return repRange.min
+  const reps = Math.round(30 * (e1RM / newWeight - 1))
   return Math.max(repRange.min, Math.min(repRange.max, reps))
 }
 
@@ -50,10 +52,21 @@ export function getSuggestion(
   }
 
   const set1 = lastSets.find((s) => s.setNumber === 1) ?? lastSets[0]
-  const lastWeight = set1.weight
   // For unilateral exercises reps is stored as 0; use repsLeft (per-side count) instead
-  const lastReps = set1.reps > 0 ? set1.reps : (set1.repsLeft || set1.repsRight || 0)
+  const effectiveRepsForSet = (s: typeof set1) => s.reps > 0 ? s.reps : (s.repsLeft || s.repsRight || 0)
+
+  // Trigger check and eligibility use Set 1 (user's prescribed first set)
+  const lastWeight = set1.weight
+  const lastReps = effectiveRepsForSet(set1)
   const rir = set1.rir
+
+  // RM calculation uses best-performing set (highest estimated 1RM across all sets)
+  const bestSet = lastSets.reduce((best, s) => {
+    const e = estimate1RM(s.weight, effectiveRepsForSet(s))
+    return e > estimate1RM(best.weight, effectiveRepsForSet(best)) ? s : best
+  }, lastSets[0])
+  const refWeight = bestSet.weight
+  const refReps = effectiveRepsForSet(bestSet)
 
   // If the last session was logged with no meaningful data (weight=0 AND reps=0 for all sets),
   // treat it as no history so PO shows plan target reps rather than 0/0.
@@ -89,17 +102,14 @@ export function getSuggestion(
   }
 
   // Determine if weight progression trigger is met
-  const effectiveReps = (s: typeof set1) =>
-    s.reps > 0 ? s.reps : (s.repsLeft || s.repsRight || 0)
-
   let triggerMet = false
   if (trigger === 'topOfRange') {
     triggerMet = lastReps >= repRange.max
   } else if (trigger === 'allSetsTop') {
-    triggerMet = lastSets.every((s) => effectiveReps(s) >= repRange.max)
+    triggerMet = lastSets.every((s) => effectiveRepsForSet(s) >= repRange.max)
   } else if (trigger === 'combo') {
-    const anyAtTop = lastSets.some((s) => effectiveReps(s) >= repRange.max)
-    const allAboveMin = lastSets.every((s) => effectiveReps(s) >= repRange.min)
+    const anyAtTop = lastSets.some((s) => effectiveRepsForSet(s) >= repRange.max)
+    const allAboveMin = lastSets.every((s) => effectiveRepsForSet(s) >= repRange.min)
     triggerMet = anyAtTop && allAboveMin
   }
 
@@ -119,7 +129,7 @@ export function getSuggestion(
   }
 
   const newWeight = lastWeight + increment
-  const suggestedReps = calculateSuggestedReps(lastWeight, lastReps, newWeight, repRange)
+  const suggestedReps = calculateSuggestedReps(refWeight, refReps, newWeight, repRange)
 
   return { weight: String(newWeight), reps: String(suggestedReps), progressionType: 'weight' }
 }

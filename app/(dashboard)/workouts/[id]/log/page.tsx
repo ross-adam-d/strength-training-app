@@ -241,6 +241,8 @@ export default function WorkoutLogPage() {
   const [suggestions, setSuggestions] = useState<Map<string, Map<number, { weight: string; reps: string; duration?: string }>>>(new Map())
   const [allTimeBests, setAllTimeBests] = useState<Record<string, { est1RM: number; maxWeight: number }>>({})
   const lastSessionSet1 = useRef<Map<string, { weight: number; reps: number }>>(new Map())
+  const [stagnationData, setStagnationData] = useState<Record<string, { stagnant: boolean; sessionsChecked: number; currentBest: number; suggestedLoad?: number; isBodyweight: boolean }>>({})
+  const [stagnationTooltipOpen, setStagnationTooltipOpen] = useState<Set<string>>(new Set())
 
   // Add exercise modal state
   const [showExercisePicker, setShowExercisePicker] = useState(false)
@@ -318,23 +320,23 @@ export default function WorkoutLogPage() {
             continue
           }
 
-          // Store last session set 1 data for cleanOnBlur
-          if (representativeSet) {
-            const effectiveReps = we.exercise.isUnilateral && representativeSet.repsLeft
-              ? representativeSet.repsLeft
-              : (representativeSet.reps > 0 ? representativeSet.reps : 0)
-            lastSessionSet1.current.set(we.exercise.id, {
-              weight: representativeSet.weight,
-              reps: effectiveReps,
-            })
-          }
-
           // Prepare effective sets (handle unilateral reps)
           const effectiveSets = exerciseSets.map((s) =>
             we.exercise.isUnilateral && s.repsLeft
               ? { ...s, reps: s.repsLeft }
               : s
           )
+
+          // Store best-performing set (highest e1RM) for cleanOnBlur weight-change recalculation
+          if (effectiveSets.length > 0) {
+            const bestRefSet = effectiveSets.reduce((best, s) => {
+              return estimate1RM(s.weight, s.reps) > estimate1RM(best.weight, best.reps) ? s : best
+            }, effectiveSets[0])
+            lastSessionSet1.current.set(we.exercise.id, {
+              weight: bestRefSet.weight,
+              reps: bestRefSet.reps > 0 ? bestRefSet.reps : 0,
+            })
+          }
 
           const set1Suggestion = we.exercise.isTimed ? null : getSuggestion(
             effectiveSets,
@@ -443,11 +445,16 @@ export default function WorkoutLogPage() {
           setExerciseLogs(prepopulated)
         }
 
-        // Fetch all-time PR bests for PR detection
+        // Fetch all-time PR bests and stagnation status in parallel
         const exerciseIds = data.workoutExercises.map((we: WorkoutExercise) => we.exercise.id)
         if (exerciseIds.length > 0) {
-          const bestsRes = await fetch(`/api/exercises/bests?ids=${exerciseIds.join(',')}`)
+          const idsParam = exerciseIds.join(',')
+          const [bestsRes, stagnationRes] = await Promise.all([
+            fetch(`/api/exercises/bests?ids=${idsParam}`),
+            fetch(`/api/exercises/stagnation?ids=${idsParam}`),
+          ])
           if (bestsRes.ok) setAllTimeBests(await bestsRes.json())
+          if (stagnationRes.ok) setStagnationData(await stagnationRes.json())
         }
       }
     } catch (error) {
@@ -1002,8 +1009,8 @@ export default function WorkoutLogPage() {
       })
     )
 
-    // When weight changes: recalculate rep suggestion for all sets of this exercise
-    if (field === 'weight') {
+    // When Set 1 weight changes: recalculate rep suggestion for Set 1 only; blank Sets 2+
+    if (field === 'weight' && setNumber === 1) {
       const weightVal = parseFloat(cleanedValue)
       if (!isNaN(weightVal) && weightVal > 0) {
         const we = workout?.workoutExercises.find((w) => w.exercise.id === exerciseId)
@@ -1016,7 +1023,11 @@ export default function WorkoutLogPage() {
             setSuggestions((prev) => {
               const exerciseMap = new Map(prev.get(exerciseId) ?? [])
               exerciseMap.forEach((val, key) => {
-                exerciseMap.set(key, { ...val, weight: cleanedValue, reps: String(suggestedReps) })
+                exerciseMap.set(key, {
+                  ...val,
+                  weight: cleanedValue,
+                  reps: key === 1 ? String(suggestedReps) : '',
+                })
               })
               const next = new Map(prev)
               next.set(exerciseId, exerciseMap)
@@ -1460,6 +1471,30 @@ export default function WorkoutLogPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h2 className="text-xl font-bold">{we.exercise.name}</h2>
+                      {stagnationData[we.exercise.id]?.stagnant && (
+                        <button
+                          type="button"
+                          className="relative flex-shrink-0"
+                          onClick={() => setStagnationTooltipOpen((prev) => {
+                            const next = new Set(prev)
+                            next.has(we.exercise.id) ? next.delete(we.exercise.id) : next.add(we.exercise.id)
+                            return next
+                          })}
+                          aria-label="Progression stalled — tap for advice"
+                        >
+                          <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                          </svg>
+                          {stagnationTooltipOpen.has(we.exercise.id) && (
+                            <div className="absolute left-0 top-7 z-20 w-64 bg-gray-900 text-white text-xs rounded-xl px-3 py-2.5 shadow-lg text-left leading-relaxed">
+                              No 1RM progress over the last 3 sessions.
+                              {stagnationData[we.exercise.id].suggestedLoad
+                                ? ` Consider dropping to ~${kgToDisplay(stagnationData[we.exercise.id].suggestedLoad!, unitPref)} ${weightUnit(unitPref)} for a few weeks to focus on form and execution.`
+                                : ' Consider reducing reps slightly for a few sessions to focus on form and execution.'}
+                            </div>
+                          )}
+                        </button>
+                      )}
                       {isInSuperset && (
                         <span className="inline-block bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">
                           SS{supersetGroup}
