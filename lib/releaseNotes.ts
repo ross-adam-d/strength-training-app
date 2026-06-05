@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-06-02'
+export const CURRENT_RELEASE_ID = '2026-06-05'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-06-05',
+    date: 'June 5, 2026',
+    title: 'Smarter progressive overload',
+    changes: [
+      'Rep targets after a weight increase now use 1RM calculations (Epley formula) for greater accuracy — based on your best-performing set, not just Set 1',
+      'When you change weight manually, only Set 1 shows a calculated rep suggestion — subsequent sets are left blank so you can go by feel',
+      'Manually dropping to a much lighter weight now shows the full attainable rep count, uncapped by your target range',
+      'New: stagnation warning on exercises with no 1RM progress over the last 3 sessions — tap the ⚠ icon during a workout for a load-reduction recommendation',
+      'Deep Analytics: new Progression Stalls card shows all exercises that have stalled in the last 4 weeks with suggested load adjustments',
+    ],
+  },
   {
     id: '2026-06-02',
     date: 'June 2, 2026',
