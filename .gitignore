@@ -47,3 +47,8 @@ prisma/migrations
 .env*.local
 
 .env*.local
+
+# local junk / scratch (not part of the app)
+/2.5.26/
+build_output.txt
+*.xlsx
