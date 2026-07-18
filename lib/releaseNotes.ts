@@ -1,4 +1,4 @@
-export const CURRENT_RELEASE_ID = '2026-06-05'
+export const CURRENT_RELEASE_ID = '2026-07-18'
 
 
 export interface ReleaseNote {
@@ -9,6 +9,27 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: '2026-07-18',
+    date: 'July 18, 2026',
+    title: 'Timed exercises in history & consistent volume analytics',
+    changes: [
+      'Workout history now shows the recorded time (e.g. 45s or 1:30) for timed exercises like planks and holds, instead of showing 0 reps',
+      'Weak Point Analysis now follows the same time-period selector as the Muscle Group Volume chart, so the two always agree for the same period',
+    ],
+  },
+  {
+    id: '2026-07-09',
+    date: 'July 9, 2026',
+    title: 'Bodyweight & timed exercises in progress',
+    changes: [
+      'Log your bodyweight at the top of any session that includes bodyweight exercises — it\'s pre-filled from your last session or profile',
+      'Bodyweight and weighted-bodyweight lifts now count towards your volume and get estimated 1RM tracking (your bodyweight is the load, plus any added weight)',
+      'Exercise Progress: bodyweight lifts default to a Reps view (total reps and best set per session) with a toggle to Load & 1RM',
+      'Timed exercises like planks now chart your longest hold and total time under tension per session, instead of showing zero',
+      'New Bodyweight & Timed Bests table shows your best reps and longest holds per exercise',
+    ],
+  },
   {
     id: '2026-06-05',
     date: 'June 5, 2026',

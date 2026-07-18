@@ -5,6 +5,14 @@ import Link from 'next/link'
 import { formatWeight, weightUnit } from '@/lib/units'
 import { formatSetTargets, SetTarget } from '@/lib/setTargets'
 
+// Timed exercises store their result in `duration` (seconds), not reps.
+function formatHold(seconds: number | null | undefined): string {
+  if (!seconds) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`
+}
+
 export default async function CoachClientWorkoutLogPage({
   params,
 }: {
@@ -46,7 +54,7 @@ export default async function CoachClientWorkoutLogPage({
         },
       },
       exerciseLogs: {
-        include: { exercise: { select: { id: true, name: true, isUnilateral: true } } },
+        include: { exercise: { select: { id: true, name: true, isUnilateral: true, isTimed: true } } },
       },
     },
   })
@@ -117,6 +125,7 @@ export default async function CoachClientWorkoutLogPage({
           const completedSets = sets.filter((s) => !s.skipped)
           const exerciseRpe = sets[0]?.exerciseRpe
           const isUnilateral = sets[0]?.exercise.isUnilateral ?? false
+          const isTimed = sets[0]?.exercise.isTimed ?? false
 
           const plannedExercise = workoutExerciseMap.get(exerciseId)
           const planLine = (() => {
@@ -147,7 +156,7 @@ export default async function CoachClientWorkoutLogPage({
               <div className={`grid ${isUnilateral ? 'grid-cols-[2rem_1fr_1.2fr_1fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 text-xs font-medium text-gray-500 mb-2`}>
                 <div className="text-center">#</div>
                 <div className="text-center">Weight</div>
-                <div className="text-center">{isUnilateral ? 'Reps (L/R)' : 'Reps'}</div>
+                <div className="text-center">{isTimed ? 'Time' : isUnilateral ? 'Reps (L/R)' : 'Reps'}</div>
                 <div className="text-center">RIR</div>
               </div>
 
@@ -166,7 +175,9 @@ export default async function CoachClientWorkoutLogPage({
                       <span className="font-medium text-gray-700 text-center">{set.setNumber}</span>
                       <span className="text-center text-gray-900">{formatWeight(set.weight, unitPref)} {weightUnit(unitPref)}</span>
                       <span className="text-center text-gray-900">
-                        {isUnilateral
+                        {isTimed
+                          ? formatHold(set.duration)
+                          : isUnilateral
                           ? `${set.repsLeft ?? 0} / ${set.repsRight ?? 0}`
                           : set.reps}
                       </span>
