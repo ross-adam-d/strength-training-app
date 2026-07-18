@@ -48,12 +48,25 @@ export async function GET(
         workoutLog: {
           select: {
             completedAt: true,
+            bodyweight: true,
+          },
+        },
+        exercise: {
+          select: {
+            isBodyweight: true,
+            isTimed: true,
           },
         },
       },
     })
 
-    return NextResponse.json(logs)
+    // Profile weight as bodyweight fallback for sessions that didn't record one
+    const profile = await prisma.profile.findUnique({
+      where: { userId: targetUserId },
+      select: { weight: true },
+    })
+
+    return NextResponse.json({ logs, profileWeight: profile?.weight ?? null })
   } catch (error) {
     console.error('Error fetching exercise logs:', error)
     return NextResponse.json(

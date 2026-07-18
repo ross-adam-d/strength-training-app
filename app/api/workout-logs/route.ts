@@ -11,6 +11,7 @@ const workoutLogSchema = z.object({
   overallRating: z.number().int().min(1).max(5).optional(),
   overallRpe: z.number().optional(),
   preWorkoutWellness: z.number().int().min(1).max(5).optional(),
+  bodyweight: z.number().positive().optional(),
   exerciseLogs: z.array(z.object({
     exerciseId: z.string(),
     setNumber: z.number().int().positive(),
@@ -56,6 +57,8 @@ export async function GET(request: Request) {
             exercise: {
               select: {
                 name: true,
+                isBodyweight: true,
+                isTimed: true,
               },
             },
             weight: true,
@@ -140,6 +143,7 @@ export async function POST(request: Request) {
         overallRating: data.overallRating,
         overallRpe: data.overallRpe,
         preWorkoutWellness: data.preWorkoutWellness,
+        bodyweight: data.bodyweight,
         exerciseLogs: {
           create: data.exerciseLogs.map((log) => ({
             exerciseId: log.exerciseId,

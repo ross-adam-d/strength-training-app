@@ -189,6 +189,10 @@ export default function WorkoutLogPage() {
   const [wellnessChecked, setWellnessChecked] = useState(false)
   const [preWorkoutWellness, setPreWorkoutWellness] = useState<number | null>(null)
 
+  // Session bodyweight (display units) — captured when the workout has bodyweight exercises,
+  // used as the effective load for those lifts in history & reporting.
+  const [bodyweight, setBodyweight] = useState<string>('')
+
   // Completed exercises tracking
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
   const [removedExercises, setRemovedExercises] = useState<Set<string>>(new Set())
@@ -515,6 +519,7 @@ export default function WorkoutLogPage() {
       overallNotes,
       overallRating,
       preWorkoutWellness,
+      bodyweight,
       startTime: startTime.toISOString(),
       savedAt: new Date().toISOString(),
       pauseOffset: pauseOffsetRef.current,
@@ -525,11 +530,25 @@ export default function WorkoutLogPage() {
 
     localStorage.setItem(draftKey, JSON.stringify(draft))
     setLastSavedAt(new Date())
-  }, [workout, exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, preWorkoutWellness, startTime, draftKey])
+  }, [workout, exerciseLogs, exerciseNotes, exerciseRpes, completedExercises, overallNotes, overallRating, preWorkoutWellness, bodyweight, startTime, draftKey])
 
   useEffect(() => {
     fetchWorkout()
   }, [fetchWorkout])
+
+  // Prefill session bodyweight from last session / profile (only when not already set,
+  // e.g. by a resumed draft). Runs once on mount.
+  useEffect(() => {
+    fetch('/api/profile/bodyweight')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.bodyweight != null) {
+          setBodyweight((prev) => (prev === '' ? String(Math.round(kgToDisplay(d.bodyweight, unitPref) * 10) / 10) : prev))
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Rest timer tick effect — keyed on activeTimerKey only; uses wall clock to survive backgrounding
   useEffect(() => {
@@ -675,6 +694,7 @@ export default function WorkoutLogPage() {
       setPreWorkoutWellness(draft.preWorkoutWellness)
       setWellnessChecked(true)
     }
+    if (draft.bodyweight) setBodyweight(draft.bodyweight)
     setLastSavedAt(new Date(draft.savedAt))
 
     // Restore session timer — continue from where it left off, excluding time away
@@ -1067,18 +1087,21 @@ export default function WorkoutLogPage() {
       const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
       const isUnilateral = workoutExercise?.exercise.isUnilateral || false
       const isTimed = workoutExercise?.exercise.isTimed || false
+      // Bodyweight exercises use bodyweight as the load; the added-load field is optional.
+      const isBodyweight = workoutExercise?.exercise.isBodyweight || false
+      const weightMissing = !isBodyweight && log.weight === ''
 
       if (isUnilateral) {
         // For unilateral: check repsLeft, repsRight, and weight
         return log.repsLeft === '' || log.repsLeft === undefined ||
                log.repsRight === '' || log.repsRight === undefined ||
-               log.weight === ''
+               weightMissing
       } else if (isTimed) {
         // For timed: check duration and weight
-        return log.duration === '' || log.duration === undefined || log.weight === ''
+        return log.duration === '' || log.duration === undefined || weightMissing
       } else {
         // For regular: check reps and weight
-        return log.reps === '' || log.weight === ''
+        return log.reps === '' || weightMissing
       }
     })
 
@@ -1114,12 +1137,14 @@ export default function WorkoutLogPage() {
       const workoutExercise = workout?.workoutExercises.find(we => we.exercise.id === log.exerciseId)
       const isUnilateral = workoutExercise?.exercise.isUnilateral || false
       const isTimed = workoutExercise?.exercise.isTimed || false
+      const isBodyweight = workoutExercise?.exercise.isBodyweight || false
+      const weightMissing = !isBodyweight && log.weight === ''
 
       const isIncomplete = isTimed
-        ? (log.duration === '' || log.duration === undefined || log.weight === '')
+        ? (log.duration === '' || log.duration === undefined || weightMissing)
         : isUnilateral
-          ? (log.repsLeft === '' || log.repsLeft === undefined || log.repsRight === '' || log.repsRight === undefined || log.weight === '')
-          : (log.reps === '' || log.weight === '')
+          ? (log.repsLeft === '' || log.repsLeft === undefined || log.repsRight === '' || log.repsRight === undefined || weightMissing)
+          : (log.reps === '' || weightMissing)
 
       if (isIncomplete) {
         return { ...log, skipped: true, reps: '', duration: undefined, weight: '', rir: undefined, notes: '' }
@@ -1153,6 +1178,10 @@ export default function WorkoutLogPage() {
       overallRating,
       overallRpe,
       preWorkoutWellness: preWorkoutWellness ?? undefined,
+      bodyweight: (() => {
+        const bw = parseFloat(String(bodyweight).trim())
+        return !isNaN(bw) && bw > 0 ? displayToKg(bw, unitPref) : undefined
+      })(),
       exerciseLogs: logsToSave.map((log) => {
         if (log.skipped) {
           // Check if exercise is unilateral or timed
@@ -1424,6 +1453,31 @@ export default function WorkoutLogPage() {
         </Card>
       </div>
 
+      {/* Bodyweight capture — only when the session includes bodyweight exercises */}
+      {workout.workoutExercises.some((we) => we.exercise.isBodyweight) && (
+        <Card className="mb-6">
+          <CardBody>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900">Bodyweight today</p>
+                <p className="text-xs text-gray-400 mt-0.5">Used as the load for your bodyweight exercises</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={bodyweight}
+                  onChange={(e) => setBodyweight(e.target.value)}
+                  placeholder="0"
+                  className="w-24 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-400"
+                />
+                <span className="text-sm text-gray-500">{weightUnit(unitPref)}</span>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Warmup Section */}
       {(workout.warmupNotes || workout.microcycle.mesocycle.warmupNotes) && (
         <Card className="mb-6 bg-gray-900 border-gray-700">
@@ -1598,7 +1652,7 @@ export default function WorkoutLogPage() {
             <CardBody>
               <div className={`grid ${we.exercise.isUnilateral ? 'grid-cols-[2rem_1fr_0.8fr_0.8fr_0.8fr]' : 'grid-cols-[2rem_1fr_1fr_1fr]'} gap-2 pb-2 border-b mb-3`}>
                 <div />
-                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">{we.exercise.isBodyweight ? 'Weight' : `Weight (${weightUnit(unitPref)})`}</div>
+                <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">{we.exercise.isBodyweight ? `+ Load (${weightUnit(unitPref)})` : `Weight (${weightUnit(unitPref)})`}</div>
                 {we.exercise.isUnilateral ? (
                   <>
                     <div className="text-xs md:text-sm font-semibold text-gray-500 text-center uppercase tracking-wide">Left</div>
@@ -1654,7 +1708,8 @@ export default function WorkoutLogPage() {
                         {(() => {
                           const attempted = validationAttemptedFor.has(we.exercise.id) && !log.skipped
                           const isCompleted = completedExercises.has(we.exercise.id)
-                          const weightMissing = attempted && (log.weight === '' || log.weight === undefined || log.weight === null)
+                          // Bodyweight exercises use bodyweight as the load; the added-load field is optional.
+                          const weightMissing = attempted && !we.exercise.isBodyweight && (log.weight === '' || log.weight === undefined || log.weight === null)
                           const repsMissing = attempted && !we.exercise.isUnilateral && !we.exercise.isTimed && (log.reps === '' || log.reps === undefined || log.reps === null)
                           const leftMissing = attempted && we.exercise.isUnilateral && (log.repsLeft === '' || log.repsLeft === undefined || log.repsLeft === null)
                           const rightMissing = attempted && we.exercise.isUnilateral && (log.repsRight === '' || log.repsRight === undefined || log.repsRight === null)
@@ -1667,16 +1722,34 @@ export default function WorkoutLogPage() {
 
                           return (
                             <>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                pattern="[0-9.]*"
-                                placeholder={we.exercise.isBodyweight ? 'BW' : (suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || '')}
-                                value={log.weight}
-                                onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
-                                onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
-                                className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : weightMissing ? invalidCls : normalCls}`}
-                              />
+                              {we.exercise.isBodyweight ? (
+                                <div className="flex items-center gap-1 min-w-0">
+                                  <span className="text-xs text-gray-400 whitespace-nowrap shrink-0" title="Your bodyweight for this session">
+                                    {bodyweight.trim() !== '' ? `${bodyweight}+` : 'BW+'}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9.]*"
+                                    placeholder="0"
+                                    value={log.weight}
+                                    onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
+                                    onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
+                                    className={`${baseCls} placeholder-gray-300 min-w-0 ${isCompleted ? completedCls : normalCls}`}
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  pattern="[0-9.]*"
+                                  placeholder={suggestions.get(we.exercise.id)?.get(log.setNumber)?.weight || ''}
+                                  value={log.weight}
+                                  onChange={(e) => updateLog(log.exerciseId, log.setNumber, 'weight', e.target.value)}
+                                  onBlur={() => cleanOnBlur(log.exerciseId, log.setNumber, 'weight', log.weight)}
+                                  className={`${baseCls} placeholder-gray-300 ${isCompleted ? completedCls : weightMissing ? invalidCls : normalCls}`}
+                                />
+                              )}
                               {we.exercise.isUnilateral ? (
                                 <>
                                   <input

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { formatWeight, weightUnit, kgToDisplay } from '@/lib/units'
+import { effectiveLoad, resolveBodyweight, liftType, type LiftType } from '@/lib/effectiveLoad'
 import { Select } from '@/components/ui/select'
 import {
   LineChart,
@@ -20,6 +21,8 @@ import {
 interface Exercise {
   id: string
   name: string
+  isBodyweight: boolean
+  isTimed: boolean
 }
 
 interface ExerciseLog {
@@ -29,17 +32,23 @@ interface ExerciseLog {
   repsLeft: number | null
   repsRight: number | null
   weight: number
+  duration: number | null
   skipped: boolean
   exerciseRpe: number | null
-  workoutLog: { completedAt: string }
+  exercise: { isBodyweight: boolean; isTimed: boolean }
+  workoutLog: { completedAt: string; bodyweight: number | null }
 }
 
 interface PrItem {
   exerciseId: string
   exerciseName: string
+  type: LiftType
   est1RM: number
   est5RM: number
   est10RM: number
+  bestReps: number
+  bestHold: number
+  bestSessionTUT: number
   lastLoggedAt: string
 }
 
@@ -76,6 +85,13 @@ function formatLastLogged(isoString: string) {
     month: 'short',
     year: '2-digit',
   })
+}
+
+function formatHold(seconds: number): string {
+  if (!seconds) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`
 }
 
 function SortButton({
@@ -124,8 +140,11 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExercise, setSelectedExercise] = useState('')
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([])
+  const [profileWeight, setProfileWeight] = useState<number | null>(null)
   const [loadingExercises, setLoadingExercises] = useState(true)
   const [loadingLogs, setLoadingLogs] = useState(false)
+  // Bodyweight exercises can be viewed as reps (default) or as derived load/1RM/volume
+  const [bwView, setBwView] = useState<'reps' | 'load'>('reps')
 
   // Fetch PR data on mount
   useEffect(() => {
@@ -158,7 +177,17 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
         ? `/api/exercises/${exerciseId}/logs?since=${encodeURIComponent(since)}${clientParam}`
         : `/api/exercises/${exerciseId}/logs${clientId ? `?clientId=${clientId}` : ''}`
       const res = await fetch(url)
-      if (res.ok) setExerciseLogs(await res.json())
+      if (res.ok) {
+        const data = await res.json()
+        // New shape: { logs, profileWeight }; tolerate the old array shape too
+        if (Array.isArray(data)) {
+          setExerciseLogs(data)
+          setProfileWeight(null)
+        } else {
+          setExerciseLogs(data.logs ?? [])
+          setProfileWeight(data.profileWeight ?? null)
+        }
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -180,63 +209,132 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
     }
   }
 
-  // Filter + sort PR data
-  const filteredPrs = prData
-    .filter((item) => item.exerciseName.toLowerCase().includes(search.toLowerCase()))
+  const selectedMeta = exercises.find((e) => e.id === selectedExercise)
+  const selType: LiftType = selectedMeta
+    ? liftType(selectedMeta.isBodyweight, selectedMeta.isTimed)
+    : 'load'
+
+  // Reset bodyweight view to reps when switching exercises
+  useEffect(() => { setBwView('reps') }, [selectedExercise])
+
+  // Split PRs by type — loaded lifts keep the rich 1RM table; bodyweight & timed
+  // get their own natural metrics (reps / hold).
+  const loadedPrs = prData
+    .filter((i) => i.type === 'load' && i.exerciseName.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       let cmp = 0
-      if (sortKey === 'exerciseName') {
-        cmp = a.exerciseName.localeCompare(b.exerciseName)
-      } else if (sortKey === 'est1RM') {
-        cmp = a.est1RM - b.est1RM
-      } else {
-        cmp = new Date(a.lastLoggedAt).getTime() - new Date(b.lastLoggedAt).getTime()
-      }
+      if (sortKey === 'exerciseName') cmp = a.exerciseName.localeCompare(b.exerciseName)
+      else if (sortKey === 'est1RM') cmp = a.est1RM - b.est1RM
+      else cmp = new Date(a.lastLoggedAt).getTime() - new Date(b.lastLoggedAt).getTime()
       return sortDir === 'asc' ? cmp : -cmp
     })
 
-  const displayedPrs = isBasic ? filteredPrs.slice(0, 5) : filteredPrs
+  const bwPrs = prData
+    .filter((i) => i.type === 'bodyweight' && i.exerciseName.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => b.bestReps - a.bestReps)
+  const timedPrs = prData
+    .filter((i) => i.type === 'timed' && i.exerciseName.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => b.bestHold - a.bestHold)
 
-  // Derived chart data
-  const weightProgressData = exerciseLogs.reduce(
-    (acc: { date: string; maxWeight: number; estimated1RM: number }[], log) => {
-      const date = formatDate(log.workoutLog.completedAt)
-      const effectiveReps = log.reps || ((log.repsLeft ?? 0) + (log.repsRight ?? 0))
-      const est1RM = calculate1RM(log.weight, effectiveReps)
-      const existing = acc.find((item) => item.date === date)
-      if (existing) {
-        if (log.weight > existing.maxWeight) {
-          existing.maxWeight = Math.round(kgToDisplay(log.weight, unitPref) * 10) / 10
-          existing.estimated1RM = Math.round(kgToDisplay(est1RM, unitPref))
-        }
-      } else {
-        acc.push({
-          date,
-          maxWeight: Math.round(kgToDisplay(log.weight, unitPref) * 10) / 10,
-          estimated1RM: Math.round(kgToDisplay(est1RM, unitPref)),
-        })
-      }
-      return acc
-    },
-    []
-  )
+  const displayedLoaded = isBasic ? loadedPrs.slice(0, 5) : loadedPrs
 
-  const volumeData = exerciseLogs.reduce(
-    (acc: { date: string; volume: number; sets: number }[], log) => {
-      const date = formatDate(log.workoutLog.completedAt)
-      const existing = acc.find((item) => item.date === date)
-      const reps = log.reps || ((log.repsLeft ?? 0) + (log.repsRight ?? 0))
-      const vol = kgToDisplay(log.weight * reps, unitPref)
-      if (existing) {
-        existing.volume += vol
-        existing.sets += 1
-      } else {
-        acc.push({ date, volume: Math.round(vol), sets: 1 })
-      }
-      return acc
-    },
-    []
-  )
+  // ── Chart data helpers ──────────────────────────────────────────────────
+  const effReps = (log: ExerciseLog) => log.reps || ((log.repsLeft ?? 0) + (log.repsRight ?? 0))
+  const loadOf = (log: ExerciseLog) =>
+    effectiveLoad(
+      log.weight,
+      log.exercise?.isBodyweight ?? false,
+      resolveBodyweight(log.workoutLog.bodyweight, profileWeight)
+    )
+
+  // Load / 1RM / volume — used for loaded lifts and the bodyweight "load" view
+  const showLoadCharts = selType === 'load' || (selType === 'bodyweight' && bwView === 'load')
+
+  const weightProgressData = showLoadCharts
+    ? exerciseLogs.reduce(
+        (acc: { date: string; maxWeight: number; estimated1RM: number }[], log) => {
+          const load = loadOf(log)
+          if (load == null) return acc
+          const date = formatDate(log.workoutLog.completedAt)
+          const est1RM = calculate1RM(load, effReps(log))
+          const existing = acc.find((item) => item.date === date)
+          if (existing) {
+            if (load > existing.maxWeight) {
+              existing.maxWeight = Math.round(kgToDisplay(load, unitPref) * 10) / 10
+              existing.estimated1RM = Math.round(kgToDisplay(est1RM, unitPref))
+            }
+          } else {
+            acc.push({
+              date,
+              maxWeight: Math.round(kgToDisplay(load, unitPref) * 10) / 10,
+              estimated1RM: Math.round(kgToDisplay(est1RM, unitPref)),
+            })
+          }
+          return acc
+        },
+        []
+      )
+    : []
+
+  const volumeData = showLoadCharts
+    ? exerciseLogs.reduce(
+        (acc: { date: string; volume: number; sets: number }[], log) => {
+          const load = loadOf(log)
+          if (load == null) return acc
+          const date = formatDate(log.workoutLog.completedAt)
+          const existing = acc.find((item) => item.date === date)
+          const vol = kgToDisplay(load * effReps(log), unitPref)
+          if (existing) {
+            existing.volume += vol
+            existing.sets += 1
+          } else {
+            acc.push({ date, volume: Math.round(vol), sets: 1 })
+          }
+          return acc
+        },
+        []
+      )
+    : []
+
+  // Reps view (bodyweight) — total reps + best-set reps per session
+  const repsData = selType === 'bodyweight' && bwView === 'reps'
+    ? exerciseLogs.reduce(
+        (acc: { date: string; totalReps: number; bestSet: number }[], log) => {
+          if (log.skipped) return acc
+          const date = formatDate(log.workoutLog.completedAt)
+          const r = effReps(log)
+          const existing = acc.find((item) => item.date === date)
+          if (existing) {
+            existing.totalReps += r
+            if (r > existing.bestSet) existing.bestSet = r
+          } else {
+            acc.push({ date, totalReps: r, bestSet: r })
+          }
+          return acc
+        },
+        []
+      )
+    : []
+
+  // Timed — longest hold + total time under tension per session
+  const timedData = selType === 'timed'
+    ? exerciseLogs.reduce(
+        (acc: { date: string; longestHold: number; totalTUT: number }[], log) => {
+          if (log.skipped) return acc
+          const date = formatDate(log.workoutLog.completedAt)
+          const d = log.duration ?? 0
+          const existing = acc.find((item) => item.date === date)
+          if (existing) {
+            existing.totalTUT += d
+            if (d > existing.longestHold) existing.longestHold = d
+          } else {
+            acc.push({ date, longestHold: d, totalTUT: d })
+          }
+          return acc
+        },
+        []
+      )
+    : []
 
   const rpeData = exerciseLogs.reduce(
     (acc: { date: string; rpe: number }[], log) => {
@@ -250,50 +348,20 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
     []
   )
 
-  const validLogs = exerciseLogs.filter((l) => !l.skipped && l.weight > 0 && l.reps > 0)
-  const sessionDates = [...new Set(validLogs.map((l) => l.workoutLog.completedAt.slice(0, 10)))]
-
-  const performanceSummary = (() => {
-    if (validLogs.length === 0 || sessionDates.length < 2) return null
-    const firstDate = sessionDates[0]
-    const lastDate = sessionDates[sessionDates.length - 1]
-    const firstLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === firstDate)
-    const lastLogs = validLogs.filter((l) => l.workoutLog.completedAt.slice(0, 10) === lastDate)
-    const firstWeightKg = Math.max(...firstLogs.map((l) => l.weight))
-    const lastWeightKg = Math.max(...lastLogs.map((l) => l.weight))
-    const weightChange = firstWeightKg > 0 ? ((lastWeightKg - firstWeightKg) / firstWeightKg) * 100 : 0
-    const firstBestLog = firstLogs.reduce((best, l) =>
-      calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
-    )
-    const lastBestLog = lastLogs.reduce((best, l) =>
-      calculate1RM(l.weight, l.reps) > calculate1RM(best.weight, best.reps) ? l : best
-    )
-    const first1RMKg = calculate1RM(firstBestLog.weight, firstBestLog.reps)
-    const last1RMKg = calculate1RM(lastBestLog.weight, lastBestLog.reps)
-    const rmChange = first1RMKg > 0 ? ((last1RMKg - first1RMKg) / first1RMKg) * 100 : 0
-    const allTimeMaxWeightKg = Math.max(...validLogs.map((l) => l.weight))
-    const isPR = lastWeightKg >= allTimeMaxWeightKg && lastWeightKg > firstWeightKg
-    return {
-      lastWeight: formatWeight(lastWeightKg, unitPref),
-      last1RM: formatWeight(last1RMKg, unitPref),
-      weightChange,
-      rmChange,
-      isPR,
-      sessionCount: sessionDates.length,
-    }
-  })()
+  const hasChartData =
+    weightProgressData.length > 0 || repsData.length > 0 || timedData.length > 0
 
   return (
     <div className="space-y-6">
-      {/* PR Table */}
+      {/* PR Table — loaded lifts */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Personal Records</h2>
-              {isBasic && prData.length > 5 && (
+              {isBasic && loadedPrs.length > 5 && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Showing top 5 of {prData.length} — Elite for full table
+                  Showing top 5 of {loadedPrs.length} — Elite for full table
                 </p>
               )}
             </div>
@@ -319,9 +387,9 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
         <CardBody>
           {loadingPrs ? (
             <div className="text-center py-8 text-sm text-gray-500">Loading...</div>
-          ) : prData.length === 0 ? (
+          ) : loadedPrs.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500">
-              No data yet. Complete a workout to see your personal records.
+              No weighted lifts logged yet.
             </div>
           ) : (
             <div className="overflow-x-auto -mx-4 px-4">
@@ -336,7 +404,7 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {displayedPrs.map((item) => (
+                  {displayedLoaded.map((item) => (
                     <tr key={item.exerciseId}>
                       <td className="py-2.5 pr-3 font-medium text-gray-900">{item.exerciseName}</td>
                       <td className="py-2.5 px-2 text-right text-primary-600 font-semibold">
@@ -351,15 +419,69 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
                   ))}
                 </tbody>
               </table>
-              {isBasic && prData.length > 5 && (
+              {isBasic && loadedPrs.length > 5 && (
                 <p className="text-xs text-gray-400 text-center mt-4 pb-1">
-                  + {prData.length - 5} more exercises — upgrade to Elite to see all
+                  + {loadedPrs.length - 5} more exercises — upgrade to Elite to see all
                 </p>
               )}
             </div>
           )}
         </CardBody>
       </Card>
+
+      {/* Bodyweight & Timed bests */}
+      {!isBasic && (bwPrs.length > 0 || timedPrs.length > 0) && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-base font-semibold text-gray-900">Bodyweight &amp; Timed Bests</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Best reps and longest holds per exercise</p>
+          </CardHeader>
+          <CardBody>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="w-full text-sm min-w-[360px]">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-3">Exercise</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">Best</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 px-2">Detail</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 pl-2">Last</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {bwPrs.map((item) => (
+                    <tr key={item.exerciseId}>
+                      <td className="py-2.5 pr-3 font-medium text-gray-900">{item.exerciseName}</td>
+                      <td className="py-2.5 px-2 text-right text-primary-600 font-semibold">
+                        {item.bestReps} reps
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-gray-500 text-xs">
+                        {item.est1RM > 0 ? `~${formatWeight(item.est1RM, unitPref)} 1RM` : '—'}
+                      </td>
+                      <td className="py-2.5 pl-2 text-right text-gray-400 text-xs">
+                        {formatLastLogged(item.lastLoggedAt)}
+                      </td>
+                    </tr>
+                  ))}
+                  {timedPrs.map((item) => (
+                    <tr key={item.exerciseId}>
+                      <td className="py-2.5 pr-3 font-medium text-gray-900">{item.exerciseName}</td>
+                      <td className="py-2.5 px-2 text-right text-primary-600 font-semibold">
+                        {formatHold(item.bestHold)}
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-gray-500 text-xs">
+                        TUT {formatHold(item.bestSessionTUT)}
+                      </td>
+                      <td className="py-2.5 pl-2 text-right text-gray-400 text-xs">
+                        {formatLastLogged(item.lastLoggedAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Exercise Progress Charts — Elite only */}
       {isBasic ? (
@@ -392,105 +514,117 @@ export default function ExerciseTab({ timePeriod, clientId }: { timePeriod: stri
                 )}
               </div>
             </div>
+            {/* Reps ⇄ Load toggle for bodyweight exercises */}
+            {selType === 'bodyweight' && (
+              <div className="flex gap-1 mt-3">
+                {(['reps', 'load'] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setBwView(v)}
+                    className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                      bwView === v
+                        ? 'bg-primary-100 text-primary-700 font-medium'
+                        : 'text-gray-500 hover:text-gray-700 border border-gray-200'
+                    }`}
+                  >
+                    {v === 'reps' ? 'Reps' : 'Load & 1RM'}
+                  </button>
+                ))}
+              </div>
+            )}
           </CardHeader>
           <CardBody>
             {loadingLogs ? (
               <div className="text-center py-8 text-sm text-gray-500">Loading...</div>
-            ) : weightProgressData.length === 0 ? (
+            ) : !hasChartData ? (
               <div className="text-center py-10 text-gray-500 text-sm">
-                No data for this exercise in the selected period.
+                {selType === 'bodyweight' && bwView === 'load'
+                  ? 'No bodyweight recorded for these sessions — log your bodyweight to see load & 1RM.'
+                  : 'No data for this exercise in the selected period.'}
               </div>
             ) : (
               <div className="space-y-8">
-                {performanceSummary && (
-                  <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Top Weight</p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {performanceSummary.lastWeight} {unit}
-                      </p>
-                      <p
-                        className={`text-xs font-medium mt-0.5 ${
-                          performanceSummary.weightChange >= 0 ? 'text-green-600' : 'text-red-500'
-                        }`}
-                      >
-                        {performanceSummary.weightChange >= 0 ? '+' : ''}
-                        {performanceSummary.weightChange.toFixed(1)}%
-                        {performanceSummary.isPR && (
-                          <span className="ml-1 bg-amber-100 text-amber-700 text-xs px-1 py-0.5 rounded">
-                            PR
-                          </span>
-                        )}
-                      </p>
+                {/* Timed exercise charts */}
+                {selType === 'timed' && (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-3">Longest Hold (per session)</p>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={timedData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} width={40} tickFormatter={(v: number) => formatHold(v)} />
+                          <Tooltip formatter={(val: number) => [formatHold(val), 'Longest hold']} />
+                          <Line type="monotone" dataKey="longestHold" stroke="#d96b00" name="Longest hold" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Est. 1RM</p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {performanceSummary.last1RM} {unit}
-                      </p>
-                      <p
-                        className={`text-xs font-medium mt-0.5 ${
-                          performanceSummary.rmChange >= 0 ? 'text-green-600' : 'text-red-500'
-                        }`}
-                      >
-                        {performanceSummary.rmChange >= 0 ? '+' : ''}
-                        {performanceSummary.rmChange.toFixed(1)}%
-                      </p>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-3">Total Time Under Tension (per session)</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={timedData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} width={40} tickFormatter={(v: number) => formatHold(v)} />
+                          <Tooltip formatter={(val: number) => [formatHold(val), 'Total TUT']} />
+                          <Bar dataKey="totalTUT" fill="#f5a855" name="Total TUT" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Sessions</p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {performanceSummary.sessionCount}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">logged</p>
-                    </div>
+                  </>
+                )}
+
+                {/* Bodyweight reps view */}
+                {selType === 'bodyweight' && bwView === 'reps' && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-3">Reps (per session)</p>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={repsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} width={40} />
+                        <Tooltip />
+                        <Bar dataKey="totalReps" fill="#d96b00" name="Total reps" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="bestSet" fill="#f5a855" name="Best set" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
 
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-3">
-                    Max Weight & Estimated 1RM ({unit})
-                  </p>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={weightProgressData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} width={40} />
-                      <Tooltip />
-                      <Bar
-                        dataKey="maxWeight"
-                        fill="#d96b00"
-                        name={`Max Weight (${unit})`}
-                        radius={[3, 3, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="estimated1RM"
-                        fill="#f5a855"
-                        name={`Est. 1RM (${unit})`}
-                        radius={[3, 3, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* Load / 1RM / volume charts (loaded lifts + bodyweight load view) */}
+                {showLoadCharts && weightProgressData.length > 0 && (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-3">
+                        {selType === 'bodyweight' ? 'Effective Load & Estimated 1RM' : 'Max Weight & Estimated 1RM'} ({unit})
+                      </p>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={weightProgressData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} width={40} />
+                          <Tooltip />
+                          <Bar dataKey="maxWeight" fill="#d96b00" name={`Max Weight (${unit})`} radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="estimated1RM" fill="#f5a855" name={`Est. 1RM (${unit})`} radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-3">Session Volume ({unit})</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={volumeData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} width={40} />
+                          <Tooltip />
+                          <Bar dataKey="volume" fill="#d96b00" name={`Volume (${unit})`} radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                )}
 
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-3">Session Volume ({unit})</p>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={volumeData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} width={40} />
-                      <Tooltip />
-                      <Bar
-                        dataKey="volume"
-                        fill="#d96b00"
-                        name={`Volume (${unit})`}
-                        radius={[3, 3, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
+                {/* RPE chart — shared across all types */}
                 {rpeData.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-gray-500 mb-3">Exercise RPE (1–5)</p>

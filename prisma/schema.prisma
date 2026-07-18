@@ -286,6 +286,7 @@ model WorkoutLog {
   overallRpe        Float?   // average exercise RPE (1-5 scale)
   skipped           Boolean  @default(false)
   preWorkoutWellness Int?     // 1-5 pre-workout self-assessment
+  bodyweight        Float?   // user's bodyweight (kg) at time of session — used as effective load for bodyweight exercises
 
   workoutId         String?
   workout           Workout? @relation(fields: [workoutId], references: [id], onDelete: Cascade)

@@ -43,7 +43,8 @@ export function LiftHistoryModal({ exerciseId, exerciseName, onClose }: LiftHist
     try {
       const res = await fetch(`/api/exercises/${exerciseId}/logs`)
       if (res.ok) {
-        const logs: ExerciseLog[] = await res.json()
+        const data = await res.json()
+        const logs: ExerciseLog[] = Array.isArray(data) ? data : data.logs
 
         // Group logs by workout session (completedAt date)
         const sessionMap = new Map<string, ExerciseLog[]>()

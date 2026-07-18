@@ -17,17 +17,26 @@ type ComparisonItem = {
 
 type LogEntry = {
   overallRpe: number | null
-  exerciseLogs: Array<{ weight: number; reps: number; repsLeft: number | null; repsRight: number | null }>
+  bodyweight: number | null
+  exerciseLogs: Array<{
+    weight: number
+    reps: number
+    repsLeft: number | null
+    repsRight: number | null
+    exercise: { isBodyweight: boolean }
+  }>
 }
 
-function computeStats(allLogs: LogEntry[]) {
+function computeStats(allLogs: LogEntry[], profileWeight: number | null) {
   const sessionsCompleted = allLogs.length
   const totalVolumeKg = allLogs.reduce((sum, log) => {
+    const bwRef = log.bodyweight ?? profileWeight ?? 0
     return (
       sum +
       log.exerciseLogs.reduce((exSum, ex) => {
         const reps = ex.reps || (ex.repsLeft || 0) + (ex.repsRight || 0)
-        return exSum + ex.weight * reps
+        const load = ex.exercise.isBodyweight ? bwRef + ex.weight : ex.weight
+        return exSum + load * reps
       }, 0)
     )
   }, 0)
@@ -50,7 +59,13 @@ function weeksBetween(start: Date, end: Date) {
 
 const EXERCISE_LOG_SELECT = {
   where: { skipped: false },
-  select: { weight: true, reps: true, repsLeft: true, repsRight: true },
+  select: {
+    weight: true,
+    reps: true,
+    repsLeft: true,
+    repsRight: true,
+    exercise: { select: { isBodyweight: true } },
+  },
 } as const
 
 export async function GET(request: Request) {
@@ -76,6 +91,13 @@ export async function GET(request: Request) {
       userId = clientId
     }
     const now = new Date()
+
+    // Profile weight is the bodyweight fallback for sessions that didn't record one
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { weight: true },
+    })
+    const profileWeight = profile?.weight ?? null
 
     // ── Weeks in active/latest phase ───────────────────────────────────────
     if (type === 'weeks') {
@@ -132,6 +154,7 @@ export async function GET(request: Request) {
                   workoutLogs: {
                     select: {
                       overallRpe: true,
+                      bodyweight: true,
                       exerciseLogs: EXERCISE_LOG_SELECT,
                     },
                   },
@@ -146,7 +169,7 @@ export async function GET(request: Request) {
 
       const result: ComparisonItem[] = meso.microcycles.map((micro) => {
         const allLogs = micro.workouts.flatMap((w) => w.workoutLogs)
-        const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
+        const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs, profileWeight)
         const start = new Date(micro.startDate)
         const end = new Date(micro.endDate)
         const status = end < now ? 'completed' : start <= now ? 'active' : 'planned'
@@ -188,6 +211,7 @@ export async function GET(request: Request) {
                       workoutLogs: {
                         select: {
                           overallRpe: true,
+                          bodyweight: true,
                           exerciseLogs: EXERCISE_LOG_SELECT,
                         },
                       },
@@ -205,7 +229,7 @@ export async function GET(request: Request) {
           const allLogs = meso.microcycles
             .flatMap((micro) => micro.workouts)
             .flatMap((w) => w.workoutLogs)
-          const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
+          const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs, profileWeight)
           const effectiveEnd = meso.status === 'active' ? new Date(Math.min(now.getTime(), new Date(meso.endDate).getTime())) : new Date(meso.endDate)
           const wk = weeksBetween(new Date(meso.startDate), effectiveEnd)
           return {
@@ -244,6 +268,7 @@ export async function GET(request: Request) {
                     workoutLogs: {
                       select: {
                         overallRpe: true,
+                        bodyweight: true,
                         exerciseLogs: EXERCISE_LOG_SELECT,
                       },
                     },
@@ -261,7 +286,7 @@ export async function GET(request: Request) {
         .flatMap((meso) => meso.microcycles)
         .flatMap((micro) => micro.workouts)
         .flatMap((w) => w.workoutLogs)
-      const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs)
+      const { sessionsCompleted, totalVolumeKg, avgWorkoutRpe } = computeStats(allLogs, profileWeight)
       const effectiveEnd = macro.status === 'active' ? new Date(Math.min(now.getTime(), new Date(macro.endDate).getTime())) : new Date(macro.endDate)
       const wk = weeksBetween(new Date(macro.startDate), effectiveEnd)
       return {

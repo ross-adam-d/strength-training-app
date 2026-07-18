@@ -37,8 +37,9 @@ interface WorkoutLog {
   completedAt: string
   duration?: number
   overallRpe?: number
+  bodyweight?: number | null
   workout: { name: string } | null
-  exerciseLogs: Array<{ exercise: { name: string }; weight: number; reps: number; repsLeft: number | null; repsRight: number | null }>
+  exerciseLogs: Array<{ exercise: { name: string; isBodyweight?: boolean }; weight: number; reps: number; repsLeft: number | null; repsRight: number | null }>
 }
 
 function getLastWeekRange(): { since: Date; until: Date } {
@@ -67,6 +68,7 @@ export default function ProgressPage() {
   const [activeTab, setActiveTab] = useState<Tab>('volume')
   const [timePeriod, setTimePeriod] = useState('3m')
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([])
+  const [bwFallback, setBwFallback] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
 
@@ -76,6 +78,11 @@ export default function ProgressPage() {
       .then(setRecentWorkouts)
       .catch(console.error)
       .finally(() => setLoading(false))
+    // Bodyweight fallback for sessions that didn't record one, so BW volume counts
+    fetch('/api/profile/bodyweight')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setBwFallback(d?.bodyweight ?? null))
+      .catch(() => {})
   }, [])
 
   async function handleExport() {
@@ -112,10 +119,14 @@ export default function ProgressPage() {
   })
 
   const totalVolumeKg = filteredWorkouts.reduce(
-    (sum, w) => sum + w.exerciseLogs.reduce((s, l) => {
-      const reps = l.reps || ((l.repsLeft ?? 0) + (l.repsRight ?? 0))
-      return s + l.weight * reps
-    }, 0),
+    (sum, w) => {
+      const bwRef = w.bodyweight ?? bwFallback ?? 0
+      return sum + w.exerciseLogs.reduce((s, l) => {
+        const reps = l.reps || ((l.repsLeft ?? 0) + (l.repsRight ?? 0))
+        const load = l.exercise.isBodyweight ? bwRef + l.weight : l.weight
+        return s + load * reps
+      }, 0)
+    },
     0
   )
 
